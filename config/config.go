@@ -159,6 +159,7 @@ func (c *Config) flush() {
 		fmt.Println("Unable to write config file")
 		os.Exit(-1)
 	}
+	log.Debug("flushed config")
 }
 
 func (c *Config) SwitchCluster(name string) *Cluster {

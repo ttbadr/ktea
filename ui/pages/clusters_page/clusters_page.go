@@ -8,7 +8,7 @@ import (
 	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages"
+	"ktea/ui/pages/navigation"
 	"sort"
 	"strings"
 )
@@ -107,7 +107,7 @@ func (m *Model) createRows() []table.Row {
 	return rows
 }
 
-func New(ktx *kontext.ProgramKtx) (pages.Page, tea.Cmd) {
+func New(ktx *kontext.ProgramKtx) (navigation.Page, tea.Cmd) {
 	model := Model{}
 	model.ktx = ktx
 	model.table = table.New(

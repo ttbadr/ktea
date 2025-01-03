@@ -10,7 +10,7 @@ import (
 	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/notifier"
-	"ktea/ui/pages"
+	"ktea/ui/pages/navigation"
 )
 
 type state int
@@ -76,7 +76,7 @@ func (m *CmdBarModel) Update(msg tea.Msg, stc SelectedTopicConfig) (tea.Msg, tea
 			if m.IsFocused() {
 				m.state = HIDDEN
 			} else {
-				return nil, ui.PublishMsg(pages.LoadTopicsPageMsg{})
+				return nil, ui.PublishMsg(navigation.LoadTopicsPageMsg{})
 			}
 			return nil, nil
 		} else if msg.String() == "e" && isEditable(m) {

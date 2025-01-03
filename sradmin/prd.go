@@ -1,6 +1,6 @@
 //go:build prd
 
-package sr
+package sradmin
 
 func maybeIntroduceLatency() {
 }

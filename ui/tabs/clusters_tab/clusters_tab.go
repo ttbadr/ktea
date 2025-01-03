@@ -6,9 +6,9 @@ import (
 	"ktea/kontext"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages"
 	"ktea/ui/pages/clusters_page"
 	"ktea/ui/pages/create_cluster_page"
+	"ktea/ui/pages/navigation"
 	"strings"
 )
 
@@ -16,8 +16,8 @@ type state int
 
 type Model struct {
 	state      state
-	active     pages.Page
-	createPage pages.Page
+	active     navigation.Page
+	createPage navigation.Page
 	config     *config.Config
 	statusbar  *statusbar.Model
 	ktx        *kontext.ProgramKtx

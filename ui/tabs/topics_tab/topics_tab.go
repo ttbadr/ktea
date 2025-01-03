@@ -6,18 +6,18 @@ import (
 	"ktea/kontext"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages"
 	"ktea/ui/pages/configs_page"
 	"ktea/ui/pages/consumption_form_page"
 	"ktea/ui/pages/consumption_page"
 	"ktea/ui/pages/create_topic_page"
 	"ktea/ui/pages/error_page"
+	"ktea/ui/pages/navigation"
 	"ktea/ui/pages/publish_page"
 	"ktea/ui/pages/topics_page"
 )
 
 type Model struct {
-	active     pages.Page
+	active     navigation.Page
 	topicsPage *topics_page.Model
 	statusbar  *statusbar.Model
 	ka         *kadmin.SaramaKafkaAdmin
@@ -40,26 +40,26 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	switch msg := msg.(type) {
 
-	case pages.LoadTopicsPageMsg:
+	case navigation.LoadTopicsPageMsg:
 		var cmd tea.Cmd
 		m.active, cmd = topics_page.New(m.ka, m.ka)
 		cmds = append(cmds, cmd)
 
-	case pages.LoadConsumptionFormPageMsg:
+	case navigation.LoadConsumptionFormPageMsg:
 		m.active = consumption_form_page.New(m.topicsPage.SelectedTopic())
 
-	case pages.LoadTopicConfigPageMsg:
+	case navigation.LoadTopicConfigPageMsg:
 		page, cmd := configs_page.New(m.ka, m.ka, m.topicsPage.SelectedTopicName())
 		cmds = append(cmds, cmd)
 		m.active = page
 
-	case pages.LoadCreateTopicPageMsg:
+	case navigation.LoadCreateTopicPageMsg:
 		m.active = create_topic_page.New(m.ka)
 
-	case pages.LoadPublishPageMsg:
+	case navigation.LoadPublishPageMsg:
 		m.active = publish_page.New(m.ka, msg.Topic)
 
-	case pages.LoadConsumptionPageMsg:
+	case navigation.LoadConsumptionPageMsg:
 		var cmd tea.Cmd
 		m.active, cmd = consumption_page.New(m.ka, msg.Topic)
 		cmds = append(cmds, cmd)

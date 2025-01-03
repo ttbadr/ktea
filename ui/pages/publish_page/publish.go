@@ -12,7 +12,7 @@ import (
 	"ktea/ui"
 	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages"
+	"ktea/ui/pages/navigation"
 	"strconv"
 )
 
@@ -80,7 +80,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.notifier.Idle()
 		switch msg.Type {
 		case tea.KeyEsc:
-			return ui.PublishMsg(pages.LoadTopicsPageMsg{})
+			return ui.PublishMsg(navigation.LoadTopicsPageMsg{})
 		}
 	}
 	if m.form != nil {

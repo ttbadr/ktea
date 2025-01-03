@@ -1,6 +1,6 @@
 //go:build dev
 
-package sr
+package sradmin
 
 import "time"
 

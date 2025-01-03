@@ -5,8 +5,8 @@ import (
 	"github.com/charmbracelet/log"
 	"ktea/config"
 	"ktea/kadmin"
-	"ktea/kadmin/sr"
 	"ktea/kontext"
+	"ktea/sradmin"
 	"ktea/ui"
 	"ktea/ui/components/tab"
 	"ktea/ui/pages/clusters_page"
@@ -29,7 +29,7 @@ type Model struct {
 	topicsTabCtrl  *topics_tab.Model
 	cgroupsTabCtrl *cgroups_tab.Model
 	ka             *kadmin.SaramaKafkaAdmin
-	sra            *sr.SrAdmin
+	sra            *sradmin.SrAdmin
 	renderer       *ui.Renderer
 }
 
@@ -189,7 +189,7 @@ func (m *Model) activateCluster(cluster *config.Cluster) error {
 	}
 
 	if cluster.HasSchemaRegistry() {
-		m.sra = sr.NewSrAdmin(m.ktx)
+		m.sra = sradmin.NewSrAdmin(m.ktx)
 	}
 
 	m.recreateTabs(cluster)

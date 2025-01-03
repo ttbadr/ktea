@@ -4,13 +4,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
-	"ktea/kadmin/sr"
 	"ktea/kontext"
+	sradmin2 "ktea/sradmin"
 	"ktea/ui"
 	"ktea/ui/components/cmdbar"
 	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages"
+	"ktea/ui/pages/navigation"
 	"time"
 )
 
@@ -29,7 +29,7 @@ type values struct {
 type Model struct {
 	values
 	form        *huh.Form
-	creator     sr.SubjectCreator
+	creator     sradmin2.SubjectCreator
 	cmdBar      cmdbar.Widget
 	state       state
 	ktx         *kontext.ProgramKtx
@@ -63,7 +63,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if m.form.State == huh.StateCompleted && m.state == entering {
 			m.state = creating
 			return func() tea.Msg {
-				return m.creator.CreateSchema(sr.SubjectCreationDetails{
+				return m.creator.CreateSchema(sradmin2.SubjectCreationDetails{
 					Subject: m.subject,
 					Schema:  m.schema,
 				})
@@ -76,12 +76,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		{
 			switch msg.String() {
 			case "esc":
-				cmds = append(cmds, ui.PublishMsg(pages.LoadSubjectsPageMsg{}))
+				cmds = append(cmds, ui.PublishMsg(navigation.LoadSubjectsPageMsg{}))
 			}
 		}
-	case sr.SchemaCreatedMsg:
+	case sradmin2.SchemaCreatedMsg:
 		m.form = nil
-	case sr.SchemaCreationStartedMsg:
+	case sradmin2.SchemaCreationStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
 	}
 
@@ -124,13 +124,13 @@ func newForm(model *Model) *huh.Form {
 	return form
 }
 
-func New(creator sr.SubjectCreator, ktx *kontext.ProgramKtx) (*Model, tea.Cmd) {
+func New(creator sradmin2.SubjectCreator, ktx *kontext.ProgramKtx) (*Model, tea.Cmd) {
 	model := &Model{}
 	model.ktx = ktx
 	model.creator = creator
 	model.state = entering
 	notifierCmdBar := cmdbar.NewNotifierCmdBar()
-	subjectListingStartedNotifier := func(msg sr.SchemaCreationStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
+	subjectListingStartedNotifier := func(msg sradmin2.SchemaCreationStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		cmd := m.SpinWithLoadingMsg("Creating Schema")
 		return true, cmd
 	}
@@ -138,7 +138,7 @@ func New(creator sr.SubjectCreator, ktx *kontext.ProgramKtx) (*Model, tea.Cmd) {
 		m.Idle()
 		return true, nil
 	}
-	f := func(msg sr.SchemaCreatedMsg, m *notifier.Model) (bool, tea.Cmd) {
+	f := func(msg sradmin2.SchemaCreatedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowSuccessMsg("Schema created")
 		return true, func() tea.Msg {
 			time.Sleep(2 * time.Second)

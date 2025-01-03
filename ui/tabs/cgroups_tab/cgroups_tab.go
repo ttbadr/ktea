@@ -7,17 +7,17 @@ import (
 	"ktea/kontext"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages"
 	"ktea/ui/pages/cgroups_page"
 	"ktea/ui/pages/cgroups_topics_page"
+	"ktea/ui/pages/navigation"
 )
 
 type Model struct {
-	active              pages.Page
+	active              navigation.Page
 	list                *cgroups_page.Model
 	statusbar           *statusbar.Model
-	offsetLister        kadmin.ConsumerGroupOffsetLister
-	consumerGroupLister kadmin.ConsumerGroupLister
+	offsetLister        kadmin.OffsetLister
+	consumerGroupLister kadmin.CGroupLister
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -31,12 +31,12 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
-	case pages.LoadCGroupTopicsPageMsg:
+	case navigation.LoadCGroupTopicsPageMsg:
 		cgroupsTopicsPage, cmd := cgroups_topics_page.New(m.offsetLister, msg.GroupName)
 		cmds = append(cmds, cmd)
 		m.active = cgroupsTopicsPage
 		return tea.Batch(cmds...)
-	case pages.LoadCGroupsPageMsg:
+	case navigation.LoadCGroupsPageMsg:
 		cgroupsPage, cmd := cgroups_page.New(m.consumerGroupLister)
 		m.active = cgroupsPage
 		return cmd
@@ -54,8 +54,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 }
 
 func New(
-	consumerGroupLister kadmin.ConsumerGroupLister,
-	consumerGroupOffsetLister kadmin.ConsumerGroupOffsetLister,
+	consumerGroupLister kadmin.CGroupLister,
+	consumerGroupOffsetLister kadmin.OffsetLister,
 ) (*Model, tea.Cmd) {
 	cgroupsPage, cmd := cgroups_page.New(consumerGroupLister)
 

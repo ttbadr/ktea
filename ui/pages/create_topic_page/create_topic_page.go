@@ -11,7 +11,7 @@ import (
 	"ktea/ui"
 	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages"
+	"ktea/ui/pages/navigation"
 	"regexp"
 	"strconv"
 	"strings"
@@ -72,7 +72,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return cmd
 	case tea.KeyMsg:
 		if msg.String() == "esc" && m.formState != loading {
-			return ui.PublishMsg(pages.LoadTopicsPageMsg{})
+			return ui.PublishMsg(navigation.LoadTopicsPageMsg{})
 		} else if msg.String() == "ctrl+r" {
 			m.formValues.name = ""
 			m.formValues.cleanupPolicy = ""

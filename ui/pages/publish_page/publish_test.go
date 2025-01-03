@@ -7,7 +7,7 @@ import (
 	"ktea/kontext"
 	"ktea/tests/keys"
 	"ktea/ui"
-	"ktea/ui/pages"
+	"ktea/ui/pages/navigation"
 	"testing"
 )
 
@@ -33,7 +33,7 @@ func TestPublish(t *testing.T) {
 
 		cmd := m.Update(keys.Key(tea.KeyEsc))
 
-		assert.IsType(t, pages.LoadTopicsPageMsg{}, cmd())
+		assert.IsType(t, navigation.LoadTopicsPageMsg{}, cmd())
 	})
 
 	t.Run("publish plain text", func(t *testing.T) {

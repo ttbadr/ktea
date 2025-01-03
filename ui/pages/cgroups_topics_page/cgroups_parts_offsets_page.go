@@ -9,7 +9,7 @@ import (
 	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages"
+	"ktea/ui/pages/navigation"
 	"slices"
 	"sort"
 	"strconv"
@@ -77,7 +77,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc":
-			return ui.PublishMsg(pages.LoadCGroupsPageMsg{})
+			return ui.PublishMsg(navigation.LoadCGroupsPageMsg{})
 		}
 	case kadmin.OffsetListingStartedMsg:
 		cmds = append(
@@ -170,7 +170,7 @@ func (m *Model) Title() string {
 	return "Consumer Groups / " + m.groupName
 }
 
-func New(lister kadmin.ConsumerGroupOffsetLister, group string) (*Model, tea.Cmd) {
+func New(lister kadmin.OffsetLister, group string) (*Model, tea.Cmd) {
 	tt := table.New(
 		table.WithFocused(true),
 		table.WithStyles(styles.Table.Styles),

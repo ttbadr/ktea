@@ -2,22 +2,22 @@ package sr_tab
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"ktea/kadmin/sr"
 	"ktea/kontext"
+	"ktea/sradmin"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages"
 	"ktea/ui/pages/create_subjects_page"
+	"ktea/ui/pages/navigation"
 	"ktea/ui/pages/subjects_page"
 )
 
 type Model struct {
-	active    pages.Page
+	active    navigation.Page
 	statusbar *statusbar.Model
 	ktx       *kontext.ProgramKtx
-	creator   sr.SubjectCreator
-	lister    sr.SubjectLister
-	deleter   sr.SubjectDeleter
+	creator   sradmin.SubjectCreator
+	lister    sradmin.SubjectLister
+	deleter   sradmin.SubjectDeleter
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -28,11 +28,11 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 	switch msg.(type) {
-	case pages.LoadCreateSubjectPageMsg:
+	case navigation.LoadCreateSubjectPageMsg:
 		createPage, cmd := create_subjects_page.New(m.creator, m.ktx)
 		cmds = append(cmds, cmd)
 		m.active = createPage
-	case pages.LoadSubjectsPageMsg:
+	case navigation.LoadSubjectsPageMsg:
 		subjectsPage, cmd := subjects_page.New(m.lister, m.deleter)
 		cmds = append(cmds, cmd)
 		m.active = subjectsPage
@@ -45,7 +45,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func New(lister sr.SubjectLister, creator sr.SubjectCreator, deleter sr.SubjectDeleter, ktx *kontext.ProgramKtx) (*Model, tea.Cmd) {
+func New(lister sradmin.SubjectLister, creator sradmin.SubjectCreator, deleter sradmin.SubjectDeleter, ktx *kontext.ProgramKtx) (*Model, tea.Cmd) {
 	subjectsPage, cmd := subjects_page.New(lister, deleter)
 	model := Model{active: subjectsPage}
 	model.statusbar = statusbar.New(subjectsPage)

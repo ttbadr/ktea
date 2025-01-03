@@ -5,9 +5,10 @@ import (
 	"github.com/charmbracelet/huh"
 	"ktea/kadmin"
 	"ktea/kontext"
+	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages"
+	"ktea/ui/pages/navigation"
 )
 
 type Model struct {
@@ -16,7 +17,7 @@ type Model struct {
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
-	return m.form.View()
+	return renderer.RenderWithStyle(m.form.View(), styles.Form)
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
@@ -24,7 +25,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEsc:
-			return ui.PublishMsg(pages.LoadTopicsPageMsg{})
+			return ui.PublishMsg(navigation.LoadTopicsPageMsg{})
 		}
 	}
 
@@ -33,7 +34,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.form = f
 	}
 	if m.form.State == huh.StateCompleted {
-		return ui.PublishMsg(pages.LoadConsumptionPageMsg{
+		return ui.PublishMsg(navigation.LoadConsumptionPageMsg{
 			Topic: m.topic,
 		})
 	}
@@ -53,15 +54,15 @@ func (m *Model) Title() string {
 	return "Consumption details"
 }
 
-func newCreateTopicForm() *huh.Form {
+func newForm() *huh.Form {
 	form := huh.NewForm(
 		huh.NewGroup(
-			huh.NewSelect[string]().
+			huh.NewSelect[kadmin.StartPoint]().
 				Title("Start form").
 				Options(
-					huh.NewOption("Beginning", "beginning"),
-					huh.NewOption("Most Recent", "most-recent"),
-					huh.NewOption("Today", "today")),
+					huh.NewOption("Beginning", kadmin.Beginning),
+					huh.NewOption("Most Recent", kadmin.MostRecent),
+					huh.NewOption("Today", kadmin.Today)),
 			huh.NewSelect[string]().
 				Title("Limit").
 				Options(
@@ -77,6 +78,6 @@ func newCreateTopicForm() *huh.Form {
 func New(topic kadmin.Topic) *Model {
 	return &Model{
 		topic: topic,
-		form:  newCreateTopicForm(),
+		form:  newForm(),
 	}
 }

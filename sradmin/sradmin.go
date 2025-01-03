@@ -1,4 +1,4 @@
-package sr
+package sradmin
 
 import tea "github.com/charmbracelet/bubbletea"
 

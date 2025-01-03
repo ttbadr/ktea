@@ -1,4 +1,4 @@
-package sr
+package sradmin
 
 import (
 	"encoding/base64"

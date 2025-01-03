@@ -9,13 +9,13 @@ import (
 	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages"
+	"ktea/ui/pages/navigation"
 	"sort"
 	"strconv"
 )
 
 type Model struct {
-	lister kadmin.ConsumerGroupLister
+	lister kadmin.CGroupLister
 	cmdBar *CmdBar
 	table  table.Model
 	groups []*kadmin.ConsumerGroup
@@ -61,7 +61,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "enter":
-			return ui.PublishMsg(pages.LoadCGroupTopicsPageMsg{GroupName: m.table.SelectedRow()[0]})
+			return ui.PublishMsg(navigation.LoadCGroupTopicsPageMsg{GroupName: m.table.SelectedRow()[0]})
 		}
 	case kadmin.ConsumerGroupsListedMsg:
 		m.groups = msg.ConsumerGroups
@@ -91,7 +91,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func New(lister kadmin.ConsumerGroupLister) (*Model, tea.Cmd) {
+func New(lister kadmin.CGroupLister) (*Model, tea.Cmd) {
 	m := &Model{}
 	m.lister = lister
 	m.table = table.New(

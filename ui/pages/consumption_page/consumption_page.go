@@ -10,7 +10,7 @@ import (
 	"ktea/kontext"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages"
+	"ktea/ui/pages/navigation"
 	"strconv"
 )
 
@@ -75,7 +75,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.KeyMsg:
 		if msg.String() == "esc" {
 			m.cancelConsumption()
-			return ui.PublishMsg(pages.LoadTopicsPageMsg{})
+			return ui.PublishMsg(navigation.LoadTopicsPageMsg{})
 		}
 	case kadmin.ReadingStartedMsg:
 		m.receivingChan = msg.ConsumerRecord

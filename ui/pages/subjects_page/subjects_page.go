@@ -3,12 +3,12 @@ package subjects_page
 import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
-	"ktea/kadmin/sr"
 	"ktea/kontext"
+	sradmin2 "ktea/sradmin"
 	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages"
+	"ktea/ui/pages/navigation"
 	"strconv"
 	"strings"
 )
@@ -17,9 +17,9 @@ type Model struct {
 	table         table.Model
 	rows          []table.Row
 	cmdBar        *SubjectsCmdBar
-	subjects      []sr.Subject
+	subjects      []sradmin2.Subject
 	tableFocussed bool
-	lister        sr.SubjectLister
+	lister        sradmin2.SubjectLister
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -56,19 +56,19 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		case "f5":
 			return m.lister.ListSubjects
 		case "ctrl+n":
-			return ui.PublishMsg(pages.LoadCreateSubjectPageMsg{})
+			return ui.PublishMsg(navigation.LoadCreateSubjectPageMsg{})
 		case "enter":
 			return ui.PublishMsg(
-				pages.LoadSchemaDetailsPageMsg{
+				navigation.LoadSchemaDetailsPageMsg{
 					Subject: m.table.SelectedRow()[0],
 				},
 			)
 		}
-	case sr.SubjectListingStartedMsg:
+	case sradmin2.SubjectListingStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
-	case sr.SubjectsListedMsg:
+	case sradmin2.SubjectsListedMsg:
 		m.subjects = msg.Subjects
-	case sr.SubjectDeletionStartedMsg:
+	case sradmin2.SubjectDeletionStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
 	}
 
@@ -121,9 +121,9 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 	}
 }
 
-func (t *Model) SelectedTopicName() sr.Subject {
+func (t *Model) SelectedTopicName() sradmin2.Subject {
 	selectedRow := t.table.SelectedRow()
-	var selectedTopic sr.Subject
+	var selectedTopic sradmin2.Subject
 	if selectedRow != nil {
 		return t.subjects[t.table.Cursor()]
 	}
@@ -134,7 +134,7 @@ func (m *Model) Title() string {
 	return "Subjects"
 }
 
-func New(lister sr.SubjectLister, deleter sr.SubjectDeleter) (*Model, tea.Cmd) {
+func New(lister sradmin2.SubjectLister, deleter sradmin2.SubjectDeleter) (*Model, tea.Cmd) {
 	t := table.New(
 		table.WithFocused(true),
 		table.WithStyles(styles.Table.Styles),

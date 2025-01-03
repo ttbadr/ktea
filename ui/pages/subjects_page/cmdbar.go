@@ -3,8 +3,8 @@ package subjects_page
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"ktea/kadmin/sr"
 	"ktea/kontext"
+	sradmin2 "ktea/sradmin"
 	"ktea/ui"
 	"ktea/ui/components/cmdbar"
 	"ktea/ui/components/notifier"
@@ -13,7 +13,7 @@ import (
 )
 
 type SubjectsCmdBar struct {
-	deleteWidget     *cmdbar.DeleteCmdBarModel[sr.Subject]
+	deleteWidget     *cmdbar.DeleteCmdBarModel[sradmin2.Subject]
 	searchWidget     cmdbar.Widget
 	notifierWidget   cmdbar.Widget
 	active           cmdbar.Widget
@@ -27,7 +27,7 @@ func (s *SubjectsCmdBar) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) st
 	return ""
 }
 
-func (s *SubjectsCmdBar) Update(msg tea.Msg, selectedSubject sr.Subject) (tea.Msg, tea.Cmd) {
+func (s *SubjectsCmdBar) Update(msg tea.Msg, selectedSubject sradmin2.Subject) (tea.Msg, tea.Cmd) {
 	// when notifier is active it is receiving priority to handle messages
 	// until a message comes in that deactivates the notifier
 	if s.active == s.notifierWidget {
@@ -40,7 +40,7 @@ func (s *SubjectsCmdBar) Update(msg tea.Msg, selectedSubject sr.Subject) (tea.Ms
 	}
 
 	switch msg := msg.(type) {
-	case sr.SubjectListingStartedMsg, sr.SubjectDeletionStartedMsg:
+	case sradmin2.SubjectListingStartedMsg, sradmin2.SubjectDeletionStartedMsg:
 		s.active = s.notifierWidget
 		_, pmsg, cmd := s.active.Update(msg)
 		return pmsg, cmd
@@ -102,8 +102,8 @@ func (s *SubjectsCmdBar) Shortcuts() []statusbar.Shortcut {
 	return s.active.Shortcuts()
 }
 
-func NewCmdBar(deleter sr.SubjectDeleter) *SubjectsCmdBar {
-	deleteMsgFunc := func(subject sr.Subject) string {
+func NewCmdBar(deleter sradmin2.SubjectDeleter) *SubjectsCmdBar {
+	deleteMsgFunc := func(subject sradmin2.Subject) string {
 		message := subject.Name + lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#7571F9")).
 			Bold(true).
@@ -111,17 +111,17 @@ func NewCmdBar(deleter sr.SubjectDeleter) *SubjectsCmdBar {
 		return message
 	}
 
-	deleteFunc := func(subject sr.Subject) tea.Cmd {
+	deleteFunc := func(subject sradmin2.Subject) tea.Cmd {
 		return func() tea.Msg {
 			return deleter.DeleteSubject(subject.Name, 1)
 		}
 	}
 
-	subjectListingStartedNotifier := func(msg sr.SubjectListingStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
+	subjectListingStartedNotifier := func(msg sradmin2.SubjectListingStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		cmd := m.SpinWithLoadingMsg("Loading subjects")
 		return true, cmd
 	}
-	subjectsListedNotifier := func(msg sr.SubjectsListedMsg, m *notifier.Model) (bool, tea.Cmd) {
+	subjectsListedNotifier := func(msg sradmin2.SubjectsListedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.Idle()
 		return false, nil
 	}
@@ -129,15 +129,15 @@ func NewCmdBar(deleter sr.SubjectDeleter) *SubjectsCmdBar {
 		m.Idle()
 		return false, nil
 	}
-	subjectDeletionStartedNotifier := func(msg sr.SubjectDeletionStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
+	subjectDeletionStartedNotifier := func(msg sradmin2.SubjectDeletionStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		cmd := m.SpinWithLoadingMsg("Deleting Subject")
 		return true, cmd
 	}
-	subjectListingErrorMsg := func(msg sr.SubjetListingErrorMsg, m *notifier.Model) (bool, tea.Cmd) {
+	subjectListingErrorMsg := func(msg sradmin2.SubjetListingErrorMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowErrorMsg("Error listing subjects", msg.Err)
 		return true, nil
 	}
-	subjectDeletedNotifier := func(msg sr.SubjectDeletedMsg, m *notifier.Model) (bool, tea.Cmd) {
+	subjectDeletedNotifier := func(msg sradmin2.SubjectDeletedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowSuccessMsg("Subject deleted")
 		return true, func() tea.Msg {
 			time.Sleep(2 * time.Second)
