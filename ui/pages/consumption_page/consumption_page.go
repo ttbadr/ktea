@@ -10,12 +10,12 @@ import (
 	"ktea/kontext"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages/navigation"
+	"ktea/ui/pages/nav"
 	"strconv"
 )
 
 type Model struct {
-	topic             kadmin.Topic
+	readDetails       kadmin.ReadDetails
 	consumedRecords   []kadmin.ConsumerRecord
 	table             *table.Model
 	receivingChan     chan kadmin.ConsumerRecord
@@ -75,7 +75,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.KeyMsg:
 		if msg.String() == "esc" {
 			m.cancelConsumption()
-			return ui.PublishMsg(navigation.LoadTopicsPageMsg{})
+			return ui.PublishMsg(nav.LoadTopicsPageMsg{})
 		}
 	case kadmin.ReadingStartedMsg:
 		m.receivingChan = msg.ConsumerRecord
@@ -88,7 +88,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-func New(reader kadmin.RecordReader, topic kadmin.Topic) (*Model, tea.Cmd) {
+func New(reader kadmin.RecordReader, readDetails kadmin.ReadDetails) (nav.Page, tea.Cmd) {
 	s := table.DefaultStyles()
 	s.Header = s.Header.
 		BorderStyle(lipgloss.NormalBorder()).
@@ -104,10 +104,10 @@ func New(reader kadmin.RecordReader, topic kadmin.Topic) (*Model, tea.Cmd) {
 	)
 	m := &Model{}
 	m.reader = reader
-	m.topic = topic
+	m.readDetails = readDetails
 	m.table = &t
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	m.cancelConsumption = cancelFunc
-	cmd := func() tea.Msg { return m.reader.ReadRecords(ctx, kadmin.ReadDetails{Topic: m.topic}) }
+	cmd := func() tea.Msg { return m.reader.ReadRecords(ctx, kadmin.ReadDetails{Topic: m.readDetails.Topic}) }
 	return m, cmd
 }

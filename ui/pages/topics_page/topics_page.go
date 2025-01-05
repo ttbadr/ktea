@@ -9,7 +9,7 @@ import (
 	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages/navigation"
+	"ktea/ui/pages/nav"
 	"slices"
 	"sort"
 	"strconv"
@@ -77,14 +77,16 @@ func (t *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 		switch msg.String() {
 		case "ctrl+n":
-			return ui.PublishMsg(navigation.LoadCreateTopicPageMsg{})
+			return ui.PublishMsg(nav.LoadCreateTopicPageMsg{})
 		case "ctrl+u":
-			return ui.PublishMsg(navigation.LoadTopicConfigPageMsg{})
+			return ui.PublishMsg(nav.LoadTopicConfigPageMsg{})
 		case "ctrl+p":
-			return ui.PublishMsg(navigation.LoadPublishPageMsg{Topic: t.SelectedTopic()})
+			return ui.PublishMsg(nav.LoadPublishPageMsg{Topic: t.SelectedTopic()})
 		case "enter":
 			if t.cmdBar.IsNotFocused() {
-				return ui.PublishMsg(navigation.LoadConsumptionFormPageMsg{})
+				return ui.PublishMsg(nav.LoadConsumptionFormPageMsg{
+					Topic: t.SelectedTopic(),
+				})
 			}
 		}
 		selectedTopic := t.SelectedTopicName()

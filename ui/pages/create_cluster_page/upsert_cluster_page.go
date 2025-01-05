@@ -47,7 +47,13 @@ type Model struct {
 }
 
 func (m *Model) Shortcuts() []statusbar.Shortcut {
-	return []statusbar.Shortcut{}
+	return []statusbar.Shortcut{
+		{"Confirm", "enter"},
+		{"Next Field", "tab"},
+		{"Prev. Field", "s-tab"},
+		{"Reset Form", "C-r"},
+		{"Go Back", "esc"},
+	}
 }
 
 func (m *Model) Title() string {
@@ -68,20 +74,17 @@ type FormValues struct {
 	SrPassword       string
 }
 
-func (f *FormValues) HasSASLAuthMethodSelected() bool {
-	return f.AuthMethod == config.SASLAuthMethod
-}
-
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
-	builder := strings.Builder{}
-	if !ktx.Config.HasEnvs() {
+	var views []string
+	if !ktx.Config.HasClusters() {
+		builder := strings.Builder{}
 		builder.WriteString("\n")
 		builder.WriteString(lipgloss.NewStyle().PaddingLeft(1).Render("No clusters configured. Please create your first cluster!"))
 		builder.WriteString("\n")
+		views = append(views, renderer.Render(builder.String()))
 	}
-	builder.WriteString("\n")
-	builder.WriteString(m.form.View())
-	return builder.String()
+	views = append(views, renderer.RenderWithStyle(m.form.View(), styles.Form))
+	return ui.JoinVerticalSkipEmptyViews(views...)
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
@@ -168,6 +171,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 	}
 	return cmd
+}
+
+func (f *FormValues) HasSASLAuthMethodSelected() bool {
+	return f.AuthMethod == config.SASLAuthMethod
 }
 
 func (m *Model) NextField(count int) {

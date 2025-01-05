@@ -9,7 +9,7 @@ import (
 	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages/navigation"
+	"ktea/ui/pages/nav"
 	"slices"
 	"sort"
 	"strconv"
@@ -77,7 +77,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc":
-			return ui.PublishMsg(navigation.LoadCGroupsPageMsg{})
+			return ui.PublishMsg(nav.LoadCGroupsPageMsg{})
 		}
 	case kadmin.OffsetListingStartedMsg:
 		cmds = append(

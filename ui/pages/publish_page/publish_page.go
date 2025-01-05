@@ -6,13 +6,13 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/lipgloss"
 	"ktea/kadmin"
 	"ktea/kontext"
+	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages/navigation"
+	"ktea/ui/pages/nav"
 	"strconv"
 )
 
@@ -43,10 +43,9 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	if m.form == nil {
 		m.form = m.newForm(ktx)
 	}
-	return lipgloss.JoinVertical(
-		lipgloss.Top,
+	return ui.JoinVerticalSkipEmptyViews(
 		notifierView,
-		renderer.Render(m.form.View()),
+		renderer.RenderWithStyle(m.form.View(), styles.Form),
 	)
 }
 
@@ -80,7 +79,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.notifier.Idle()
 		switch msg.Type {
 		case tea.KeyEsc:
-			return ui.PublishMsg(navigation.LoadTopicsPageMsg{})
+			return ui.PublishMsg(nav.LoadTopicsPageMsg{})
 		}
 	}
 	if m.form != nil {
@@ -135,7 +134,7 @@ func (m *Model) newForm(ktx *kontext.ProgramKtx) *huh.Form {
 		ShowLineNumbers(true).
 		Key("PAYLOAD").
 		Title("Payload").
-		WithHeight(ktx.AvailableHeight - 9)
+		WithHeight(ktx.AvailableHeight - 8)
 	m.title = huh.NewInput().
 		Title("Key").
 		Key("KEY")

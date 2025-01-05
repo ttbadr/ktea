@@ -9,7 +9,7 @@ import (
 	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages/navigation"
+	"ktea/ui/pages/nav"
 	"sort"
 	"strconv"
 )
@@ -61,7 +61,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "enter":
-			return ui.PublishMsg(navigation.LoadCGroupTopicsPageMsg{GroupName: m.table.SelectedRow()[0]})
+			return ui.PublishMsg(nav.LoadCGroupTopicsPageMsg{GroupName: m.table.SelectedRow()[0]})
 		}
 	case kadmin.ConsumerGroupsListedMsg:
 		m.groups = msg.ConsumerGroups

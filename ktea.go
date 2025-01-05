@@ -96,7 +96,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.initTopicsTabOrError(msg.Cluster)
 	case config.LoadedMsg:
 		m.ktx.Config = msg.Config
-		if m.ktx.Config.HasEnvs() {
+		if m.ktx.Config.HasClusters() {
 			m.tabs.GoToTab(tabs.TopicsTab)
 			return m.initTopicsTabOrError(msg.Config.ActiveCluster())
 		} else {
@@ -121,7 +121,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// if no clusters configured,
 	// do not allow to move away from create cluster form
-	if m.ktx.Config != nil && m.ktx.Config.HasEnvs() {
+	if m.ktx.Config != nil && m.ktx.Config.HasClusters() {
 		m.tabs.Update(msg)
 	}
 	if m.tabs.ActiveTab() != m.activeTab {

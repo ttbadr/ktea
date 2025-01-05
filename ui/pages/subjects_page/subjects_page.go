@@ -8,7 +8,7 @@ import (
 	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages/navigation"
+	"ktea/ui/pages/nav"
 	"strconv"
 	"strings"
 )
@@ -56,10 +56,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		case "f5":
 			return m.lister.ListSubjects
 		case "ctrl+n":
-			return ui.PublishMsg(navigation.LoadCreateSubjectPageMsg{})
+			return ui.PublishMsg(nav.LoadCreateSubjectPageMsg{})
 		case "enter":
 			return ui.PublishMsg(
-				navigation.LoadSchemaDetailsPageMsg{
+				nav.LoadSchemaDetailsPageMsg{
 					Subject: m.table.SelectedRow()[0],
 				},
 			)

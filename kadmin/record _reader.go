@@ -26,6 +26,7 @@ type ReadDetails struct {
 	Topic      Topic
 	Partitions []int
 	StartPoint StartPoint
+	Limit      int
 }
 
 type ConsumerRecord struct {

@@ -36,7 +36,7 @@ func (c *CmdBar) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 }
 
 // Update returns the tea.Msg if it is not being handled or nil if it is
-func (c *CmdBar) Update(msg tea.Msg, selectedCluster string) (tea.Msg, tea.Cmd) {
+func (c *CmdBar) Update(msg tea.Msg, selectedCluster *string) (tea.Msg, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+d" {
@@ -45,7 +45,7 @@ func (c *CmdBar) Update(msg tea.Msg, selectedCluster string) (tea.Msg, tea.Cmd) 
 			c.deleteConfirm = newDeleteConfirm()
 			c.deleteConfirm.Title(lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#FAFAFA")).
-				Render("🗑️  "+selectedCluster) + lipgloss.NewStyle().
+				Render("🗑️  "+*selectedCluster) + lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#7571F9")).
 				Bold(true).
 				Render(" will be delete permanently")).
@@ -59,8 +59,8 @@ func (c *CmdBar) Update(msg tea.Msg, selectedCluster string) (tea.Msg, tea.Cmd) 
 			c.state = HIDDEN
 			if c.deleteConfirm.GetValue().(bool) {
 				return nil, func() tea.Msg {
-					c.ktx.Config.DeleteCluster(selectedCluster)
-					return config.ClusterDeletedMsg{Name: selectedCluster}
+					c.ktx.Config.DeleteCluster(*selectedCluster)
+					return config.ClusterDeletedMsg{Name: *selectedCluster}
 				}
 			}
 

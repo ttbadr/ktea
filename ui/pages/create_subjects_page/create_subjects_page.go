@@ -3,14 +3,14 @@ package create_subjects_page
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/lipgloss"
 	"ktea/kontext"
 	sradmin2 "ktea/sradmin"
+	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/cmdbar"
 	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages/navigation"
+	"ktea/ui/pages/nav"
 	"time"
 )
 
@@ -45,7 +45,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 
 	return ui.JoinVerticalSkipEmptyViews(
 		cmdbarView,
-		renderer.Render(lipgloss.NewStyle().PaddingTop(1).Render(m.form.View())),
+		renderer.RenderWithStyle(m.form.View(), styles.Form),
 	)
 }
 
@@ -76,7 +76,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		{
 			switch msg.String() {
 			case "esc":
-				cmds = append(cmds, ui.PublishMsg(navigation.LoadSubjectsPageMsg{}))
+				cmds = append(cmds, ui.PublishMsg(nav.LoadSubjectsPageMsg{}))
 			}
 		}
 	case sradmin2.SchemaCreatedMsg:

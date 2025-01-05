@@ -8,7 +8,7 @@ import (
 	"ktea/kontext"
 	"ktea/tests/keys"
 	"ktea/ui"
-	"ktea/ui/pages/navigation"
+	"ktea/ui/pages/nav"
 	"testing"
 )
 
@@ -63,7 +63,7 @@ func TestCreateTopic(t *testing.T) {
 
 		cmd := m.Update(keys.Key(tea.KeyEsc))
 
-		assert.IsType(t, navigation.LoadTopicsPageMsg{}, cmd())
+		assert.IsType(t, nav.LoadTopicsPageMsg{}, cmd())
 	})
 
 	t.Run("c-r resets form", func(t *testing.T) {

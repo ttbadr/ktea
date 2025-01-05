@@ -12,7 +12,8 @@ var Statusbar StatusBarStyle
 var Table TableStyle
 var CmdBar lipgloss.Style
 var Form = lipgloss.NewStyle().
-	Padding(1)
+	PaddingLeft(1).
+	PaddingTop(1)
 var Notifier NotifierStyle
 var clusterColors map[string]string
 

@@ -8,7 +8,7 @@ import (
 	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages/navigation"
+	"ktea/ui/pages/nav"
 	"sort"
 	"strings"
 )
@@ -67,7 +67,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			}
 		}
 		selectedCluster := m.SelectedCluster()
-		msgToPropagate, cmd := m.cmdBar.Update(msg, *selectedCluster)
+		msgToPropagate, cmd := m.cmdBar.Update(msg, selectedCluster)
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}
@@ -107,7 +107,7 @@ func (m *Model) createRows() []table.Row {
 	return rows
 }
 
-func New(ktx *kontext.ProgramKtx) (navigation.Page, tea.Cmd) {
+func New(ktx *kontext.ProgramKtx) (nav.Page, tea.Cmd) {
 	model := Model{}
 	model.ktx = ktx
 	model.table = table.New(

@@ -48,7 +48,7 @@ type Config struct {
 	ConfigIO ConfigIO  `yaml:"-"`
 }
 
-func (c *Config) HasEnvs() bool {
+func (c *Config) HasClusters() bool {
 	return len(c.Clusters) > 0
 }
 

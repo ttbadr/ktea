@@ -8,10 +8,11 @@ import (
 	"github.com/charmbracelet/huh"
 	"ktea/kadmin"
 	"ktea/kontext"
+	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages/navigation"
+	"ktea/ui/pages/nav"
 	"regexp"
 	"strconv"
 	"strings"
@@ -21,7 +22,6 @@ type formState int
 
 const (
 	initial       formState = 0
-	created       formState = 0
 	configEntered formState = 1
 	loading       formState = 2
 )
@@ -51,7 +51,8 @@ type topicFormValues struct {
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	var views []string
 	notifierView := m.notifier.View(ktx, renderer)
-	views = append(views, notifierView, m.form.View())
+	formView := renderer.RenderWithStyle(m.form.View(), styles.Form)
+	views = append(views, notifierView, formView)
 
 	if len(m.formValues.configs) > 0 {
 		views = append(views, renderer.Render("Custom Topic configurations:\n\n"))
@@ -72,7 +73,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return cmd
 	case tea.KeyMsg:
 		if msg.String() == "esc" && m.formState != loading {
-			return ui.PublishMsg(navigation.LoadTopicsPageMsg{})
+			return ui.PublishMsg(nav.LoadTopicsPageMsg{})
 		} else if msg.String() == "ctrl+r" {
 			m.formValues.name = ""
 			m.formValues.cleanupPolicy = ""

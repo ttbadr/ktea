@@ -7,12 +7,12 @@ import (
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
 	"ktea/ui/pages/create_subjects_page"
-	"ktea/ui/pages/navigation"
+	"ktea/ui/pages/nav"
 	"ktea/ui/pages/subjects_page"
 )
 
 type Model struct {
-	active    navigation.Page
+	active    nav.Page
 	statusbar *statusbar.Model
 	ktx       *kontext.ProgramKtx
 	creator   sradmin.SubjectCreator
@@ -28,11 +28,11 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 	switch msg.(type) {
-	case navigation.LoadCreateSubjectPageMsg:
+	case nav.LoadCreateSubjectPageMsg:
 		createPage, cmd := create_subjects_page.New(m.creator, m.ktx)
 		cmds = append(cmds, cmd)
 		m.active = createPage
-	case navigation.LoadSubjectsPageMsg:
+	case nav.LoadSubjectsPageMsg:
 		subjectsPage, cmd := subjects_page.New(m.lister, m.deleter)
 		cmds = append(cmds, cmd)
 		m.active = subjectsPage

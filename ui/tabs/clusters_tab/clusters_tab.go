@@ -8,7 +8,7 @@ import (
 	"ktea/ui/components/statusbar"
 	"ktea/ui/pages/clusters_page"
 	"ktea/ui/pages/create_cluster_page"
-	"ktea/ui/pages/navigation"
+	"ktea/ui/pages/nav"
 	"strings"
 )
 
@@ -16,8 +16,8 @@ type state int
 
 type Model struct {
 	state      state
-	active     navigation.Page
-	createPage navigation.Page
+	active     nav.Page
+	createPage nav.Page
 	config     *config.Config
 	statusbar  *statusbar.Model
 	ktx        *kontext.ProgramKtx
@@ -25,7 +25,7 @@ type Model struct {
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	builder := strings.Builder{}
-	if m.config.HasEnvs() && m.statusbar != nil {
+	if m.config.HasClusters() && m.statusbar != nil {
 		builder.WriteString(m.statusbar.View(ktx, renderer))
 	}
 	builder.WriteString(m.active.View(ktx, renderer))
@@ -43,7 +43,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.statusbar = statusbar.New(m.active)
 		return func() tea.Msg { return config.ReLoadConfig() }
 	case config.ClusterDeletedMsg:
-		if m.config.HasEnvs() {
+		if m.config.HasClusters() {
 			var listPage, _ = clusters_page.New(m.ktx)
 			m.active = create_cluster_page.NewForm(m.ktx.Config, m.ktx)
 			m.statusbar = statusbar.New(m.active)
@@ -62,10 +62,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		switch msg.String() {
 		case "esc":
 			m.active, _ = clusters_page.New(m.ktx)
-			return nil
 		case "ctrl+n":
 			m.active = create_cluster_page.NewForm(m.ktx.Config, m.ktx)
-			return nil
 		case "ctrl+e":
 			clusterName := m.active.(*clusters_page.Model).SelectedCluster()
 			selectedCluster := m.ktx.Config.FindClusterByName(*clusterName)
@@ -94,7 +92,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			return nil
 		}
 	}
+
+	// always recreate the statusbar in case the active page might have changed
 	m.statusbar = statusbar.New(m.active)
+
 	return m.active.Update(msg)
 }
 
@@ -103,7 +104,7 @@ func New(ktx *kontext.ProgramKtx) (*Model, tea.Cmd) {
 	m := Model{}
 	m.ktx = ktx
 	m.config = ktx.Config
-	if m.config.HasEnvs() {
+	if m.config.HasClusters() {
 		var listPage, c = clusters_page.New(ktx)
 		cmd = c
 		m.active = listPage

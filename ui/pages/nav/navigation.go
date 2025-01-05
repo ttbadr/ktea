@@ -1,4 +1,4 @@
-package navigation
+package nav
 
 import (
 	"ktea/kadmin"
@@ -24,11 +24,11 @@ type LoadPublishPageMsg struct {
 }
 
 type LoadConsumptionPageMsg struct {
-	Topic       kadmin.Topic
 	ReadDetails kadmin.ReadDetails
 }
 
 type LoadConsumptionFormPageMsg struct {
+	Topic kadmin.Topic
 }
 
 type LoadCGroupsPageMsg struct {

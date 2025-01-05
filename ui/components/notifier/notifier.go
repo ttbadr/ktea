@@ -51,6 +51,9 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case spinner.TickMsg:
+		if m.state != spinning {
+			return nil
+		}
 		s, cmd := m.spinner.Update(msg)
 		m.spinner = s
 		return cmd

@@ -7,7 +7,7 @@ import (
 	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages/navigation"
+	"ktea/ui/pages/nav"
 )
 
 type Model struct {
@@ -40,6 +40,6 @@ func (m *Model) Title() string {
 	return ""
 }
 
-func New(err error) navigation.Page {
+func New(err error) nav.Page {
 	return &Model{err: err}
 }

@@ -9,11 +9,11 @@ import (
 	"ktea/ui/components/statusbar"
 	"ktea/ui/pages/cgroups_page"
 	"ktea/ui/pages/cgroups_topics_page"
-	"ktea/ui/pages/navigation"
+	"ktea/ui/pages/nav"
 )
 
 type Model struct {
-	active              navigation.Page
+	active              nav.Page
 	list                *cgroups_page.Model
 	statusbar           *statusbar.Model
 	offsetLister        kadmin.OffsetLister
@@ -31,12 +31,12 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
-	case navigation.LoadCGroupTopicsPageMsg:
+	case nav.LoadCGroupTopicsPageMsg:
 		cgroupsTopicsPage, cmd := cgroups_topics_page.New(m.offsetLister, msg.GroupName)
 		cmds = append(cmds, cmd)
 		m.active = cgroupsTopicsPage
 		return tea.Batch(cmds...)
-	case navigation.LoadCGroupsPageMsg:
+	case nav.LoadCGroupsPageMsg:
 		cgroupsPage, cmd := cgroups_page.New(m.consumerGroupLister)
 		m.active = cgroupsPage
 		return cmd
