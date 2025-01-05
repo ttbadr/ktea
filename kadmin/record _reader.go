@@ -3,6 +3,7 @@ package kadmin
 import (
 	"context"
 	"github.com/IBM/sarama"
+	"sync"
 )
 
 type StartPoint int
@@ -42,24 +43,50 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) Rea
 		ConsumerRecord: make(chan ConsumerRecord),
 		Err:            make(chan error),
 	}
+
+	client, err := sarama.NewConsumerFromClient(ka.client)
+	if err != nil {
+		close(rsm.ConsumerRecord)
+		close(rsm.Err)
+		return rsm
+	}
+
+	var (
+		readMsgCount int
+		mu           sync.Mutex
+		wg           sync.WaitGroup
+	)
+
 	var partitions []int
 	if len(rd.Partitions) == 0 {
 		partitions = make([]int, rd.Topic.Partitions)
-
 		for i := range partitions {
 			partitions[i] = i
 		}
 	} else {
 		partitions = rd.Partitions
 	}
-	client, err := sarama.NewConsumerFromClient(ka.client)
-	if err != nil {
-		return ReadingStartedMsg{}
+
+	var (
+		offsets map[int]int64
+		ok      bool
+	)
+	if rd.StartPoint != Beginning {
+		offsets, ok = ka.fetchFirstAvailableOffsets(partitions, rd, rsm)
+		if !ok {
+			close(rsm.Err)
+			return rsm
+		}
 	}
+
+	wg.Add(len(partitions))
+
 	for _, partition := range partitions {
 		go func(partition int) {
-			consumer, err := client.ConsumePartition(rd.Topic.Name, int32(partition), 0)
+			defer wg.Done()
 
+			startingOffset := ka.determineStartingOffset(partition, rd, offsets)
+			consumer, err := client.ConsumePartition(rd.Topic.Name, int32(partition), startingOffset)
 			if err != nil {
 				rsm.Err <- err
 				return
@@ -71,7 +98,7 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) Rea
 
 			for {
 				select {
-				case err = <-consumer.Errors():
+				case err := <-consumer.Errors():
 					rsm.Err <- err
 					return
 				case <-ctx.Done():
@@ -89,10 +116,74 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) Rea
 						Offset:    msg.Offset,
 						Headers:   headers,
 					}
+
+					mu.Lock()
+					readMsgCount++
+					if readMsgCount >= rd.Limit {
+						mu.Unlock()
+						return
+					}
+					mu.Unlock()
 				}
 			}
 		}(partition)
-
 	}
+
+	go func() {
+		wg.Wait()
+		close(rsm.ConsumerRecord)
+		close(rsm.Err)
+	}()
+
 	return rsm
+}
+
+func (ka *SaramaKafkaAdmin) determineStartingOffset(partition int, rd ReadDetails, offsets map[int]int64) int64 {
+	var startingOffset int64
+	if rd.StartPoint == Beginning {
+		startingOffset = sarama.OffsetOldest
+	} else {
+		latestOffset := offsets[partition]
+		startingOffset = latestOffset - int64(rd.Limit)
+		if startingOffset < 0 {
+			startingOffset = 0
+		}
+	}
+	return startingOffset
+}
+
+func (ka *SaramaKafkaAdmin) fetchFirstAvailableOffsets(partitions []int, rd ReadDetails, rsm ReadingStartedMsg) (map[int]int64, bool) {
+	offsets := make(map[int]int64)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	errorsChan := make(chan error, len(partitions))
+
+	for _, partition := range partitions {
+		wg.Add(1)
+		go func(partition int) {
+			defer wg.Done()
+
+			offset, err := ka.client.GetOffset(rd.Topic.Name, int32(partition), sarama.OffsetNewest)
+			if err != nil {
+				errorsChan <- err
+				return
+			}
+
+			mu.Lock()
+			offsets[partition] = offset
+			mu.Unlock()
+		}(partition)
+	}
+
+	wg.Wait()
+
+	select {
+	case err := <-errorsChan:
+		rsm.Err <- err
+		close(rsm.ConsumerRecord)
+		close(rsm.Err)
+		return nil, false
+	default:
+		return offsets, true
+	}
 }

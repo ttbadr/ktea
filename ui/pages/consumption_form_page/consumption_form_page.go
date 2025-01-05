@@ -105,8 +105,7 @@ func (m *Model) newForm(partitions int, ktx *kontext.ProgramKtx) *huh.Form {
 				Title("Start form").
 				Options(
 					huh.NewOption("Beginning", kadmin.Beginning),
-					huh.NewOption("Most Recent", kadmin.MostRecent),
-					huh.NewOption("Today", kadmin.Today)),
+					huh.NewOption("Most Recent", kadmin.MostRecent)),
 			huh.NewMultiSelect[int]().
 				Value(&m.formValues.partitions).
 				Height(optionsHeight).
