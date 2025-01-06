@@ -11,7 +11,6 @@ type StartPoint int
 const (
 	Beginning  StartPoint = 0
 	MostRecent StartPoint = 1
-	Today      StartPoint = 2
 )
 
 type RecordReader interface {
@@ -39,43 +38,35 @@ type ConsumerRecord struct {
 }
 
 func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) ReadingStartedMsg {
-	rsm := ReadingStartedMsg{
+	startedMsg := ReadingStartedMsg{
 		ConsumerRecord: make(chan ConsumerRecord),
 		Err:            make(chan error),
 	}
 
 	client, err := sarama.NewConsumerFromClient(ka.client)
 	if err != nil {
-		close(rsm.ConsumerRecord)
-		close(rsm.Err)
-		return rsm
+		close(startedMsg.ConsumerRecord)
+		close(startedMsg.Err)
+		return startedMsg
 	}
 
 	var (
-		readMsgCount int
-		mu           sync.Mutex
-		wg           sync.WaitGroup
+		msgCount   int
+		mu         sync.Mutex
+		closeOnce  sync.Once
+		wg         sync.WaitGroup
+		offsets    map[int]int64
+		ok         bool
+		partitions []int
 	)
 
-	var partitions []int
-	if len(rd.Partitions) == 0 {
-		partitions = make([]int, rd.Topic.Partitions)
-		for i := range partitions {
-			partitions[i] = i
-		}
-	} else {
-		partitions = rd.Partitions
-	}
+	partitions = ka.determineReadPartitions(rd)
 
-	var (
-		offsets map[int]int64
-		ok      bool
-	)
 	if rd.StartPoint != Beginning {
-		offsets, ok = ka.fetchFirstAvailableOffsets(partitions, rd, rsm)
+		offsets, ok = ka.fetchFirstAvailableOffsets(partitions, rd, startedMsg)
 		if !ok {
-			close(rsm.Err)
-			return rsm
+			close(startedMsg.Err)
+			return startedMsg
 		}
 	}
 
@@ -88,28 +79,28 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) Rea
 			startingOffset := ka.determineStartingOffset(partition, rd, offsets)
 			consumer, err := client.ConsumePartition(rd.Topic.Name, int32(partition), startingOffset)
 			if err != nil {
-				rsm.Err <- err
+				startedMsg.Err <- err
 				return
 			}
 
 			defer consumer.Close()
 
-			messages := consumer.Messages()
+			msgChan := consumer.Messages()
 
 			for {
 				select {
 				case err := <-consumer.Errors():
-					rsm.Err <- err
+					startedMsg.Err <- err
 					return
 				case <-ctx.Done():
 					return
-				case msg := <-messages:
+				case msg := <-msgChan:
 					headers := make(map[string]string)
 					for _, h := range msg.Headers {
 						headers[string(h.Key)] = string(h.Value)
 					}
 
-					rsm.ConsumerRecord <- ConsumerRecord{
+					consumerRecord := ConsumerRecord{
 						Key:       string(msg.Key),
 						Value:     string(msg.Value),
 						Partition: int64(msg.Partition),
@@ -117,13 +108,27 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) Rea
 						Headers:   headers,
 					}
 
+					var shouldClose bool
+
 					mu.Lock()
-					readMsgCount++
-					if readMsgCount >= rd.Limit {
-						mu.Unlock()
-						return
+					msgCount++
+					if msgCount >= rd.Limit {
+						shouldClose = true
 					}
 					mu.Unlock()
+
+					select {
+					case startedMsg.ConsumerRecord <- consumerRecord:
+					case <-ctx.Done():
+						return
+					}
+
+					if shouldClose {
+						closeOnce.Do(func() {
+							close(startedMsg.ConsumerRecord)
+						})
+						return
+					}
 				}
 			}
 		}(partition)
@@ -131,19 +136,34 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) Rea
 
 	go func() {
 		wg.Wait()
-		close(rsm.ConsumerRecord)
-		close(rsm.Err)
+		closeOnce.Do(func() {
+			close(startedMsg.ConsumerRecord)
+			close(startedMsg.Err)
+		})
 	}()
 
-	return rsm
+	return startedMsg
 }
 
-func (ka *SaramaKafkaAdmin) determineStartingOffset(partition int, rd ReadDetails, offsets map[int]int64) int64 {
+func (ka *SaramaKafkaAdmin) determineReadPartitions(rd ReadDetails) []int {
+	var partitions []int
+	if len(rd.Partitions) == 0 {
+		partitions = make([]int, rd.Topic.Partitions)
+		for i := range partitions {
+			partitions[i] = i
+		}
+	} else {
+		partitions = rd.Partitions
+	}
+	return partitions
+}
+
+func (ka *SaramaKafkaAdmin) determineStartingOffset(partition int, rd ReadDetails, partByOffset map[int]int64) int64 {
 	var startingOffset int64
 	if rd.StartPoint == Beginning {
 		startingOffset = sarama.OffsetOldest
 	} else {
-		latestOffset := offsets[partition]
+		latestOffset := partByOffset[partition]
 		startingOffset = latestOffset - int64(rd.Limit)
 		if startingOffset < 0 {
 			startingOffset = 0

@@ -108,6 +108,8 @@ func New(reader kadmin.RecordReader, readDetails kadmin.ReadDetails) (nav.Page, 
 	m.table = &t
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	m.cancelConsumption = cancelFunc
-	cmd := func() tea.Msg { return m.reader.ReadRecords(ctx, kadmin.ReadDetails{Topic: m.readDetails.Topic}) }
+	cmd := func() tea.Msg {
+		return m.reader.ReadRecords(ctx, readDetails)
+	}
 	return m, cmd
 }
