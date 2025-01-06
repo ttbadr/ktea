@@ -67,21 +67,28 @@ func (m *Model) Title() string {
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
-	case spinner.TickMsg:
+	case spinner.TickMsg, notifier.HideNotificationMsg:
 		return m.notifier.Update(msg)
 	case kadmin.PublicationStartedMsg:
-		return waitForPublicationToCompleteCmd(msg)
-	case PublicationFailed:
+		return tea.Batch(
+			m.notifier.SpinWithLoadingMsg("Publishing record"),
+			func() tea.Msg { return msg.AwaitCompletion() },
+		)
+	case kadmin.PublicationFailed:
 		m.state = none
 		m.form.Init()
 		return m.notifier.ShowErrorMsg("Publication failed!", fmt.Errorf("TODO"))
-	case PublicationSucceeded:
+	case kadmin.PublicationSucceeded:
 		m.state = none
 		m.formValues.Key = ""
 		m.formValues.Partition = ""
 		m.formValues.Payload = ""
 		m.form = nil
-		return m.notifier.ShowSuccessMsg("Record published!")
+		return tea.Batch(
+			m.notifier.ShowSuccessMsg("Record published!"),
+			func() tea.Msg {
+				return notifier.HideNotificationMsg{}
+			})
 	case tea.KeyMsg:
 		m.notifier.Idle()
 		switch msg.Type {
@@ -117,23 +124,6 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return cmd
 	}
 	return nil
-}
-
-type PublicationFailed struct {
-}
-
-type PublicationSucceeded struct {
-}
-
-func waitForPublicationToCompleteCmd(msg kadmin.PublicationStartedMsg) tea.Cmd {
-	return func() tea.Msg {
-		select {
-		case <-msg.Err:
-			return PublicationFailed{}
-		case <-msg.Published:
-			return PublicationSucceeded{}
-		}
-	}
 }
 
 func (m *Model) newForm(ktx *kontext.ProgramKtx) *huh.Form {

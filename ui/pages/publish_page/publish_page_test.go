@@ -7,6 +7,7 @@ import (
 	"ktea/kontext"
 	"ktea/tests/keys"
 	"ktea/ui"
+	"ktea/ui/components/notifier"
 	"ktea/ui/pages/nav"
 	"testing"
 )
@@ -110,7 +111,7 @@ func TestPublish(t *testing.T) {
 		cmd = m.Update(cmd())
 		// execute cmd
 		executeBatchCmd(cmd)
-		m.Update(PublicationSucceeded{})
+		m.Update(kadmin.PublicationSucceeded{})
 
 		render := m.View(ui.TestKontext, ui.TestRenderer)
 
@@ -158,6 +159,36 @@ func TestPublish(t *testing.T) {
 		assert.Equal(t, "topic1", producerRecord.Topic)
 		assert.Nil(t, producerRecord.Partition)
 		assert.Equal(t, "payload", producerRecord.Value)
+	})
+
+	t.Run("upon successful publication", func(t *testing.T) {
+		m := New(&MockPublisher{
+			PublishRecordFunc: func(p *kadmin.ProducerRecord) kadmin.PublicationStartedMsg {
+				return kadmin.PublicationStartedMsg{}
+			},
+		}, kadmin.Topic{
+			Name:       "topic1",
+			Partitions: 10,
+			Replicas:   1,
+			Isr:        1,
+		})
+
+		cmds := m.Update(kadmin.PublicationSucceeded{})
+		msgs := executeBatchCmd(cmds)
+
+		t.Run("displays success notification", func(t *testing.T) {
+			render := m.View(ui.TestKontext, ui.TestRenderer)
+			assert.Contains(t, render, "🎉 Record published!")
+			assert.Contains(t, msgs, notifier.HideNotificationMsg{})
+		})
+
+		t.Run("hides success notification automatically", func(t *testing.T) {
+			cmds := m.Update(notifier.HideNotificationMsg{})
+			executeBatchCmd(cmds)
+
+			render := m.View(ui.TestKontext, ui.TestRenderer)
+			assert.NotContains(t, render, "🎉 Record published!")
+		})
 	})
 
 	t.Run("Validate", func(t *testing.T) {

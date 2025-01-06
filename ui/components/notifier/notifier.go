@@ -10,6 +10,7 @@ import (
 	"ktea/styles"
 	"ktea/ui"
 	"strings"
+	"time"
 )
 
 type state int
@@ -27,6 +28,10 @@ type Model struct {
 	msg        string
 	state      state
 }
+
+type HideNotificationMsg struct{}
+
+type NotificationHiddenMsg struct{}
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	if m.state == spinning {
@@ -57,6 +62,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		s, cmd := m.spinner.Update(msg)
 		m.spinner = s
 		return cmd
+	case HideNotificationMsg:
+		return func() tea.Msg {
+			time.Sleep(2 * time.Second)
+			m.Idle()
+			return NotificationHiddenMsg{}
+		}
 	}
 	return nil
 }
