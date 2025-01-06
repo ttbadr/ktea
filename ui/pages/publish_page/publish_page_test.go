@@ -78,6 +78,47 @@ func TestPublish(t *testing.T) {
 		assert.Equal(t, "payload", producerRecord.Value)
 	})
 
+	t.Run("reset form after successful publication", func(t *testing.T) {
+		m := New(&MockPublisher{
+			PublishRecordFunc: func(p *kadmin.ProducerRecord) kadmin.PublicationStartedMsg {
+				return kadmin.PublicationStartedMsg{}
+			},
+		}, kadmin.Topic{
+			Name:       "topic1",
+			Partitions: 10,
+			Replicas:   1,
+			Isr:        1,
+		})
+
+		m.View(&kontext.ProgramKtx{
+			WindowWidth:  100,
+			WindowHeight: 100,
+		}, ui.TestRenderer)
+		// Key
+		keys.UpdateKeys(m, "key")
+		cmd := m.Update(keys.Key(tea.KeyEnter))
+		m.Update(cmd())
+		// Partition
+		cmd = m.Update(keys.Key(tea.KeyEnter))
+		m.Update(cmd())
+		// payload
+		keys.UpdateKeys(m, "payload")
+		cmd = m.Update(keys.Key(tea.KeyEnter))
+		// next field
+		cmd = m.Update(cmd())
+		// next group
+		cmd = m.Update(cmd())
+		// execute cmd
+		executeBatchCmd(cmd)
+		m.Update(PublicationSucceeded{})
+
+		render := m.View(ui.TestKontext, ui.TestRenderer)
+
+		assert.Regexp(t, "Key\\W+\n\\W+>\\W+\n", render)
+		assert.Regexp(t, "Partition\\W+\n\\W+>\\W+\n", render)
+		assert.Regexp(t, "Payload\\W+\n\\W+1\\W+\n", render)
+	})
+
 	t.Run("publish without partition info", func(t *testing.T) {
 		var producerRecord *kadmin.ProducerRecord
 		m := New(&MockPublisher{

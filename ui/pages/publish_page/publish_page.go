@@ -24,18 +24,22 @@ const (
 )
 
 type Model struct {
-	state     state
-	form      *huh.Form
-	content   huh.Field
-	title     *huh.Input
-	partition *huh.Input
-	publisher kadmin.Publisher
-	topic     kadmin.Topic
-	notifier  *notifier.Model
+	state      state
+	form       *huh.Form
+	publisher  kadmin.Publisher
+	topic      kadmin.Topic
+	notifier   *notifier.Model
+	formValues *FormValues
 }
 
 type LoadPageMsg struct {
 	Topic kadmin.Topic
+}
+
+type FormValues struct {
+	Key       string
+	Partition string
+	Payload   string
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -73,6 +77,9 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return m.notifier.ShowErrorMsg("Publication failed!", fmt.Errorf("TODO"))
 	case PublicationSucceeded:
 		m.state = none
+		m.formValues.Key = ""
+		m.formValues.Partition = ""
+		m.formValues.Payload = ""
 		m.form = nil
 		return m.notifier.ShowSuccessMsg("Record published!")
 	case tea.KeyMsg:
@@ -94,14 +101,14 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				m.notifier.SpinWithRocketMsg("Publishing record"),
 				func() tea.Msg {
 					var part *int
-					if partStr := m.form.GetString("PARTITION"); partStr != "" {
-						if p, err := strconv.Atoi(partStr); err == nil {
+					if m.formValues.Partition != "" {
+						if p, err := strconv.Atoi(m.formValues.Partition); err == nil {
 							part = &p
 						}
 					}
 					return m.publisher.PublishRecord(&kadmin.ProducerRecord{
-						Key:       m.form.GetString("KEY"),
-						Value:     m.form.GetString("PAYLOAD"),
+						Key:       m.formValues.Key,
+						Value:     m.formValues.Payload,
 						Topic:     m.topic.Name,
 						Partition: part,
 					})
@@ -130,17 +137,17 @@ func waitForPublicationToCompleteCmd(msg kadmin.PublicationStartedMsg) tea.Cmd {
 }
 
 func (m *Model) newForm(ktx *kontext.ProgramKtx) *huh.Form {
-	m.content = huh.NewText().
+	content := huh.NewText().
 		ShowLineNumbers(true).
-		Key("PAYLOAD").
+		Value(&m.formValues.Payload).
 		Title("Payload").
-		WithHeight(ktx.AvailableHeight - 8)
-	m.title = huh.NewInput().
+		WithHeight(ktx.AvailableHeight - 10)
+	key := huh.NewInput().
 		Title("Key").
-		Key("KEY")
-	m.partition = huh.NewInput().
+		Value(&m.formValues.Key)
+	partition := huh.NewInput().
+		Value(&m.formValues.Partition).
 		Title("Partition").
-		Key("PARTITION").
 		Validate(func(str string) error {
 			if str == "" {
 				return nil
@@ -156,9 +163,9 @@ func (m *Model) newForm(ktx *kontext.ProgramKtx) *huh.Form {
 		})
 	form := huh.NewForm(
 		huh.NewGroup(
-			m.title,
-			m.partition,
-			m.content,
+			key,
+			partition,
+			content,
 		),
 	)
 	form.QuitAfterSubmit = false
@@ -167,5 +174,5 @@ func (m *Model) newForm(ktx *kontext.ProgramKtx) *huh.Form {
 }
 
 func New(p kadmin.Publisher, topic kadmin.Topic) *Model {
-	return &Model{topic: topic, publisher: p, notifier: notifier.New()}
+	return &Model{topic: topic, publisher: p, notifier: notifier.New(), formValues: &FormValues{}}
 }
