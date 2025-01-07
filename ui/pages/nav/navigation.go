@@ -20,7 +20,7 @@ type LoadCreateTopicPageMsg struct{}
 type LoadTopicConfigPageMsg struct{}
 
 type LoadPublishPageMsg struct {
-	Topic kadmin.Topic
+	Topic *kadmin.Topic
 }
 
 type LoadConsumptionPageMsg struct {
@@ -28,7 +28,8 @@ type LoadConsumptionPageMsg struct {
 }
 
 type LoadConsumptionFormPageMsg struct {
-	Topic kadmin.Topic
+	Topic       *kadmin.Topic
+	ReadDetails *kadmin.ReadDetails
 }
 
 type LoadCGroupsPageMsg struct {

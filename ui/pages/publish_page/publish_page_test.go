@@ -25,7 +25,7 @@ func (m *MockPublisher) PublishRecord(p *kadmin.ProducerRecord) kadmin.Publicati
 
 func TestPublish(t *testing.T) {
 	t.Run("esc goes back to topic list page", func(t *testing.T) {
-		m := New(&MockPublisher{}, kadmin.Topic{
+		m := New(&MockPublisher{}, &kadmin.Topic{
 			Name:       "topic1",
 			Partitions: 1,
 			Replicas:   1,
@@ -44,7 +44,7 @@ func TestPublish(t *testing.T) {
 				producerRecord = p
 				return kadmin.PublicationStartedMsg{}
 			},
-		}, kadmin.Topic{
+		}, &kadmin.Topic{
 			Name:       "topic1",
 			Partitions: 10,
 			Replicas:   1,
@@ -84,7 +84,7 @@ func TestPublish(t *testing.T) {
 			PublishRecordFunc: func(p *kadmin.ProducerRecord) kadmin.PublicationStartedMsg {
 				return kadmin.PublicationStartedMsg{}
 			},
-		}, kadmin.Topic{
+		}, &kadmin.Topic{
 			Name:       "topic1",
 			Partitions: 10,
 			Replicas:   1,
@@ -127,7 +127,7 @@ func TestPublish(t *testing.T) {
 				producerRecord = p
 				return kadmin.PublicationStartedMsg{}
 			},
-		}, kadmin.Topic{
+		}, &kadmin.Topic{
 			Name:       "topic1",
 			Partitions: 10,
 			Replicas:   1,
@@ -166,7 +166,7 @@ func TestPublish(t *testing.T) {
 			PublishRecordFunc: func(p *kadmin.ProducerRecord) kadmin.PublicationStartedMsg {
 				return kadmin.PublicationStartedMsg{}
 			},
-		}, kadmin.Topic{
+		}, &kadmin.Topic{
 			Name:       "topic1",
 			Partitions: 10,
 			Replicas:   1,
@@ -194,7 +194,7 @@ func TestPublish(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 
 		t.Run("When partition is not a number", func(t *testing.T) {
-			m := New(&MockPublisher{}, kadmin.Topic{
+			m := New(&MockPublisher{}, &kadmin.Topic{
 				Name:       "topic1",
 				Partitions: 1,
 				Replicas:   1,
@@ -221,7 +221,7 @@ func TestPublish(t *testing.T) {
 		})
 
 		t.Run("When partition is negative", func(t *testing.T) {
-			m := New(&MockPublisher{}, kadmin.Topic{
+			m := New(&MockPublisher{}, &kadmin.Topic{
 				Name:       "topic1",
 				Partitions: 1,
 				Replicas:   1,
@@ -248,7 +248,7 @@ func TestPublish(t *testing.T) {
 		})
 
 		t.Run("When partition is zero, should be allowed", func(t *testing.T) {
-			m := New(&MockPublisher{}, kadmin.Topic{
+			m := New(&MockPublisher{}, &kadmin.Topic{
 				Name:       "topic1",
 				Partitions: 1,
 				Replicas:   1,
@@ -277,7 +277,7 @@ func TestPublish(t *testing.T) {
 		})
 
 		t.Run("When partition exceeds number of partitions", func(t *testing.T) {
-			m := New(&MockPublisher{}, kadmin.Topic{
+			m := New(&MockPublisher{}, &kadmin.Topic{
 				Name:       "topic1",
 				Partitions: 5,
 				Replicas:   1,

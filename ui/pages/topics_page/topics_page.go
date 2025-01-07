@@ -180,11 +180,11 @@ func (t *Model) Reset() {
 	t.table.GotoTop()
 }
 
-func (t *Model) SelectedTopic() kadmin.Topic {
+func (t *Model) SelectedTopic() *kadmin.Topic {
 	selectedTopic := t.SelectedTopicName()
 	for _, t := range t.topics {
 		if t.Name == selectedTopic {
-			return t
+			return &t
 		}
 	}
 	panic("selected topic not found")

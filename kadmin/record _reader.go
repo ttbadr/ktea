@@ -23,7 +23,7 @@ type ReadingStartedMsg struct {
 }
 
 type ReadDetails struct {
-	Topic      Topic
+	Topic      *Topic
 	Partitions []int
 	StartPoint StartPoint
 	Limit      int
@@ -38,8 +38,9 @@ type ConsumerRecord struct {
 }
 
 func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) ReadingStartedMsg {
+	ctx, cancelFunc := context.WithCancel(ctx)
 	startedMsg := ReadingStartedMsg{
-		ConsumerRecord: make(chan ConsumerRecord),
+		ConsumerRecord: make(chan ConsumerRecord, len(rd.Partitions)),
 		Err:            make(chan error),
 	}
 
@@ -66,6 +67,7 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) Rea
 		offsets, ok = ka.fetchFirstAvailableOffsets(partitions, rd, startedMsg)
 		if !ok {
 			close(startedMsg.Err)
+			cancelFunc()
 			return startedMsg
 		}
 	}
@@ -82,7 +84,6 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) Rea
 				startedMsg.Err <- err
 				return
 			}
-
 			defer consumer.Close()
 
 			msgChan := consumer.Messages()
@@ -124,9 +125,7 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) Rea
 					}
 
 					if shouldClose {
-						closeOnce.Do(func() {
-							close(startedMsg.ConsumerRecord)
-						})
+						cancelFunc() // Cancel the context to stop other goroutines
 						return
 					}
 				}
@@ -134,11 +133,11 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) Rea
 		}(partition)
 	}
 
+	// Close the channel after all producer goroutines complete
 	go func() {
 		wg.Wait()
 		closeOnce.Do(func() {
-			close(startedMsg.ConsumerRecord)
-			close(startedMsg.Err)
+			close(startedMsg.ConsumerRecord) // Close the channel only after all writers are done
 		})
 	}()
 

@@ -27,7 +27,7 @@ type Model struct {
 	state      state
 	form       *huh.Form
 	publisher  kadmin.Publisher
-	topic      kadmin.Topic
+	topic      *kadmin.Topic
 	notifier   *notifier.Model
 	formValues *FormValues
 }
@@ -163,6 +163,6 @@ func (m *Model) newForm(ktx *kontext.ProgramKtx) *huh.Form {
 	return form
 }
 
-func New(p kadmin.Publisher, topic kadmin.Topic) *Model {
+func New(p kadmin.Publisher, topic *kadmin.Topic) *Model {
 	return &Model{topic: topic, publisher: p, notifier: notifier.New(), formValues: &FormValues{}}
 }

@@ -14,7 +14,7 @@ import (
 
 type Model struct {
 	form          *huh.Form
-	topic         kadmin.Topic
+	topic         *kadmin.Topic
 	formValues    *formValues
 	windowResized bool
 }
@@ -125,6 +125,14 @@ func (m *Model) newForm(partitions int, ktx *kontext.ProgramKtx) *huh.Form {
 	return form
 }
 
-func New(topic kadmin.Topic) *Model {
+func NewWithDetails(details *kadmin.ReadDetails) *Model {
+	return &Model{topic: details.Topic, formValues: &formValues{
+		startPoint: details.StartPoint,
+		limit:      details.Limit,
+		partitions: details.Partitions,
+	}}
+}
+
+func New(topic *kadmin.Topic) *Model {
 	return &Model{topic: topic, formValues: &formValues{}}
 }

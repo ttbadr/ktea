@@ -39,7 +39,7 @@ func TestReadRecords(t *testing.T) {
 
 			// then
 			rsm := ka.ReadRecords(context.Background(), ReadDetails{
-				Topic:      Topic{topic, 1, 1, 1},
+				Topic:      &Topic{topic, 1, 1, 1},
 				Partitions: []int{},
 				StartPoint: Beginning,
 				Limit:      50,
@@ -96,7 +96,7 @@ func TestReadRecords(t *testing.T) {
 
 			// then
 			rsm := ka.ReadRecords(context.Background(), ReadDetails{
-				Topic:      Topic{topic, 4, 1, 1},
+				Topic:      &Topic{topic, 4, 1, 1},
 				Partitions: []int{},
 				StartPoint: Beginning,
 				Limit:      50,
@@ -154,7 +154,7 @@ func TestReadRecords(t *testing.T) {
 
 		// then
 		rsm := ka.ReadRecords(context.Background(), ReadDetails{
-			Topic:      Topic{topic, 1, 1, 1},
+			Topic:      &Topic{topic, 1, 1, 1},
 			Partitions: []int{},
 			StartPoint: MostRecent,
 			Limit:      50,

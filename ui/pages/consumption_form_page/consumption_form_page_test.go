@@ -14,7 +14,7 @@ import (
 func TestConsumeForm_Navigation(t *testing.T) {
 
 	t.Run("esc goes back to topic list page", func(t *testing.T) {
-		m := New(kadmin.Topic{
+		m := New(&kadmin.Topic{
 			Name:       "topic1",
 			Replicas:   1,
 			Isr:        1,
@@ -29,7 +29,7 @@ func TestConsumeForm_Navigation(t *testing.T) {
 	})
 
 	t.Run("renders all available partitions when there is height enough", func(t *testing.T) {
-		m := New(kadmin.Topic{
+		m := New(&kadmin.Topic{
 			Name:       "topic1",
 			Replicas:   1,
 			Isr:        1,
@@ -60,7 +60,7 @@ func TestConsumeForm_Navigation(t *testing.T) {
 	})
 
 	t.Run("renders subset of partitions when there is not enough height", func(t *testing.T) {
-		m := New(kadmin.Topic{
+		m := New(&kadmin.Topic{
 			Name:       "topic1",
 			Replicas:   1,
 			Isr:        1,
@@ -87,8 +87,30 @@ func TestConsumeForm_Navigation(t *testing.T) {
 		assert.NotContains(t, render, "• 5")
 	})
 
+	t.Run("load form based on previous ReadDetails", func(t *testing.T) {
+		m := NewWithDetails(&kadmin.ReadDetails{
+			Topic: &kadmin.Topic{
+				Name:       "topic1",
+				Partitions: 10,
+				Replicas:   3,
+				Isr:        3,
+			},
+			Partitions: []int{3, 6},
+			StartPoint: kadmin.MostRecent,
+			Limit:      500,
+		})
+
+		render := m.View(ui.TestKontext, ui.TestRenderer)
+
+		assert.Contains(t, render, "> Most Recent")
+		assert.NotContains(t, render, "> Beginning")
+		assert.Contains(t, render, "✓ 3")
+		assert.Contains(t, render, "✓ 6")
+		assert.Contains(t, render, "> ")
+	})
+
 	t.Run("submitting form loads consumption page with consumption information", func(t *testing.T) {
-		m := New(kadmin.Topic{
+		m := New(&kadmin.Topic{
 			Name:       "topic1",
 			Partitions: 10,
 			Replicas:   1,
@@ -123,7 +145,7 @@ func TestConsumeForm_Navigation(t *testing.T) {
 
 		assert.Equal(t, nav.LoadConsumptionPageMsg{
 			ReadDetails: kadmin.ReadDetails{
-				Topic: kadmin.Topic{
+				Topic: &kadmin.Topic{
 					Name:       "topic1",
 					Partitions: 10,
 					Replicas:   1,
@@ -137,7 +159,7 @@ func TestConsumeForm_Navigation(t *testing.T) {
 	})
 
 	t.Run("selecting partitions is optional", func(t *testing.T) {
-		m := New(kadmin.Topic{
+		m := New(&kadmin.Topic{
 			Name:       "topic1",
 			Partitions: 10,
 			Replicas:   1,
@@ -165,7 +187,7 @@ func TestConsumeForm_Navigation(t *testing.T) {
 
 		assert.Equal(t, nav.LoadConsumptionPageMsg{
 			ReadDetails: kadmin.ReadDetails{
-				Topic: kadmin.Topic{
+				Topic: &kadmin.Topic{
 					Name:       "topic1",
 					Partitions: 10,
 					Replicas:   1,

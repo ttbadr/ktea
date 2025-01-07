@@ -46,7 +46,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		cmds = append(cmds, cmd)
 
 	case nav.LoadConsumptionFormPageMsg:
-		m.active = consumption_form_page.New(msg.Topic)
+		if msg.ReadDetails != nil {
+			m.active = consumption_form_page.NewWithDetails(msg.ReadDetails)
+		} else {
+			m.active = consumption_form_page.New(msg.Topic)
+		}
 
 	case nav.LoadTopicConfigPageMsg:
 		page, cmd := configs_page.New(m.ka, m.ka, m.topicsPage.SelectedTopicName())

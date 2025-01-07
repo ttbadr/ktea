@@ -39,7 +39,7 @@ func TestPublish(t *testing.T) {
 		// then
 		ctx, cancel := context.WithCancel(context.Background())
 		rsm := ka.ReadRecords(ctx, ReadDetails{
-			Topic: Topic{topic, 1, 1, 1},
+			Topic: &Topic{topic, 1, 1, 1},
 		})
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.Equal(c, "{\"id\":\"123\"}", (<-rsm.ConsumerRecord).Value)
@@ -78,7 +78,7 @@ func TestPublish(t *testing.T) {
 
 		// then
 		rsm := ka.ReadRecords(context.Background(), ReadDetails{
-			Topic:      Topic{topic, 2, 1, 1},
+			Topic:      &Topic{topic, 2, 1, 1},
 			Partitions: []int{2},
 		})
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
