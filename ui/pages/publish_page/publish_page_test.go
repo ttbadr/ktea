@@ -244,7 +244,36 @@ func TestPublish(t *testing.T) {
 				WindowWidth:  100,
 				WindowHeight: 100,
 			}, ui.TestRenderer)
-			assert.Contains(t, render, "value must be greater than zero")
+			assert.Contains(t, render, "value must be at least zero")
+		})
+
+		t.Run("When partition is zero, should be allowed", func(t *testing.T) {
+			m := New(&MockPublisher{}, kadmin.Topic{
+				Name:       "topic1",
+				Partitions: 1,
+				Replicas:   1,
+				Isr:        1,
+			})
+
+			m.View(&kontext.ProgramKtx{
+				WindowWidth:  100,
+				WindowHeight: 100,
+			}, ui.TestRenderer)
+			// Key
+			keys.UpdateKeys(m, "key")
+			cmd := m.Update(keys.Key(tea.KeyEnter))
+			m.Update(cmd())
+			// Partition
+			keys.UpdateKeys(m, "0")
+			m.Update(keys.Key(tea.KeyEnter))
+
+			render := m.View(&kontext.ProgramKtx{
+				WindowWidth:  100,
+				WindowHeight: 100,
+			}, ui.TestRenderer)
+
+			assert.Regexp(t, "┃ Partition.\\W+\n\\W+┃ > 0", render)
+			assert.NotContains(t, render, "value must be at least zero")
 		})
 
 		t.Run("When partition exceeds number of partitions", func(t *testing.T) {
