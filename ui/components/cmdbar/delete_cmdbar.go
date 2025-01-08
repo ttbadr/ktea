@@ -65,7 +65,11 @@ func (s *DeleteCmdBarModel[any]) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
 			}
 		}
 	}
-	confirm, _ := s.deleteConfirm.Update(msg)
+	confirm, cmd := s.deleteConfirm.Update(msg)
+	if cmd != nil {
+		// if msg has been handled do not propagate it
+		msg = nil
+	}
 	if c, ok := confirm.(*huh.Confirm); ok {
 		s.deleteConfirm = c
 	}

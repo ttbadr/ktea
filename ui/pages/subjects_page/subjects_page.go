@@ -4,10 +4,11 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"ktea/kontext"
-	sradmin2 "ktea/sradmin"
+	"ktea/sradmin"
 	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
+	ktable "ktea/ui/components/table"
 	"ktea/ui/pages/nav"
 	"strconv"
 	"strings"
@@ -17,9 +18,9 @@ type Model struct {
 	table         table.Model
 	rows          []table.Row
 	cmdBar        *SubjectsCmdBar
-	subjects      []sradmin2.Subject
+	subjects      []sradmin.Subject
 	tableFocussed bool
-	lister        sradmin2.SubjectLister
+	lister        sradmin.SubjectLister
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -46,7 +47,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
-	msg, cmd := m.cmdBar.Update(msg, m.SelectedTopicName())
+	msg, cmd := m.cmdBar.Update(msg, m.SelectedSubject())
 	m.tableFocussed = !m.cmdBar.IsFocussed()
 	cmds = append(cmds, cmd)
 
@@ -64,11 +65,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				},
 			)
 		}
-	case sradmin2.SubjectListingStartedMsg:
+	case sradmin.SubjectListingStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
-	case sradmin2.SubjectsListedMsg:
+	case sradmin.SubjectsListedMsg:
 		m.subjects = msg.Subjects
-	case sradmin2.SubjectDeletionStartedMsg:
+	case sradmin.SubjectDeletionStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
 	}
 
@@ -121,11 +122,11 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 	}
 }
 
-func (t *Model) SelectedTopicName() sradmin2.Subject {
-	selectedRow := t.table.SelectedRow()
-	var selectedTopic sradmin2.Subject
+func (m *Model) SelectedSubject() sradmin.Subject {
+	selectedRow := m.table.SelectedRow()
+	var selectedTopic sradmin.Subject
 	if selectedRow != nil {
-		return t.subjects[t.table.Cursor()]
+		return m.subjects[m.table.Cursor()]
 	}
 	return selectedTopic
 }
@@ -134,14 +135,10 @@ func (m *Model) Title() string {
 	return "Subjects"
 }
 
-func New(lister sradmin2.SubjectLister, deleter sradmin2.SubjectDeleter) (*Model, tea.Cmd) {
-	t := table.New(
-		table.WithFocused(true),
-		table.WithStyles(styles.Table.Styles),
-	)
+func New(lister sradmin.SubjectLister, deleter sradmin.SubjectDeleter) (*Model, tea.Cmd) {
 	return &Model{
 		cmdBar:        NewCmdBar(deleter),
-		table:         t,
+		table:         ktable.NewDefaultTable(),
 		tableFocussed: true,
 		lister:        lister,
 	}, lister.ListSubjects
