@@ -71,6 +71,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.subjects = msg.Subjects
 	case sradmin.SubjectDeletionStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
+	case sradmin.SubjectDeletedMsg:
+		for i, subject := range m.subjects {
+			if subject.Name == msg.SubjectName {
+				m.subjects = append(m.subjects[:i], m.subjects[i+1:]...)
+			}
+		}
 	}
 
 	searchTerm := m.cmdBar.GetSearchTerm()

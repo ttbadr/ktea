@@ -130,7 +130,7 @@ func NewCmdBar(deleter sradmin.SubjectDeleter) *SubjectsCmdBar {
 		return false, nil
 	}
 	subjectDeletionStartedNotifier := func(msg sradmin.SubjectDeletionStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
-		cmd := m.SpinWithLoadingMsg("Deleting Subject")
+		cmd := m.SpinWithLoadingMsg("Deleting Subject " + msg.Subject)
 		return true, cmd
 	}
 	subjectListingErrorMsg := func(msg sradmin.SubjetListingErrorMsg, m *notifier.Model) (bool, tea.Cmd) {
