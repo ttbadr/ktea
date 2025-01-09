@@ -35,6 +35,27 @@ func TestCreateSubjectsPage(t *testing.T) {
 			Subject: "subject",
 			Schema:  "{\"type\":\"string\"}",
 		}, msg)
+
+		t.Run("Create another schema", func(t *testing.T) {
+			subjectPage.Update(sradmin.SchemaCreatedMsg{})
+			// re-initialize form
+			subjectPage.View(ui.TestKontext, ui.TestRenderer)
+
+			keys.UpdateKeys(subjectPage, "subject")
+			cmd := subjectPage.Update(keys.Key(tea.KeyEnter))
+			// next field
+			subjectPage.Update(cmd())
+
+			keys.UpdateKeys(subjectPage, "{\"type\":\"string\"}")
+			cmd = keys.Submit(subjectPage)
+
+			msg := cmd()
+			assert.IsType(t, sradmin.SubjectCreationDetails{}, msg)
+			assert.Equal(t, sradmin.SubjectCreationDetails{
+				Subject: "subject",
+				Schema:  "{\"type\":\"string\"}",
+			}, msg)
+		})
 	})
 
 	t.Run("Subject is mandatory", func(t *testing.T) {
@@ -65,5 +86,4 @@ func TestCreateSubjectsPage(t *testing.T) {
 
 		assert.Contains(t, render, "schema cannot be empty")
 	})
-
 }

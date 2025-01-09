@@ -81,6 +81,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			}
 		}
 	case sradmin.SchemaCreatedMsg:
+		m.state = entering
 		m.form = nil
 	case sradmin.SchemaCreationStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
