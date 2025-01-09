@@ -6,7 +6,7 @@ import (
 	"ktea/sradmin"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages/create_subjects_page"
+	"ktea/ui/pages/create_schema_page"
 	"ktea/ui/pages/nav"
 	"ktea/ui/pages/subjects_page"
 )
@@ -29,7 +29,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 	switch msg.(type) {
 	case nav.LoadCreateSubjectPageMsg:
-		createPage, cmd := create_subjects_page.New(m.creator, m.ktx)
+		createPage, cmd := create_schema_page.New(m.creator, m.ktx)
 		cmds = append(cmds, cmd)
 		m.active = createPage
 	case nav.LoadSubjectsPageMsg:

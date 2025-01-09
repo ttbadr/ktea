@@ -4,6 +4,7 @@ import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"ktea/ui"
+	"ktea/ui/pages/nav"
 )
 
 type AKey interface{}
@@ -40,4 +41,12 @@ func UpdateKeys(m ui.View, keys string) {
 	for _, k := range keys {
 		m.Update(Key(k))
 	}
+}
+
+func Submit(page nav.Page) tea.Cmd {
+	cmd := page.Update(Key(tea.KeyEnter))
+	// next field
+	cmd = page.Update(cmd())
+	// next group and submit
+	return page.Update(cmd())
 }

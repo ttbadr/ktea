@@ -1,10 +1,11 @@
-package create_subjects_page
+package create_schema_page
 
 import (
+	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"ktea/kontext"
-	sradmin2 "ktea/sradmin"
+	"ktea/sradmin"
 	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/cmdbar"
@@ -29,7 +30,7 @@ type values struct {
 type Model struct {
 	values
 	form        *huh.Form
-	creator     sradmin2.SubjectCreator
+	creator     sradmin.SubjectCreator
 	cmdBar      cmdbar.Widget
 	state       state
 	ktx         *kontext.ProgramKtx
@@ -63,7 +64,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if m.form.State == huh.StateCompleted && m.state == entering {
 			m.state = creating
 			return func() tea.Msg {
-				return m.creator.CreateSchema(sradmin2.SubjectCreationDetails{
+				return m.creator.CreateSchema(sradmin.SubjectCreationDetails{
 					Subject: m.subject,
 					Schema:  m.schema,
 				})
@@ -79,9 +80,9 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				cmds = append(cmds, ui.PublishMsg(nav.LoadSubjectsPageMsg{}))
 			}
 		}
-	case sradmin2.SchemaCreatedMsg:
+	case sradmin.SchemaCreatedMsg:
 		m.form = nil
-	case sradmin2.SchemaCreationStartedMsg:
+	case sradmin.SchemaCreationStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
 	}
 
@@ -111,12 +112,24 @@ func newForm(model *Model) *huh.Form {
 	schemaInput := huh.NewText().
 		Value(&model.values.schema).
 		Title("Schema").
-		WithHeight(model.ktx.AvailableHeight - 5).(*huh.Text)
+		Validate(func(v string) error {
+			if v == "" {
+				return fmt.Errorf("schema cannot be empty")
+			}
+			return nil
+		}).
+		WithHeight(model.ktx.AvailableHeight - 7).(*huh.Text)
 	model.schemaInput = schemaInput
 	form := huh.NewForm(huh.NewGroup(
 		huh.NewInput().
 			Value(&model.values.subject).
-			Title("Subject"),
+			Title("Subject").
+			Validate(func(v string) error {
+				if v == "" {
+					return fmt.Errorf("subject cannot be empty")
+				}
+				return nil
+			}),
 		schemaInput,
 	))
 	form.Init()
@@ -124,13 +137,13 @@ func newForm(model *Model) *huh.Form {
 	return form
 }
 
-func New(creator sradmin2.SubjectCreator, ktx *kontext.ProgramKtx) (*Model, tea.Cmd) {
+func New(creator sradmin.SubjectCreator, ktx *kontext.ProgramKtx) (*Model, tea.Cmd) {
 	model := &Model{}
 	model.ktx = ktx
 	model.creator = creator
 	model.state = entering
 	notifierCmdBar := cmdbar.NewNotifierCmdBar()
-	subjectListingStartedNotifier := func(msg sradmin2.SchemaCreationStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
+	subjectListingStartedNotifier := func(msg sradmin.SchemaCreationStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		cmd := m.SpinWithLoadingMsg("Creating Schema")
 		return true, cmd
 	}
@@ -138,7 +151,7 @@ func New(creator sradmin2.SubjectCreator, ktx *kontext.ProgramKtx) (*Model, tea.
 		m.Idle()
 		return true, nil
 	}
-	f := func(msg sradmin2.SchemaCreatedMsg, m *notifier.Model) (bool, tea.Cmd) {
+	f := func(msg sradmin.SchemaCreatedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowSuccessMsg("Schema created")
 		return true, func() tea.Msg {
 			time.Sleep(2 * time.Second)
