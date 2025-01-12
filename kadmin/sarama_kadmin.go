@@ -63,27 +63,6 @@ func (ka *SaramaKafkaAdmin) doCreateTopic(tcd TopicCreationDetails, created chan
 	created <- true
 }
 
-func (ka *SaramaKafkaAdmin) doPublishRecord(p *ProducerRecord, errChan chan error, published chan bool) {
-	maybeIntroduceLatency()
-	var partition int32
-	if p.Partition == nil {
-		ka.config.Producer.Partitioner = sarama.NewHashPartitioner
-	} else {
-		partition = int32(*p.Partition)
-		ka.config.Producer.Partitioner = sarama.NewManualPartitioner
-	}
-	_, _, err := ka.producer.SendMessage(&sarama.ProducerMessage{
-		Topic:     p.Topic,
-		Key:       sarama.StringEncoder(p.Key),
-		Value:     sarama.StringEncoder(p.Value),
-		Partition: partition,
-	})
-	if err != nil {
-		errChan <- err
-	}
-	published <- true
-}
-
 type TopicPartitionOffset struct {
 	Topic     string
 	Partition int32

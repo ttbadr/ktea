@@ -1,6 +1,9 @@
 package kadmin
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	"github.com/IBM/sarama"
+	tea "github.com/charmbracelet/bubbletea"
+)
 
 type Publisher interface {
 	PublishRecord(p *ProducerRecord) PublicationStartedMsg
@@ -11,6 +14,7 @@ type ProducerRecord struct {
 	Value     string
 	Topic     string
 	Partition *int
+	Headers   map[string]string
 }
 
 type PublicationStartedMsg struct {
@@ -43,4 +47,39 @@ func (ka *SaramaKafkaAdmin) PublishRecord(p *ProducerRecord) PublicationStartedM
 		Err:       errChan,
 		Published: published,
 	}
+}
+
+func (ka *SaramaKafkaAdmin) doPublishRecord(
+	p *ProducerRecord,
+	errChan chan error,
+	published chan bool,
+) {
+	maybeIntroduceLatency()
+	var partition int32
+	if p.Partition == nil {
+		ka.config.Producer.Partitioner = sarama.NewHashPartitioner
+	} else {
+		partition = int32(*p.Partition)
+		ka.config.Producer.Partitioner = sarama.NewManualPartitioner
+	}
+
+	var headers []sarama.RecordHeader
+	for key, value := range p.Headers {
+		headers = append(headers, sarama.RecordHeader{
+			Key:   []byte(key),
+			Value: []byte(value),
+		})
+	}
+
+	_, _, err := ka.producer.SendMessage(&sarama.ProducerMessage{
+		Topic:     p.Topic,
+		Key:       sarama.StringEncoder(p.Key),
+		Value:     sarama.StringEncoder(p.Value),
+		Partition: partition,
+		Headers:   headers,
+	})
+	if err != nil {
+		errChan <- err
+	}
+	published <- true
 }

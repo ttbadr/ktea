@@ -27,14 +27,14 @@ func TestCreateSubjectsPage(t *testing.T) {
 		subjectPage.Update(cmd())
 
 		keys.UpdateKeys(subjectPage, "{\"type\":\"string\"}")
-		cmd = keys.Submit(subjectPage)
+		msgs := keys.Submit(subjectPage)
 
-		msg := cmd()
-		assert.IsType(t, sradmin.SubjectCreationDetails{}, msg)
+		assert.Len(t, msgs, 1)
+		assert.IsType(t, sradmin.SubjectCreationDetails{}, msgs[0])
 		assert.Equal(t, sradmin.SubjectCreationDetails{
 			Subject: "subject",
 			Schema:  "{\"type\":\"string\"}",
-		}, msg)
+		}, msgs[0])
 
 		t.Run("Create another schema", func(t *testing.T) {
 			subjectPage.Update(sradmin.SchemaCreatedMsg{})
@@ -47,14 +47,13 @@ func TestCreateSubjectsPage(t *testing.T) {
 			subjectPage.Update(cmd())
 
 			keys.UpdateKeys(subjectPage, "{\"type\":\"string\"}")
-			cmd = keys.Submit(subjectPage)
+			msgs = keys.Submit(subjectPage)
 
-			msg := cmd()
-			assert.IsType(t, sradmin.SubjectCreationDetails{}, msg)
-			assert.Equal(t, sradmin.SubjectCreationDetails{
+			assert.Len(t, msgs, 1)
+			assert.Contains(t, msgs, sradmin.SubjectCreationDetails{
 				Subject: "subject",
 				Schema:  "{\"type\":\"string\"}",
-			}, msg)
+			})
 		})
 	})
 

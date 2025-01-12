@@ -23,6 +23,31 @@ func (m *MockPublisher) PublishRecord(p *kadmin.ProducerRecord) kadmin.Publicati
 	return kadmin.PublicationStartedMsg{}
 }
 
+func TestParseHeaders(t *testing.T) {
+	t.Run("header format is key=value", func(t *testing.T) {
+		fv := formValues{
+			Headers: "key1=value1\n\nkey2=value2\n",
+		}
+
+		headers := fv.parsedHeaders()
+
+		assert.Equal(t, map[string]string{
+			"key1": "value1",
+			"key2": "value2",
+		}, headers)
+	})
+
+	t.Run("no headers filled in", func(t *testing.T) {
+		formValues := formValues{
+			Headers: "",
+		}
+
+		headers := formValues.parsedHeaders()
+
+		assert.Equal(t, map[string]string{}, headers)
+	})
+}
+
 func TestPublish(t *testing.T) {
 	t.Run("esc goes back to topic list page", func(t *testing.T) {
 		m := New(&MockPublisher{}, &kadmin.Topic{
@@ -55,28 +80,42 @@ func TestPublish(t *testing.T) {
 			WindowWidth:  100,
 			WindowHeight: 100,
 		}, ui.TestRenderer)
+
 		// Key
 		keys.UpdateKeys(m, "key")
 		cmd := m.Update(keys.Key(tea.KeyEnter))
 		m.Update(cmd())
+
 		// Partition
 		keys.UpdateKeys(m, "2")
 		cmd = m.Update(keys.Key(tea.KeyEnter))
 		m.Update(cmd())
-		// payload
+
+		// headers
+		keys.UpdateKeys(m, "id=123")
+		cmd = m.Update(keys.KeyWithAlt(tea.KeyEnter))
+		keys.UpdateKeys(m, "user=456")
+		cmd = m.Update(keys.Key(tea.KeyEnter))
+		keys.NextGroup(m, cmd)
+
 		keys.UpdateKeys(m, "payload")
 		cmd = m.Update(keys.Key(tea.KeyEnter))
-		// next field
-		cmd = m.Update(cmd())
-		// next group
-		cmd = m.Update(cmd())
-		// execute cmd
-		executeBatchCmd(cmd)
+		keys.NextGroup(m, cmd)
+
+		keys.Submit(m)
 
 		assert.Equal(t, "key", producerRecord.Key)
 		assert.Equal(t, "topic1", producerRecord.Topic)
 		assert.Equal(t, 2, *producerRecord.Partition)
 		assert.Equal(t, "payload", producerRecord.Value)
+		assert.Equal(
+			t,
+			map[string]string{
+				"id":   "123",
+				"user": "456",
+			},
+			producerRecord.Headers,
+		)
 	})
 
 	t.Run("reset form after successful publication", func(t *testing.T) {
@@ -95,29 +134,37 @@ func TestPublish(t *testing.T) {
 			WindowWidth:  100,
 			WindowHeight: 100,
 		}, ui.TestRenderer)
+
 		// Key
 		keys.UpdateKeys(m, "key")
 		cmd := m.Update(keys.Key(tea.KeyEnter))
 		m.Update(cmd())
+
 		// Partition
 		cmd = m.Update(keys.Key(tea.KeyEnter))
 		m.Update(cmd())
+
+		// headers
+		keys.UpdateKeys(m, "id=123")
+		cmd = m.Update(keys.KeyWithAlt(tea.KeyEnter))
+		keys.UpdateKeys(m, "user=456")
+		cmd = m.Update(keys.Key(tea.KeyEnter))
+		keys.NextGroup(m, cmd)
+
 		// payload
 		keys.UpdateKeys(m, "payload")
 		cmd = m.Update(keys.Key(tea.KeyEnter))
-		// next field
-		cmd = m.Update(cmd())
-		// next group
-		cmd = m.Update(cmd())
-		// execute cmd
-		executeBatchCmd(cmd)
+		keys.NextGroup(m, cmd)
+
+		keys.Submit(m)
+
 		m.Update(kadmin.PublicationSucceeded{})
 
 		render := m.View(ui.TestKontext, ui.TestRenderer)
 
-		assert.Regexp(t, "Key\\W+\n\\W+>\\W+\n", render)
-		assert.Regexp(t, "Partition\\W+\n\\W+>\\W+\n", render)
-		assert.Regexp(t, "Payload\\W+\n\\W+1\\W+\n", render)
+		assert.Regexp(t, "Key\\W+Payload\\W+\n.*1.*\n\\W+>\\W+\n", render)
+		assert.Regexp(t, "Partition\\W+\n.*\n\\W+>\\W+\n", render)
+		assert.Regexp(t, "Headers\\W+\n.*\\n\\W+1\\W+\n", render)
 	})
 
 	t.Run("publish without partition info", func(t *testing.T) {
@@ -138,22 +185,26 @@ func TestPublish(t *testing.T) {
 			WindowWidth:  100,
 			WindowHeight: 100,
 		}, ui.TestRenderer)
+
 		// Key
 		keys.UpdateKeys(m, "key")
 		cmd := m.Update(keys.Key(tea.KeyEnter))
 		m.Update(cmd())
+
 		// Partition
 		cmd = m.Update(keys.Key(tea.KeyEnter))
 		m.Update(cmd())
+
+		// headers
+		cmd = m.Update(keys.Key(tea.KeyEnter))
+		keys.NextGroup(m, cmd)
+
 		// payload
 		keys.UpdateKeys(m, "payload")
 		cmd = m.Update(keys.Key(tea.KeyEnter))
-		// next field
-		cmd = m.Update(cmd())
-		// next group
-		cmd = m.Update(cmd())
-		// execute cmd
-		executeBatchCmd(cmd)
+		keys.NextGroup(m, cmd)
+
+		keys.Submit(m)
 
 		assert.Equal(t, "key", producerRecord.Key)
 		assert.Equal(t, "topic1", producerRecord.Topic)
@@ -189,6 +240,53 @@ func TestPublish(t *testing.T) {
 			render := m.View(ui.TestKontext, ui.TestRenderer)
 			assert.NotContains(t, render, "🎉 Record published!")
 		})
+	})
+
+	t.Run("ctrl+r resets the form", func(t *testing.T) {
+		m := New(&MockPublisher{
+			PublishRecordFunc: func(p *kadmin.ProducerRecord) kadmin.PublicationStartedMsg {
+				return kadmin.PublicationStartedMsg{}
+			},
+		}, &kadmin.Topic{
+			Name:       "topic1",
+			Partitions: 10,
+			Replicas:   1,
+			Isr:        1,
+		})
+
+		m.View(&kontext.ProgramKtx{
+			WindowWidth:  100,
+			WindowHeight: 100,
+		}, ui.TestRenderer)
+
+		// Key
+		keys.UpdateKeys(m, "key")
+		cmd := m.Update(keys.Key(tea.KeyEnter))
+		m.Update(cmd())
+
+		// Partition
+		cmd = m.Update(keys.Key(tea.KeyEnter))
+		m.Update(cmd())
+
+		// headers
+		keys.UpdateKeys(m, "id=123")
+		cmd = m.Update(keys.KeyWithAlt(tea.KeyEnter))
+		keys.UpdateKeys(m, "user=456")
+		cmd = m.Update(keys.Key(tea.KeyEnter))
+		keys.NextGroup(m, cmd)
+
+		// payload
+		keys.UpdateKeys(m, "payload")
+		cmd = m.Update(keys.Key(tea.KeyEnter))
+		keys.NextGroup(m, cmd)
+
+		m.Update(keys.Key(tea.KeyCtrlR))
+
+		render := m.View(ui.TestKontext, ui.TestRenderer)
+
+		assert.Regexp(t, "Key\\W+Payload\\W+\n.*1.*\n\\W+>\\W+\n", render)
+		assert.Regexp(t, "Partition\\W+\n.*\n\\W+>\\W+\n", render)
+		assert.Regexp(t, "Headers\\W+\n.*\\n\\W+1\\W+\n", render)
 	})
 
 	t.Run("Validate", func(t *testing.T) {
@@ -272,7 +370,7 @@ func TestPublish(t *testing.T) {
 				WindowHeight: 100,
 			}, ui.TestRenderer)
 
-			assert.Regexp(t, "┃ Partition.\\W+\n\\W+┃ > 0", render)
+			assert.Regexp(t, "┃ Partition.\\W+\n.*\n\\W+┃ > 0", render)
 			assert.NotContains(t, render, "value must be at least zero")
 		})
 

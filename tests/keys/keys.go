@@ -9,27 +9,35 @@ import (
 
 type AKey interface{}
 
+func KeyWithAlt(key tea.KeyType) tea.Msg {
+	return keyMsg(key, true)
+}
+
 func Key(key AKey) tea.Msg {
+	return keyMsg(key, false)
+}
+
+func keyMsg(key AKey, altKey bool) tea.Msg {
 	switch key := key.(type) {
 	case rune:
 		return tea.KeyMsg{
 			Type:  tea.KeyRunes,
 			Runes: []rune{key},
-			Alt:   false,
+			Alt:   altKey,
 			Paste: false,
 		}
 	case int:
 		return tea.KeyMsg{
 			Type:  tea.KeyRunes,
 			Runes: []rune{rune(key)},
-			Alt:   false,
+			Alt:   altKey,
 			Paste: false,
 		}
 	case tea.KeyType:
 		return tea.KeyMsg{
 			Type:  key,
 			Runes: []rune{},
-			Alt:   false,
+			Alt:   altKey,
 			Paste: false,
 		}
 	default:
@@ -43,10 +51,44 @@ func UpdateKeys(m ui.View, keys string) {
 	}
 }
 
-func Submit(page nav.Page) tea.Cmd {
+func Submit(page nav.Page) []tea.Msg {
 	cmd := page.Update(Key(tea.KeyEnter))
 	// next field
 	cmd = page.Update(cmd())
 	// next group and submit
-	return page.Update(cmd())
+	cmd = page.Update(cmd())
+	return executeBatchCmd(cmd)
+}
+
+func NextGroup(page nav.Page, cmd tea.Cmd) {
+	// next field
+	cmd = page.Update(cmd())
+	// next group
+	cmd = page.Update(cmd())
+}
+
+func executeBatchCmd(cmd tea.Cmd) []tea.Msg {
+	var msgs []tea.Msg
+	if cmd == nil {
+		return msgs
+	}
+
+	msg := cmd()
+	if msg == nil {
+		return msgs
+	}
+
+	// If the message is a batch, process its commands
+	if batch, ok := msg.(tea.BatchMsg); ok {
+		for _, subCmd := range batch {
+			if subCmd != nil {
+				msgs = append(msgs, executeBatchCmd(subCmd)...)
+			}
+		}
+		return msgs
+	}
+
+	// Otherwise, it's a normal message
+	msgs = append(msgs, msg)
+	return msgs
 }

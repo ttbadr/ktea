@@ -14,6 +14,7 @@ import (
 	"ktea/ui/components/statusbar"
 	"ktea/ui/pages/nav"
 	"strconv"
+	"strings"
 )
 
 type state int
@@ -25,31 +26,48 @@ const (
 
 type Model struct {
 	state      state
-	form       *huh.Form
+	topicForm  *huh.Form
 	publisher  kadmin.Publisher
 	topic      *kadmin.Topic
 	notifier   *notifier.Model
-	formValues *FormValues
+	formValues *formValues
 }
 
 type LoadPageMsg struct {
 	Topic kadmin.Topic
 }
 
-type FormValues struct {
+type formValues struct {
 	Key       string
 	Partition string
 	Payload   string
+	Headers   string
+}
+
+func (v *formValues) parsedHeaders() map[string]string {
+	if v.Headers == "" {
+		return map[string]string{}
+	}
+	headers := map[string]string{}
+	for _, line := range strings.Split(v.Headers, "\n") {
+		if strings.Contains(line, "=") {
+			split := strings.Split(line, "=")
+			key := split[0]
+			value := split[1]
+			headers[key] = value
+		}
+	}
+	return headers
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	notifierView := m.notifier.View(ktx, renderer)
-	if m.form == nil {
-		m.form = m.newForm(ktx)
+	if m.topicForm == nil {
+		m.topicForm = m.newForm(ktx)
 	}
 	return ui.JoinVerticalSkipEmptyViews(
 		notifierView,
-		renderer.RenderWithStyle(m.form.View(), styles.Form),
+		renderer.RenderWithStyle(m.topicForm.View(), styles.Form),
 	)
 }
 
@@ -76,14 +94,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		)
 	case kadmin.PublicationFailed:
 		m.state = none
-		m.form.Init()
+		m.topicForm.Init()
 		return m.notifier.ShowErrorMsg("Publication failed!", fmt.Errorf("TODO"))
 	case kadmin.PublicationSucceeded:
-		m.state = none
-		m.formValues.Key = ""
-		m.formValues.Partition = ""
-		m.formValues.Payload = ""
-		m.form = nil
+		m.resetForm()
 		return tea.Batch(
 			m.notifier.ShowSuccessMsg("Record published!"),
 			func() tea.Msg {
@@ -94,16 +108,18 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		switch msg.Type {
 		case tea.KeyEsc:
 			return ui.PublishMsg(nav.LoadTopicsPageMsg{})
+		case tea.KeyCtrlR:
+			m.resetForm()
 		}
 	}
-	if m.form != nil {
-		form, cmd := m.form.Update(msg)
+	if m.topicForm != nil {
+		form, cmd := m.topicForm.Update(msg)
 		if f, ok := form.(*huh.Form); ok {
-			m.form = f
+			m.topicForm = f
 		}
-		if m.form != nil && m.form.State == huh.StateCompleted {
+		if m.topicForm != nil && m.topicForm.State == huh.StateCompleted {
 			m.state = publishing
-			m.form.State = huh.StateNormal
+			m.topicForm.State = huh.StateNormal
 			return tea.Batch(
 				m.notifier.SpinWithRocketMsg("Publishing record"),
 				func() tea.Msg {
@@ -113,10 +129,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 							part = &p
 						}
 					}
+
 					return m.publisher.PublishRecord(&kadmin.ProducerRecord{
 						Key:       m.formValues.Key,
 						Value:     m.formValues.Payload,
 						Topic:     m.topic.Name,
+						Headers:   m.formValues.parsedHeaders(),
 						Partition: part,
 					})
 				})
@@ -126,17 +144,28 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
+func (m *Model) resetForm() {
+	m.state = none
+	m.formValues.Key = ""
+	m.formValues.Partition = ""
+	m.formValues.Payload = ""
+	m.formValues.Headers = ""
+	m.topicForm = nil
+}
+
 func (m *Model) newForm(ktx *kontext.ProgramKtx) *huh.Form {
-	content := huh.NewText().
+	payload := huh.NewText().
 		ShowLineNumbers(true).
 		Value(&m.formValues.Payload).
 		Title("Payload").
-		WithHeight(ktx.AvailableHeight - 10)
+		WithHeight(ktx.AvailableHeight - 8)
 	key := huh.NewInput().
 		Title("Key").
+		Description("Leave empty to use a null key for the message.").
 		Value(&m.formValues.Key)
 	partition := huh.NewInput().
 		Value(&m.formValues.Partition).
+		Description("Leave empty to use the default hash partitioner.").
 		Title("Partition").
 		Validate(func(str string) error {
 			if str == "" {
@@ -151,18 +180,39 @@ func (m *Model) newForm(ktx *kontext.ProgramKtx) *huh.Form {
 			}
 			return nil
 		})
+	headers := huh.NewText().
+		Description("Enter headers in the format key=value, one per line.").
+		ShowLineNumbers(true).
+		Value(&m.formValues.Headers).
+		Title("Headers").
+		WithHeight(10)
+
 	form := huh.NewForm(
 		huh.NewGroup(
 			key,
 			partition,
-			content,
+			headers,
+		).WithWidth(ktx.WindowWidth/2),
+		huh.NewGroup(
+			payload,
+		),
+		huh.NewGroup(huh.NewConfirm().
+			Inline(true).
+			Affirmative("Publish").
+			Negative(""),
 		),
 	)
+	form.WithLayout(huh.LayoutGrid(4, 2))
 	form.QuitAfterSubmit = false
 	form.Init()
 	return form
 }
 
 func New(p kadmin.Publisher, topic *kadmin.Topic) *Model {
-	return &Model{topic: topic, publisher: p, notifier: notifier.New(), formValues: &FormValues{}}
+	return &Model{
+		topic:      topic,
+		publisher:  p,
+		notifier:   notifier.New(),
+		formValues: &formValues{},
+	}
 }

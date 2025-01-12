@@ -50,6 +50,67 @@ func TestPublish(t *testing.T) {
 		ka.DeleteTopic(topic)
 	})
 
+	t.Run("Publish with headers", func(t *testing.T) {
+		topic := topicName()
+		// given
+		createTopic(t, []kgo.TopicConfig{
+			{
+				Topic:             topic,
+				NumPartitions:     1,
+				ReplicationFactor: 1,
+			},
+		})
+
+		// when
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			psm := ka.PublishRecord(&ProducerRecord{
+				Topic: topic,
+				Key:   "123",
+				Value: "{\"id\":\"123\"}",
+				Headers: map[string]string{
+					"id":   "123",
+					"user": "456",
+				},
+			})
+
+			select {
+			case err := <-psm.Err:
+				t.Fatal(c, "Unable to publish", err)
+			case p := <-psm.Published:
+				assert.True(c, p)
+			}
+		}, 2*time.Second, 10*time.Millisecond)
+
+		// then
+		ctx, cancel := context.WithCancel(context.Background())
+		rsm := ka.ReadRecords(ctx, ReadDetails{
+			Topic: &Topic{topic, 1, 1, 1},
+			Limit: 1,
+		})
+
+		var receivedRecords []ConsumerRecord
+		for {
+			select {
+			case r, ok := <-rsm.ConsumerRecord:
+				if !ok {
+					goto assertRecords
+				}
+				receivedRecords = append(receivedRecords, r)
+			}
+		}
+
+	assertRecords:
+		assert.Equal(t, "{\"id\":\"123\"}", receivedRecords[0].Value)
+		assert.Equal(t, map[string]string{
+			"id":   "123",
+			"user": "456",
+		}, receivedRecords[0].Headers)
+
+		// clean up
+		cancel()
+		ka.DeleteTopic(topic)
+	})
+
 	t.Run("Publish to specific partition", func(t *testing.T) {
 		topic := topicName()
 		// given
