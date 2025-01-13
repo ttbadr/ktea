@@ -8,6 +8,7 @@ import (
 	"ktea/ui/components/cmdbar"
 	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
+	"ktea/ui/pages/nav"
 )
 
 type ConsumptionCmdBar struct {
@@ -55,13 +56,17 @@ func NewConsumptionCmdbar() *ConsumptionCmdBar {
 	readingStartedNotifier := func(msg kadmin.ReadingStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		return true, m.SpinWithLoadingMsg("Consuming")
 	}
+	c := func(msg nav.LoadCachedConsumptionPageMsg, m *notifier.Model) (bool, tea.Cmd) {
+		return true, m.SpinWithLoadingMsg("Consuming")
+	}
 	consumptionEndedNotifier := func(msg ConsumptionEndedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.Idle()
-		return true, nil
+		return false, nil
 	}
 	notifierCmdBar := cmdbar.NewNotifierCmdBar()
 	cmdbar.WithMapping(notifierCmdBar, readingStartedNotifier)
 	cmdbar.WithMapping(notifierCmdBar, consumptionEndedNotifier)
+	cmdbar.WithMapping(notifierCmdBar, c)
 	return &ConsumptionCmdBar{
 		notifierWidget: notifierCmdBar,
 	}

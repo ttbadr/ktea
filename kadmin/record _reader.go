@@ -3,7 +3,10 @@ package kadmin
 import (
 	"context"
 	"github.com/IBM/sarama"
+	"github.com/charmbracelet/log"
+	"sort"
 	"sync"
+	"time"
 )
 
 type StartPoint int
@@ -29,12 +32,18 @@ type ReadDetails struct {
 	Limit      int
 }
 
+type Header struct {
+	Key   string
+	Value string
+}
+
 type ConsumerRecord struct {
 	Key       string
 	Value     string
 	Partition int64
 	Offset    int64
-	Headers   map[string]string
+	Headers   []Header
+	Timestamp time.Time
 }
 
 func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) ReadingStartedMsg {
@@ -81,7 +90,9 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) Rea
 			startingOffset := ka.determineStartingOffset(partition, rd, offsets)
 			consumer, err := client.ConsumePartition(rd.Topic.Name, int32(partition), startingOffset)
 			if err != nil {
+				log.Error(err)
 				startedMsg.Err <- err
+				cancelFunc()
 				return
 			}
 			defer consumer.Close()
@@ -96,10 +107,16 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) Rea
 				case <-ctx.Done():
 					return
 				case msg := <-msgChan:
-					headers := make(map[string]string)
+					var headers []Header
 					for _, h := range msg.Headers {
-						headers[string(h.Key)] = string(h.Value)
+						headers = append(headers, Header{
+							string(h.Key),
+							string(h.Value),
+						})
 					}
+					sort.SliceStable(headers, func(i, j int) bool {
+						return headers[i].Key < headers[j].Key
+					})
 
 					consumerRecord := ConsumerRecord{
 						Key:       string(msg.Key),
@@ -107,6 +124,7 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) Rea
 						Partition: int64(msg.Partition),
 						Offset:    msg.Offset,
 						Headers:   headers,
+						Timestamp: msg.Timestamp,
 					}
 
 					var shouldClose bool
@@ -133,11 +151,10 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) Rea
 		}(partition)
 	}
 
-	// Close the channel after all producer goroutines complete
 	go func() {
 		wg.Wait()
 		closeOnce.Do(func() {
-			close(startedMsg.ConsumerRecord) // Close the channel only after all writers are done
+			close(startedMsg.ConsumerRecord)
 		})
 	}()
 
@@ -163,7 +180,7 @@ func (ka *SaramaKafkaAdmin) determineStartingOffset(partition int, rd ReadDetail
 		startingOffset = sarama.OffsetOldest
 	} else {
 		latestOffset := partByOffset[partition]
-		startingOffset = latestOffset - int64(rd.Limit)
+		startingOffset = latestOffset - int64(float64(int64(rd.Limit))/float64(len(partByOffset)))
 		if startingOffset < 0 {
 			startingOffset = 0
 		}

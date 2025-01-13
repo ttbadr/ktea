@@ -14,6 +14,9 @@ var CmdBar lipgloss.Style
 var Form = lipgloss.NewStyle().
 	PaddingLeft(1).
 	PaddingTop(1)
+var TextViewPort = lipgloss.NewStyle().
+	PaddingLeft(1).
+	BorderStyle(lipgloss.RoundedBorder())
 var Notifier NotifierStyle
 var clusterColors map[string]string
 
@@ -26,6 +29,9 @@ const ColorYellow = "#FFFF00"
 const ColorWhite = "#FFFFFF"
 const ColorBlack = "#000000"
 const ColorPink = "#FF5F87"
+const ColorGrey = "#C1C1C1"
+const ColorFocusBorder = "#F5F5F5"
+const ColorBlurBorder = "235"
 
 var Bold = lipgloss.NewStyle().
 	Bold(true)
@@ -251,9 +257,9 @@ func init() {
 			BorderStyle(lipgloss.RoundedBorder()).
 			Padding(0).
 			Margin(0).
-			BorderForeground(lipgloss.Color("235"))
+			BorderForeground(lipgloss.Color(ColorBlurBorder))
 		focus := lipgloss.NewStyle().
-			BorderForeground(lipgloss.Color("245")).
+			BorderForeground(lipgloss.Color(ColorFocusBorder)).
 			Padding(0).
 			Margin(0).
 			Inherit(blur)

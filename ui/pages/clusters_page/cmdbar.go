@@ -48,7 +48,7 @@ func (c *CmdBar) Update(msg tea.Msg, selectedCluster *string) (tea.Msg, tea.Cmd)
 				Render("🗑️  "+*selectedCluster) + lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#7571F9")).
 				Bold(true).
-				Render(" will be delete permanently")).
+				Render(" will be deleted permanently")).
 				Focus()
 			return nil, nil
 		} else if msg.String() == "enter" {

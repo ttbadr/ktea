@@ -196,7 +196,7 @@ func TestClustersTab(t *testing.T) {
 
 			// then
 			render = clustersTab.View(programKtx, ui.TestRenderer)
-			assert.Contains(t, render, "🗑️  prd will be delete permanently")
+			assert.Contains(t, render, "🗑️  prd will be deleted permanently")
 		})
 
 		t.Run("esc cancels raised delete confirmation", func(t *testing.T) {
@@ -207,14 +207,14 @@ func TestClustersTab(t *testing.T) {
 			// and delete confirmation has been raised
 			clustersTab.Update(keys.Key(tea.KeyCtrlD))
 			render = clustersTab.View(programKtx, ui.TestRenderer)
-			assert.Contains(t, render, "🗑️  prd will be delete permanently")
+			assert.Contains(t, render, "🗑️  prd will be deleted permanently")
 
 			// when
 			clustersTab.Update(keys.Key(tea.KeyEsc))
 
 			// then
 			render = clustersTab.View(programKtx, ui.TestRenderer)
-			assert.NotContains(t, render, "🗑️  prd will be delete permanently")
+			assert.NotContains(t, render, "🗑️  prd will be deleted permanently")
 		})
 
 		t.Run("enter deletes cluster", func(t *testing.T) {

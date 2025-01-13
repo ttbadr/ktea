@@ -107,7 +107,7 @@ func NewCmdBar(deleter sradmin.SubjectDeleter) *SubjectsCmdBar {
 		message := subject.Name + lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#7571F9")).
 			Bold(true).
-			Render(" will be delete permanently")
+			Render(" will be deleted permanently")
 		return message
 	}
 

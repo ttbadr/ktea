@@ -13,15 +13,18 @@ import (
 	"ktea/ui/pages/error_page"
 	"ktea/ui/pages/nav"
 	"ktea/ui/pages/publish_page"
+	"ktea/ui/pages/record_details_page"
 	"ktea/ui/pages/topics_page"
 )
 
 type Model struct {
-	active     nav.Page
-	topicsPage *topics_page.Model
-	statusbar  *statusbar.Model
-	ka         *kadmin.SaramaKafkaAdmin
-	ktx        *kontext.ProgramKtx
+	active            nav.Page
+	topicsPage        *topics_page.Model
+	statusbar         *statusbar.Model
+	ka                *kadmin.SaramaKafkaAdmin
+	ktx               *kontext.ProgramKtx
+	consumptionPage   nav.Page
+	recordDetailsPage nav.Page
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -52,6 +55,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			m.active = consumption_form_page.New(msg.Topic)
 		}
 
+	case nav.LoadRecordDetailPageMsg:
+		m.active = record_details_page.New(msg.Record, msg.Topic)
+		m.recordDetailsPage = m.active
+
 	case nav.LoadTopicConfigPageMsg:
 		page, cmd := configs_page.New(m.ka, m.ka, m.topicsPage.SelectedTopicName())
 		cmds = append(cmds, cmd)
@@ -63,9 +70,13 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case nav.LoadPublishPageMsg:
 		m.active = publish_page.New(m.ka, msg.Topic)
 
+	case nav.LoadCachedConsumptionPageMsg:
+		m.active = m.consumptionPage
+
 	case nav.LoadConsumptionPageMsg:
 		var cmd tea.Cmd
 		m.active, cmd = consumption_page.New(m.ka, msg.ReadDetails)
+		m.consumptionPage = m.active
 		cmds = append(cmds, cmd)
 
 	}

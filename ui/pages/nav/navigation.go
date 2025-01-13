@@ -27,9 +27,17 @@ type LoadConsumptionPageMsg struct {
 	ReadDetails kadmin.ReadDetails
 }
 
+type LoadCachedConsumptionPageMsg struct {
+}
+
 type LoadConsumptionFormPageMsg struct {
 	Topic       *kadmin.Topic
 	ReadDetails *kadmin.ReadDetails
+}
+
+type LoadRecordDetailPageMsg struct {
+	Record *kadmin.ConsumerRecord
+	Topic  *kadmin.Topic
 }
 
 type LoadCGroupsPageMsg struct {

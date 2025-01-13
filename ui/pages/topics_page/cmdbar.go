@@ -129,7 +129,7 @@ func (m *CmdBarModel) handleCtrlDKeyMsg(topic string) tea.Msg {
 		Render("🗑️  "+topic) + lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#7571F9")).
 		Bold(true).
-		Render(" will be delete permanently")).
+		Render(" will be deleted permanently")).
 		Focus()
 	return propagationMsg
 }

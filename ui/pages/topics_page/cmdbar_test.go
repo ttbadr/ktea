@@ -258,7 +258,7 @@ func TestNewListTopicsCommandBar_Delete(t *testing.T) {
 
 		render := bar.View(ui.TestKontext, ui.TestRenderer)
 
-		assert.Contains(t, render, "┃ 🗑️  topic.a will be delete permanently          Delete!     Cancel.         ")
+		assert.Contains(t, render, "┃ 🗑️  topic.a will be deleted permanently          Delete!     Cancel.         ")
 		assert.True(t, bar.IsFocused())
 	})
 
