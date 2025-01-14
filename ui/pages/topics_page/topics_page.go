@@ -72,7 +72,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		switch msg.String() {
 		case "ctrl+n":
 			return ui.PublishMsg(nav.LoadCreateTopicPageMsg{})
-		case "ctrl+u":
+		case "ctrl+o":
 			return ui.PublishMsg(nav.LoadTopicConfigPageMsg{})
 		case "ctrl+p":
 			return ui.PublishMsg(nav.LoadPublishPageMsg{Topic: m.SelectedTopic()})
@@ -201,7 +201,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 		{"Publish", "C-p"},
 		{"Create", "C-n"},
 		{"Delete", "F2"},
-		{"Configs", "C-u"},
+		{"Configs", "C-o"},
 		{"Refresh", "F5"},
 	}
 	m.table = table.New(

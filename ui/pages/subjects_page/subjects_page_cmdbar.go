@@ -112,7 +112,7 @@ func NewCmdBar(deleter sradmin.SubjectDeleter) *SubjectsCmdBar {
 
 	deleteFunc := func(subject sradmin.Subject) tea.Cmd {
 		return func() tea.Msg {
-			return deleter.DeleteSubject(subject.Name, 1)
+			return deleter.DeleteSubject(subject.Name)
 		}
 	}
 
@@ -133,7 +133,7 @@ func NewCmdBar(deleter sradmin.SubjectDeleter) *SubjectsCmdBar {
 		cmd := m.SpinWithLoadingMsg("Deleting Subject " + msg.Subject)
 		return true, cmd
 	}
-	subjectListingErrorMsg := func(msg sradmin.SubjetListingErrorMsg, m *notifier.Model) (bool, tea.Cmd) {
+	subjectListingErrorMsg := func(msg sradmin.SubjectListingErrorMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowErrorMsg("Error listing subjects", msg.Err)
 		return true, nil
 	}

@@ -16,5 +16,5 @@ type SubjectCreator interface {
 }
 
 type SubjectDeleter interface {
-	DeleteSubject(subject string, version int) tea.Msg
+	DeleteSubject(subject string) tea.Msg
 }

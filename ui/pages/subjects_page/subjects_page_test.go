@@ -28,7 +28,7 @@ type DeletedSubjectMsg struct {
 	Version int
 }
 
-func (m *MockSubjectsDeleter) DeleteSubject(subject string, version int) tea.Msg {
+func (m *MockSubjectsDeleter) DeleteSubject(subject string) tea.Msg {
 	return m.deletionResultMsg
 }
 

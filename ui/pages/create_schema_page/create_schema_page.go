@@ -83,6 +83,9 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case sradmin.SchemaCreatedMsg:
 		m.state = entering
 		m.form = nil
+	case sradmin.SchemaCreationErrMsg:
+		m.state = entering
+		m.form = nil
 	case sradmin.SchemaCreationStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
 	}
@@ -144,24 +147,25 @@ func New(creator sradmin.SubjectCreator, ktx *kontext.ProgramKtx) (*Model, tea.C
 	model.creator = creator
 	model.state = entering
 	notifierCmdBar := cmdbar.NewNotifierCmdBar()
-	subjectListingStartedNotifier := func(msg sradmin.SchemaCreationStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
+	cmdbar.WithMapping(notifierCmdBar, func(msg sradmin.SchemaCreationStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		cmd := m.SpinWithLoadingMsg("Creating Schema")
 		return true, cmd
-	}
-	hideNotificationMsgNotifier := func(msg notifier.HideNotificationMsg, m *notifier.Model) (bool, tea.Cmd) {
-		m.Idle()
-		return true, nil
-	}
-	f := func(msg sradmin.SchemaCreatedMsg, m *notifier.Model) (bool, tea.Cmd) {
+	})
+	cmdbar.WithMapping(notifierCmdBar, func(msg sradmin.SchemaCreatedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowSuccessMsg("Schema created")
 		return true, func() tea.Msg {
 			time.Sleep(2 * time.Second)
 			return notifier.HideNotificationMsg{}
 		}
-	}
-	cmdbar.WithMapping(notifierCmdBar, subjectListingStartedNotifier)
-	cmdbar.WithMapping(notifierCmdBar, f)
-	cmdbar.WithMapping(notifierCmdBar, hideNotificationMsgNotifier)
+	})
+	cmdbar.WithMapping(notifierCmdBar, func(msg notifier.HideNotificationMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.Idle()
+		return true, nil
+	})
+	cmdbar.WithMapping(notifierCmdBar, func(msg sradmin.SchemaCreationErrMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.ShowErrorMsg("Schema creation failed", msg.Err)
+		return true, nil
+	})
 	model.cmdBar = notifierCmdBar
 	return model, nil
 }

@@ -3,97 +3,14 @@ package sradmin
 import (
 	"encoding/base64"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/log"
 	"github.com/riferrei/srclient"
 	"ktea/config"
-	"ktea/kadmin"
 	"ktea/kontext"
 	"net/http"
 )
 
 type SrAdmin struct {
 	client *srclient.SchemaRegistryClient
-}
-
-type SubjectListingStartedMsg struct {
-	subjects chan []Subject
-	err      chan error
-}
-
-type SubjetListingErrorMsg struct {
-	Err error
-}
-
-func (msg *SubjectListingStartedMsg) AwaitCompletion() tea.Msg {
-	select {
-	case subjects := <-msg.subjects:
-		return SubjectsListedMsg{subjects}
-	case err := <-msg.err:
-		log.Error("Failed to fetch subjects", "err", err)
-		return SubjetListingErrorMsg{err}
-	}
-}
-
-type SubjectsListedMsg struct {
-	Subjects []Subject
-}
-
-func (s *SrAdmin) ListSubjects() tea.Msg {
-	subjectsChan := make(chan []Subject)
-	errChan := make(chan error)
-
-	go s.doListSubject(subjectsChan, errChan)
-
-	return SubjectListingStartedMsg{subjectsChan, errChan}
-}
-
-type Subject struct {
-	Name     string
-	Versions []int
-}
-
-func (s *SrAdmin) doListSubject(subjectsChan chan []Subject, errChan chan error) {
-	maybeIntroduceLatency()
-
-	subjects, err := s.client.GetSubjects()
-	if err != nil {
-		errChan <- err
-		return
-	}
-
-	//var wg sync.WaitGroup
-	//var mu sync.Mutex
-	results := make([][]int, len(subjects))
-
-	//for i, subject := range subjects {
-	//
-	//	wg.Add(1)
-	//
-	//	go func(index int, subject string) {
-	//		defer wg.Done()
-	//		versions, err := s.client.GetSchemaVersions(subject)
-	//		if err != nil {
-	//			errChan <- fmt.Errorf("failed to get versions for subject %s: %w", subject, err)
-	//			return
-	//		}
-	//		mu.Lock()
-	//		results[i] = versions
-	//		mu.Unlock()
-	//	}(i, subject)
-	//
-	//}
-	//
-	//wg.Wait()
-
-	var subjectPtrs []Subject
-	for i, str := range subjects {
-		ptr := str
-		subjectPtrs = append(subjectPtrs, Subject{
-			Name:     ptr,
-			Versions: results[i],
-		})
-	}
-	subjectsChan <- subjectPtrs
 }
 
 type SchemaCreationStartedMsg struct {
@@ -103,13 +20,16 @@ type SchemaCreationStartedMsg struct {
 
 type SchemaCreatedMsg struct{}
 
+type SchemaCreationErrMsg struct {
+	Err error
+}
+
 func (msg *SchemaCreationStartedMsg) AwaitCompletion() tea.Msg {
 	select {
 	case <-msg.created:
 		return SchemaCreatedMsg{}
 	case err := <-msg.err:
-		log.Error("Failed to fetch subjects", "err", err)
-		return kadmin.OffsetListingErrorMsg{err}
+		return SchemaCreationErrMsg{err}
 	}
 }
 
@@ -130,6 +50,7 @@ func (s *SrAdmin) doCreateSchema(details SubjectCreationDetails, createdChan cha
 	_, err := s.client.CreateSchema(details.Subject, details.Schema, srclient.Avro)
 	if err != nil {
 		errChan <- err
+		return
 	}
 	createdChan <- true
 }
