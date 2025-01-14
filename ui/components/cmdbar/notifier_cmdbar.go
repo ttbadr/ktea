@@ -10,8 +10,6 @@ import (
 	"reflect"
 )
 
-type HideNotificationMsg struct{}
-
 // Notification triggers a specific notification and
 // returns if the CmdBar is still active or not along with an optional
 // tea.Cmd to execute.

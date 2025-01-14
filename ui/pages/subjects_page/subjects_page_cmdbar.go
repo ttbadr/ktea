@@ -9,7 +9,6 @@ import (
 	"ktea/ui/components/cmdbar"
 	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
-	"time"
 )
 
 type SubjectsCmdBar struct {
@@ -28,15 +27,15 @@ func (s *SubjectsCmdBar) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) st
 }
 
 func (s *SubjectsCmdBar) Update(msg tea.Msg, selectedSubject sradmin.Subject) (tea.Msg, tea.Cmd) {
-	// when notifier is active it is receiving priority to handle messages
-	// until a message comes in that deactivates the notifier
+	// when the notifier is active and has priority (because of a loading spinner)
 	if s.active == s.notifierWidget {
-		s.active = s.notifierWidget
-		active, pmsg, cmd := s.active.Update(msg)
-		if !active {
-			s.active = nil
+		if s.notifierWidget.(*cmdbar.NotifierCmdBar).Notifier.HasPriority() {
+			active, pmsg, cmd := s.active.Update(msg)
+			if !active {
+				s.active = nil
+			}
+			return pmsg, cmd
 		}
-		return pmsg, cmd
 	}
 
 	switch msg := msg.(type) {
@@ -125,7 +124,8 @@ func NewCmdBar(deleter sradmin.SubjectDeleter) *SubjectsCmdBar {
 		m.Idle()
 		return false, nil
 	}
-	hideNotificationNotifier := func(msg cmdbar.HideNotificationMsg, m *notifier.Model) (bool, tea.Cmd) {
+	// TODO maybe we can move this into the notifier
+	hideNotificationNotifier := func(msg notifier.HideNotificationMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.Idle()
 		return false, nil
 	}
@@ -139,10 +139,11 @@ func NewCmdBar(deleter sradmin.SubjectDeleter) *SubjectsCmdBar {
 	}
 	subjectDeletedNotifier := func(msg sradmin.SubjectDeletedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowSuccessMsg("Subject deleted")
-		return true, func() tea.Msg {
-			time.Sleep(2 * time.Second)
-			return cmdbar.HideNotificationMsg{}
-		}
+		return true, m.AutoHideCmd()
+	}
+	subjectDeletionErrorNotifier := func(msg sradmin.SubjectDeletionErrorMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.ShowErrorMsg("Failed to delete subject", msg.Err)
+		return true, m.AutoHideCmd()
 	}
 	notifierCmdBar := cmdbar.NewNotifierCmdBar()
 	cmdbar.WithMapping(notifierCmdBar, subjectListingStartedNotifier)
@@ -151,6 +152,7 @@ func NewCmdBar(deleter sradmin.SubjectDeleter) *SubjectsCmdBar {
 	cmdbar.WithMapping(notifierCmdBar, subjectDeletionStartedNotifier)
 	cmdbar.WithMapping(notifierCmdBar, subjectListingErrorMsg)
 	cmdbar.WithMapping(notifierCmdBar, subjectDeletedNotifier)
+	cmdbar.WithMapping(notifierCmdBar, subjectDeletionErrorNotifier)
 
 	return &SubjectsCmdBar{
 		cmdbar.NewDeleteCmdBar(deleteMsgFunc, deleteFunc),

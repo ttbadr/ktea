@@ -20,6 +20,7 @@ func (m *MockSubjectsLister) ListSubjects() tea.Msg {
 }
 
 type MockSubjectsDeleter struct {
+	deletionResultMsg tea.Msg
 }
 
 type DeletedSubjectMsg struct {
@@ -28,7 +29,7 @@ type DeletedSubjectMsg struct {
 }
 
 func (m *MockSubjectsDeleter) DeleteSubject(subject string, version int) tea.Msg {
-	return DeletedSubjectMsg{subject, version}
+	return m.deletionResultMsg
 }
 
 func TestSubjectsPage(t *testing.T) {
@@ -85,11 +86,27 @@ func TestSubjectsPage(t *testing.T) {
 		assert.NotRegexp(t, "subject4\\W+5", render)
 	})
 
-	t.Run("Delete subject", func(t *testing.T) {
+	t.Run("When deletion spinner active do not allow other cmdbars to activate", func(t *testing.T) {
 
 		subjectsPage, _ := New(
 			&MockSubjectsLister{},
 			&MockSubjectsDeleter{},
+		)
+		subjectsPage.Update(sradmin.SubjectDeletionStartedMsg{})
+
+		subjectsPage.Update(keys.Key('/'))
+
+		render := subjectsPage.View(ui.TestKontext, ui.TestRenderer)
+
+		assert.Contains(t, render, " ⏳ Deleting Subject")
+	})
+
+	t.Run("Delete subject", func(t *testing.T) {
+
+		deleter := MockSubjectsDeleter{}
+		subjectsPage, _ := New(
+			&MockSubjectsLister{},
+			&deleter,
 		)
 
 		var subjects []sradmin.Subject
@@ -118,10 +135,54 @@ func TestSubjectsPage(t *testing.T) {
 		})
 
 		t.Run("Enter effectively deletes the subject", func(t *testing.T) {
+			deleter.deletionResultMsg = DeletedSubjectMsg{"subject1", 1}
+
 			subjectsPage.Update(keys.Key('d'))
 			cmds := subjectsPage.Update(keys.Key(tea.KeyEnter))
 			msgs := tests.ExecuteBatchCmd(cmds)
+
 			assert.Contains(t, msgs, DeletedSubjectMsg{"subject1", 1})
+		})
+
+		t.Run("Display error when deletion fails", func(t *testing.T) {
+			deleter.deletionResultMsg = sradmin.SubjectDeletionStartedMsg{}
+
+			subjectsPage.Update(keys.Key(tea.KeyF2))
+			subjectsPage.Update(keys.Key('d'))
+			cmds := subjectsPage.Update(keys.Key(tea.KeyEnter))
+
+			for _, msg := range tests.ExecuteBatchCmd(cmds) {
+				subjectsPage.Update(msg)
+			}
+			subjectsPage.Update(sradmin.SubjectDeletionErrorMsg{
+				Err: fmt.Errorf("unable to delete subject"),
+			})
+
+			render = subjectsPage.View(ui.NewTestKontext(), ui.TestRenderer)
+
+			assert.Regexp(t, "unable to delete subject", render)
+
+			t.Run("When deletion failure msg visible do allow other cmdbars to activate", func(t *testing.T) {
+				subjectsPage.Update(keys.Key('/'))
+
+				render = subjectsPage.View(ui.NewTestKontext(), ui.TestRenderer)
+
+				assert.NotContains(t, render, "Failed to delete subject: unable to delete subject")
+				assert.Contains(t, render, "> Search subject by name")
+			})
+		})
+
+		t.Run("When deletion started show spinning indicator", func(t *testing.T) {
+
+			subjectsPage, _ := New(
+				&MockSubjectsLister{},
+				&MockSubjectsDeleter{},
+			)
+			subjectsPage.Update(sradmin.SubjectDeletionStartedMsg{})
+
+			render := subjectsPage.View(ui.TestKontext, ui.TestRenderer)
+
+			assert.Contains(t, render, " ⏳ Deleting Subject")
 		})
 	})
 
@@ -136,18 +197,5 @@ func TestSubjectsPage(t *testing.T) {
 		render := subjectsPage.View(ui.TestKontext, ui.TestRenderer)
 
 		assert.Contains(t, render, " ⏳ Loading subjects")
-	})
-
-	t.Run("When deletion started show spinning indicator", func(t *testing.T) {
-
-		subjectsPage, _ := New(
-			&MockSubjectsLister{},
-			&MockSubjectsDeleter{},
-		)
-		subjectsPage.Update(sradmin.SubjectDeletionStartedMsg{})
-
-		render := subjectsPage.View(ui.TestKontext, ui.TestRenderer)
-
-		assert.Contains(t, render, " ⏳ Deleting Subject")
 	})
 }

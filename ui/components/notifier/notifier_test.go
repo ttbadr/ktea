@@ -36,4 +36,18 @@ func TestNotifier(t *testing.T) {
 			assert.Nil(t, cmd)
 		})
 	})
+
+	t.Run("Has priority when spinning", func(t *testing.T) {
+		notifier := New()
+
+		assert.False(t, notifier.HasPriority())
+
+		notifier.SpinWithRocketMsg("Loading")
+
+		assert.True(t, notifier.HasPriority())
+
+		notifier.Idle()
+
+		assert.False(t, notifier.HasPriority())
+	})
 }

@@ -148,7 +148,7 @@ func New(creator sradmin.SubjectCreator, ktx *kontext.ProgramKtx) (*Model, tea.C
 		cmd := m.SpinWithLoadingMsg("Creating Schema")
 		return true, cmd
 	}
-	hideNotificationMsgNotifier := func(msg cmdbar.HideNotificationMsg, m *notifier.Model) (bool, tea.Cmd) {
+	hideNotificationMsgNotifier := func(msg notifier.HideNotificationMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.Idle()
 		return true, nil
 	}
@@ -156,7 +156,7 @@ func New(creator sradmin.SubjectCreator, ktx *kontext.ProgramKtx) (*Model, tea.C
 		m.ShowSuccessMsg("Schema created")
 		return true, func() tea.Msg {
 			time.Sleep(2 * time.Second)
-			return cmdbar.HideNotificationMsg{}
+			return notifier.HideNotificationMsg{}
 		}
 	}
 	cmdbar.WithMapping(notifierCmdBar, subjectListingStartedNotifier)

@@ -102,6 +102,17 @@ func (m *Model) Idle() {
 	m.msg = ""
 }
 
+func (m *Model) AutoHideCmd() tea.Cmd {
+	return func() tea.Msg {
+		time.Sleep(5 * time.Second)
+		return HideNotificationMsg{}
+	}
+}
+
+func (m *Model) HasPriority() bool {
+	return m.state == spinning
+}
+
 func New() *Model {
 	l := Model{}
 	l.state = idle

@@ -25,23 +25,35 @@ func (msg *SubjectDeletionStartedMsg) AwaitCompletion() tea.Msg {
 	}
 }
 
-func (s *SrAdmin) DeleteSubject(subject string, version int) tea.Msg {
+func (s *SrAdmin) DeleteSubject(
+	subject string,
+	version int,
+) tea.Msg {
 	deletedChan := make(chan bool)
 	errChan := make(chan error)
-	go func(deletedChan chan bool, errChan chan error) {
-		maybeIntroduceLatency()
-		err := s.client.DeleteSubjectByVersion(subject, version, true)
-		if err != nil {
-			errChan <- err
-			return
-		} else {
-			deletedChan <- true
-			return
-		}
-	}(deletedChan, errChan)
+
+	go s.doDeleteSubject(subject, version, deletedChan, errChan)
+
 	return SubjectDeletionStartedMsg{
 		subject,
 		deletedChan,
 		errChan,
+	}
+}
+
+func (s *SrAdmin) doDeleteSubject(
+	subject string,
+	version int,
+	deletedChan chan bool,
+	errChan chan error,
+) {
+	maybeIntroduceLatency()
+	err := s.client.DeleteSubjectByVersion(subject, version, true)
+	if err != nil {
+		errChan <- err
+		return
+	} else {
+		deletedChan <- true
+		return
 	}
 }
