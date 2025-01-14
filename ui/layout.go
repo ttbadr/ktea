@@ -2,8 +2,8 @@ package ui
 
 import "github.com/charmbracelet/lipgloss"
 
-func JoinVerticalSkipEmptyViews(views ...string) string {
-	return join(views, lipgloss.Top)
+func JoinVerticalSkipEmptyViews(position lipgloss.Position, views ...string) string {
+	return join(views, position)
 }
 
 func JoinHorizontalSkipEmptyViews(views ...string) string {

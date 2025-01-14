@@ -2,6 +2,7 @@ package main
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"ktea/config"
 	"ktea/kadmin"
@@ -64,7 +65,7 @@ func (m *Model) View() string {
 		views = append(views, view)
 	}
 
-	return ui.JoinVerticalSkipEmptyViews(views...)
+	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top, views...)
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

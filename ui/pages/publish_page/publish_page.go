@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
 	"ktea/kadmin"
 	"ktea/kontext"
 	"ktea/styles"
@@ -65,7 +66,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	if m.topicForm == nil {
 		m.topicForm = m.newForm(ktx)
 	}
-	return ui.JoinVerticalSkipEmptyViews(
+	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top,
 		notifierView,
 		renderer.RenderWithStyle(m.topicForm.View(), styles.Form),
 	)

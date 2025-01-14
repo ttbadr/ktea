@@ -3,6 +3,7 @@ package topics_tab
 import (
 	"context"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"ktea/kadmin"
 	"ktea/kontext"
 	"ktea/ui"
@@ -36,7 +37,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 
 	views = append(views, m.active.View(ktx, renderer))
 
-	return ui.JoinVerticalSkipEmptyViews(views...)
+	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top, views...)
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {

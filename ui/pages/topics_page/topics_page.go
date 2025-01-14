@@ -5,6 +5,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"ktea/kadmin"
 	"ktea/kontext"
 	"ktea/styles"
@@ -34,9 +35,7 @@ type Model struct {
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	var views []string
 	cmdBarView := m.cmdBar.View(ktx, renderer)
-	if cmdBarView != "" {
-		views = append(views, cmdBarView)
-	}
+	views = append(views, cmdBarView)
 
 	m.table.SetHeight(ktx.AvailableHeight)
 	m.table.SetWidth(ktx.WindowWidth - 2)
@@ -60,7 +59,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 		views = append(views, render)
 	}
 
-	return ui.JoinVerticalSkipEmptyViews(views...)
+	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top, views...)
 }
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	cmds := make([]tea.Cmd, 2)

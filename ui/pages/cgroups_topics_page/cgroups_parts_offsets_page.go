@@ -34,34 +34,42 @@ type Model struct {
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
-	m.topicsTable.SetHeight(ktx.AvailableHeight)
-	i := int(float64(ktx.WindowWidth / 2))
-	m.topicsTable.SetWidth(i - 2)
+
+	halfWidth := int(float64(ktx.WindowWidth / 2))
+
+	cmdBarView := m.cmdBar.View(ktx, renderer)
+
+	// TODO figure out where the 1 comes from
+	m.topicsTable.SetHeight(ktx.AvailableHeight - 1)
+	m.topicsTable.SetWidth(halfWidth - 2)
 	m.topicsTable.SetColumns([]table.Column{
-		{"Topic Name", int(float64(i - 4))},
+		{"Topic Name", int(float64(halfWidth - 4))},
 	})
 	m.topicsTable.SetRows(m.topicsRows)
 
-	m.offsetsTable.SetHeight(ktx.AvailableHeight)
+	m.offsetsTable.SetHeight(ktx.AvailableHeight - 1)
 	m.offsetsTable.SetColumns([]table.Column{
-		{"Partition", int(float64(i-6) * 0.5)},
-		{"Offset", int(float64(i-5) * 0.5)},
+		{"Partition", int(float64(halfWidth-6) * 0.5)},
+		{"Offset", int(float64(halfWidth-5) * 0.5)},
 	})
 	m.offsetsTable.SetRows(m.offsetRows)
 
-	topicTableRender := styles.Table.Blur
-	offsetTableRender := styles.Table.Blur
+	topicTableStyle := styles.Table.Blur
+	offsetTableStyle := styles.Table.Blur
 	if m.tableFocus == topicFocus {
-		topicTableRender = styles.Table.Focus
-		offsetTableRender = styles.Table.Blur
+		topicTableStyle = styles.Table.Focus
+		offsetTableStyle = styles.Table.Blur
 	}
 
-	return lg.JoinVertical(lg.Left,
-		m.cmdBar.View(ktx, renderer),
+	topicsTableView := renderer.RenderWithStyle(m.topicsTable.View(), topicTableStyle)
+	offsetsTableView := renderer.RenderWithStyle(m.offsetsTable.View(), offsetTableStyle)
+
+	return ui.JoinVerticalSkipEmptyViews(lg.Left,
+		cmdBarView,
 		lg.JoinHorizontal(
 			lg.Top,
-			topicTableRender.Render(m.topicsTable.View()),
-			offsetTableRender.Render(m.offsetsTable.View()),
+			topicsTableView,
+			offsetsTableView,
 		))
 }
 
@@ -163,7 +171,9 @@ func (m *Model) selectedRow() string {
 }
 
 func (m *Model) Shortcuts() []statusbar.Shortcut {
-	return []statusbar.Shortcut{}
+	return []statusbar.Shortcut{
+		{"Go Back", "esc"},
+	}
 }
 
 func (m *Model) Title() string {

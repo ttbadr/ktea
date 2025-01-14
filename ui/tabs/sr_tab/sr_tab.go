@@ -2,6 +2,7 @@ package sr_tab
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"ktea/kontext"
 	"ktea/sradmin"
 	"ktea/ui"
@@ -23,7 +24,7 @@ type Model struct {
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	view := m.statusbar.View(ktx, renderer)
-	return ui.JoinVerticalSkipEmptyViews(view, m.active.View(ktx, renderer))
+	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top, view, m.active.View(ktx, renderer))
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {

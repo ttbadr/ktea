@@ -5,6 +5,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
 	"ktea/kadmin"
 	"ktea/kontext"
 	"ktea/styles"
@@ -56,7 +57,7 @@ func (m *CmdBarModel) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) strin
 		views = append(views, m.notifier.View(ktx, renderer))
 	}
 
-	return ui.JoinVerticalSkipEmptyViews(views...)
+	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top, views...)
 }
 
 // Update returns the tea.Msg if it is not being handled or nil if it is

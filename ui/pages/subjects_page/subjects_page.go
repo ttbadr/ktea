@@ -3,6 +3,7 @@ package subjects_page
 import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"ktea/kontext"
 	"ktea/sradmin"
 	"ktea/styles"
@@ -43,7 +44,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 		render = renderer.Render(styles.Table.Blur.Render(m.table.View()))
 	}
 
-	return ui.JoinVerticalSkipEmptyViews(cmdBarView, render)
+	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top, cmdBarView, render)
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {

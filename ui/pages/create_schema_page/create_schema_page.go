@@ -4,6 +4,7 @@ import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
 	"ktea/kontext"
 	"ktea/sradmin"
 	"ktea/styles"
@@ -45,6 +46,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	}
 
 	return ui.JoinVerticalSkipEmptyViews(
+		lipgloss.Top,
 		cmdbarView,
 		renderer.RenderWithStyle(m.form.View(), styles.Form),
 	)

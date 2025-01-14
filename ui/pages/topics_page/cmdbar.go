@@ -42,7 +42,7 @@ func (m *CmdBarModel) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) strin
 	}
 
 	views = append(views, renderer.Render(m.notifier.View(ktx, renderer)))
-	return ui.JoinVerticalSkipEmptyViews(views...)
+	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top, views...)
 }
 
 func (m *CmdBarModel) Shortcuts() []statusbar.Shortcut {
