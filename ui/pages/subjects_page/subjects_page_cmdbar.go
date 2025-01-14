@@ -53,13 +53,13 @@ func (s *SubjectsCmdBar) Update(msg tea.Msg, selectedSubject sradmin.Subject) (t
 				s.active = nil
 			}
 			return pmsg, cmd
-		case "ctrl+d":
+		case "f2":
 			if _, ok := s.active.(*cmdbar.SearchCmdBarModel); ok {
 				s.searchPrevActive = true
 			}
 			s.deleteWidget.Delete(selectedSubject)
+			_, pmsg, cmd := s.deleteWidget.Update(msg)
 			s.active = s.deleteWidget
-			_, pmsg, cmd := s.active.Update(msg)
 			return pmsg, cmd
 		}
 	}

@@ -53,7 +53,7 @@ func (s *DeleteCmdBarModel[any]) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+d":
+		case "f2":
 			s.active = true
 			return s.active, nil, nil
 		case "esc":

@@ -10,3 +10,12 @@ var TestKontext = &kontext.ProgramKtx{
 }
 
 var TestRenderer = NewRenderer(TestKontext)
+
+func NewTestKontext() *kontext.ProgramKtx {
+	return &kontext.ProgramKtx{
+		Config:          nil,
+		WindowWidth:     100,
+		WindowHeight:    100,
+		AvailableHeight: 100,
+	}
+}

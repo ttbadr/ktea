@@ -26,7 +26,6 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 	return []statusbar.Shortcut{
 		{"Search", "/"},
 		{"View", "enter"},
-		{"Delete", "C-d"},
 		{"Refresh", "F5"},
 	}
 }

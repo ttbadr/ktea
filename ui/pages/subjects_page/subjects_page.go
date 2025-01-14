@@ -116,7 +116,7 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 			},
 			{
 				Name:       "delete",
-				Keybinding: "C-d",
+				Keybinding: "F2",
 			},
 			{
 				Name:       "refresh",
