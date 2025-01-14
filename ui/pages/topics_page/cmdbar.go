@@ -83,8 +83,8 @@ func (m *CmdBarModel) Update(msg tea.Msg, selectedTopic string) (tea.Msg, tea.Cm
 			propagationMsg = m.handleSlashKeyMsg(msg)
 		} else if msg.String() == "enter" {
 			propagationMsg, cmd = m.handleEnterKeyMsg(msg, cmd, selectedTopic)
-		} else if msg.String() == "ctrl+d" {
-			propagationMsg = m.handleCtrlDKeyMsg(selectedTopic)
+		} else if msg.String() == "f2" {
+			propagationMsg = m.handleF2Msg(selectedTopic)
 		} else if msg.String() == "esc" {
 			m.handleEscKeyMsg()
 		} else if m.state == SEARCHING {
@@ -120,7 +120,7 @@ func (m *CmdBarModel) handleEscKeyMsg() {
 	}
 }
 
-func (m *CmdBarModel) handleCtrlDKeyMsg(topic string) tea.Msg {
+func (m *CmdBarModel) handleF2Msg(topic string) tea.Msg {
 	var propagationMsg tea.Msg = nil
 	m.state = DELETE_CONFIRMATION
 	// TODO: clean-up style

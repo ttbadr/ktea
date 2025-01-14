@@ -3,6 +3,7 @@ package topics_page
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
+	"ktea/tests/keys"
 	"ktea/ui"
 	"testing"
 )
@@ -246,31 +247,21 @@ func TestNewListTopicsCommandBar_Search(t *testing.T) {
 }
 
 func TestNewListTopicsCommandBar_Delete(t *testing.T) {
-	t.Run("c-d raises delete confirmation", func(t *testing.T) {
+	t.Run("F2 raises delete confirmation", func(t *testing.T) {
 		bar := NewCmdBar(&MockTopicDeleter{})
 
-		bar.Update(tea.KeyMsg{
-			Type:  tea.KeyCtrlD,
-			Runes: []rune{},
-			Alt:   false,
-			Paste: false,
-		}, "topic.a")
+		bar.Update(keys.Key(tea.KeyF2), "topic.a")
 
 		render := bar.View(ui.TestKontext, ui.TestRenderer)
 
-		assert.Contains(t, render, "┃ 🗑️  topic.a will be deleted permanently          Delete!     Cancel.         ")
+		assert.Regexp(t, "┃ 🗑️  topic.a will be deleted permanently\\W+Delete!\\W+Cancel.\\W+", render)
 		assert.True(t, bar.IsFocused())
 	})
 
 	t.Run("esc cancels raised delete confirmation", func(t *testing.T) {
 		bar := NewCmdBar(&MockTopicDeleter{})
 
-		bar.Update(tea.KeyMsg{
-			Type:  tea.KeyCtrlD,
-			Runes: []rune{},
-			Alt:   false,
-			Paste: false,
-		}, "topic.a")
+		bar.Update(keys.Key(tea.KeyF2), "topic.a")
 		bar.Update(tea.KeyMsg{
 			Type:  tea.KeyEsc,
 			Runes: []rune{},
@@ -287,12 +278,7 @@ func TestNewListTopicsCommandBar_Delete(t *testing.T) {
 	t.Run("esc resets raised delete confirmation", func(t *testing.T) {
 		bar := NewCmdBar(&MockTopicDeleter{})
 
-		bar.Update(tea.KeyMsg{
-			Type:  tea.KeyCtrlD,
-			Runes: []rune{},
-			Alt:   false,
-			Paste: false,
-		}, "topic.a")
+		bar.Update(keys.Key(tea.KeyF2), "topic.a")
 		bar.Update(tea.KeyMsg{
 			Type:  tea.KeyRight,
 			Runes: []rune{},
@@ -306,12 +292,7 @@ func TestNewListTopicsCommandBar_Delete(t *testing.T) {
 			Alt:   false,
 			Paste: false,
 		}, "topic.a")
-		bar.Update(tea.KeyMsg{
-			Type:  tea.KeyCtrlD,
-			Runes: []rune{},
-			Alt:   false,
-			Paste: false,
-		}, "topic.a")
+		bar.Update(keys.Key(tea.KeyF2), "topic.a")
 
 		assert.False(t, bar.deleteConfirm.GetValue().(bool))
 	})

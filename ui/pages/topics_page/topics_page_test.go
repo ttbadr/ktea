@@ -3,6 +3,7 @@ package topics_page
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
+	"ktea/kadmin"
 	"ktea/tests/keys"
 	"testing"
 )
@@ -10,21 +11,42 @@ import (
 type MockTopicLister struct {
 }
 
-func (m MockTopicLister) ListTopics() tea.Msg {
-	return nil
+type ListTopicsCalledMsg struct{}
+
+func (m *MockTopicLister) ListTopics() tea.Msg {
+	return ListTopicsCalledMsg{}
 }
 
 func TestTopicsPage(t *testing.T) {
 	t.Run("Ignore KeyMsg when topics aren't loaded yet", func(t *testing.T) {
 		page, _ := New(&MockTopicDeleter{}, &MockTopicLister{})
 
-		msg := page.Update(keys.Key(tea.KeyCtrlN))
-		assert.Nil(t, msg)
+		cmd := page.Update(keys.Key(tea.KeyCtrlN))
+		assert.Nil(t, cmd)
 
-		msg = page.Update(keys.Key(tea.KeyCtrlI))
-		assert.Nil(t, msg)
+		cmd = page.Update(keys.Key(tea.KeyCtrlI))
+		assert.Nil(t, cmd)
 
-		msg = page.Update(keys.Key(tea.KeyCtrlP))
-		assert.Nil(t, msg)
+		cmd = page.Update(keys.Key(tea.KeyCtrlP))
+		assert.Nil(t, cmd)
+	})
+
+	t.Run("F5 refreshes topic list", func(t *testing.T) {
+		page, _ := New(&MockTopicDeleter{}, &MockTopicLister{})
+
+		_ = page.Update(kadmin.TopicListedMsg{
+			Topics: []kadmin.Topic{
+				{
+					Name:       "topic1",
+					Partitions: 1,
+					Replicas:   1,
+					Isr:        1,
+				},
+			},
+		})
+
+		cmd := page.Update(keys.Key(tea.KeyF5))
+
+		assert.IsType(t, ListTopicsCalledMsg{}, cmd())
 	})
 }

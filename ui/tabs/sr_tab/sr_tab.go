@@ -12,12 +12,13 @@ import (
 )
 
 type Model struct {
-	active    nav.Page
-	statusbar *statusbar.Model
-	ktx       *kontext.ProgramKtx
-	creator   sradmin.SubjectCreator
-	lister    sradmin.SubjectLister
-	deleter   sradmin.SubjectDeleter
+	active       nav.Page
+	statusbar    *statusbar.Model
+	ktx          *kontext.ProgramKtx
+	creator      sradmin.SubjectCreator
+	lister       sradmin.SubjectLister
+	deleter      sradmin.SubjectDeleter
+	subjectsPage *subjects_page.Model
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -28,14 +29,17 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 	switch msg.(type) {
+	case sradmin.SubjectsListedMsg:
+		return m.subjectsPage.Update(msg)
 	case nav.LoadCreateSubjectPageMsg:
 		createPage, cmd := create_schema_page.New(m.creator, m.ktx)
 		cmds = append(cmds, cmd)
 		m.active = createPage
 	case nav.LoadSubjectsPageMsg:
-		subjectsPage, cmd := subjects_page.New(m.lister, m.deleter)
+		var cmd tea.Cmd
+		m.subjectsPage, cmd = subjects_page.New(m.lister, m.deleter)
+		m.active = m.subjectsPage
 		cmds = append(cmds, cmd)
-		m.active = subjectsPage
 	}
 
 	m.statusbar = statusbar.New(m.active)
@@ -48,6 +52,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 func New(lister sradmin.SubjectLister, creator sradmin.SubjectCreator, deleter sradmin.SubjectDeleter, ktx *kontext.ProgramKtx) (*Model, tea.Cmd) {
 	subjectsPage, cmd := subjects_page.New(lister, deleter)
 	model := Model{active: subjectsPage}
+	model.subjectsPage = subjectsPage
 	model.statusbar = statusbar.New(subjectsPage)
 	model.ktx = ktx
 	model.creator = creator

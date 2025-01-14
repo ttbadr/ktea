@@ -1,6 +1,7 @@
 package topics_page
 
 import (
+	"context"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
@@ -25,54 +26,47 @@ type Model struct {
 	cmdBar     *CmdBarModel
 	rows       []table.Row
 	moveCursor func()
+	lister     kadmin.TopicLister
+	Ctx        context.Context
+	ctx        context.Context
 }
 
-type TopicListedMsg struct {
-	Topics   []kadmin.Topic
-	newTopic string
-}
-
-type TopicListedErrorMsg struct {
-	Err error
-}
-
-func (t *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
+func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	var views []string
-	cmdBarView := t.cmdBar.View(ktx, renderer)
+	cmdBarView := m.cmdBar.View(ktx, renderer)
 	if cmdBarView != "" {
 		views = append(views, cmdBarView)
 	}
 
-	t.table.SetHeight(ktx.AvailableHeight)
-	t.table.SetWidth(ktx.WindowWidth - 2)
-	t.table.SetColumns([]table.Column{
+	m.table.SetHeight(ktx.AvailableHeight)
+	m.table.SetWidth(ktx.WindowWidth - 2)
+	m.table.SetColumns([]table.Column{
 		{"Name", int(float64(ktx.WindowWidth-9) * 0.7)},
 		{"Partitions", int(float64(ktx.WindowWidth-9) * 0.1)},
 		{"Replicas", int(float64(ktx.WindowWidth-9) * 0.1)},
 		{"In Sync Replicas", int(float64(ktx.WindowWidth-9) * 0.1)},
 	})
-	t.table.SetRows(t.rows)
+	m.table.SetRows(m.rows)
 
-	if t.moveCursor != nil {
-		t.moveCursor()
+	if m.moveCursor != nil {
+		m.moveCursor()
 	}
 
-	if t.cmdBar.IsFocused() {
-		render := renderer.Render(styles.Table.Blur.Render(t.table.View()))
+	if m.cmdBar.IsFocused() {
+		render := renderer.Render(styles.Table.Blur.Render(m.table.View()))
 		views = append(views, render)
 	} else {
-		render := renderer.Render(styles.Table.Focus.Render(t.table.View()))
+		render := renderer.Render(styles.Table.Focus.Render(m.table.View()))
 		views = append(views, render)
 	}
 
 	return ui.JoinVerticalSkipEmptyViews(views...)
 }
-func (t *Model) Update(msg tea.Msg) tea.Cmd {
+func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	cmds := make([]tea.Cmd, 2)
-	var newTopic string
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if t.topics == nil {
+		if m.topics == nil {
 			return nil
 		}
 		switch msg.String() {
@@ -81,108 +75,92 @@ func (t *Model) Update(msg tea.Msg) tea.Cmd {
 		case "ctrl+u":
 			return ui.PublishMsg(nav.LoadTopicConfigPageMsg{})
 		case "ctrl+p":
-			return ui.PublishMsg(nav.LoadPublishPageMsg{Topic: t.SelectedTopic()})
+			return ui.PublishMsg(nav.LoadPublishPageMsg{Topic: m.SelectedTopic()})
+		case "f5":
+			return m.lister.ListTopics
 		case "enter":
-			if t.cmdBar.IsNotFocused() {
+			if m.cmdBar.IsNotFocused() {
 				return ui.PublishMsg(nav.LoadConsumptionFormPageMsg{
-					Topic: t.SelectedTopic(),
+					Topic: m.SelectedTopic(),
 				})
 			}
 		}
-		selectedTopic := t.SelectedTopicName()
-		m, c := t.cmdBar.Update(msg, selectedTopic)
+		selectedTopic := m.SelectedTopicName()
+		pmsg, c := m.cmdBar.Update(msg, selectedTopic)
 		if c != nil {
 			cmds = append(cmds, c)
 		}
-		if m != nil {
-			t.table, c = t.table.Update(m)
+		if pmsg != nil {
+			m.table, c = m.table.Update(pmsg)
 			if c != nil {
 				cmds = append(cmds, c)
 			}
 		}
 	case spinner.TickMsg:
-		selectedTopic := t.SelectedTopicName()
-		_, c := t.cmdBar.Update(msg, selectedTopic)
+		selectedTopic := m.SelectedTopicName()
+		_, c := m.cmdBar.Update(msg, selectedTopic)
 		if c != nil {
 			cmds = append(cmds, c)
 		}
 	case kadmin.TopicListingStartedMsg:
-		tickCmd := t.cmdBar.notifier.SpinWithLoadingMsg("Loading Topics")
-		return tea.Batch(tickCmd, func() tea.Msg {
-			select {
-			case topics := <-msg.Topics:
-				return TopicListedMsg{Topics: topics}
-			case err := <-msg.Err:
-				return TopicListedErrorMsg{Err: err}
-			}
-		})
-	case TopicListedErrorMsg:
-		t.cmdBar.notifier.ShowErrorMsg("Loading Topics Failed", msg.Err)
-	case TopicListedMsg:
-		t.cmdBar.notifier.Idle()
-		t.topics = msg.Topics
-		newTopic = msg.newTopic
+		tickCmd := m.cmdBar.notifier.SpinWithLoadingMsg("Loading Topics")
+		return tea.Batch(
+			tickCmd,
+			msg.AwaitCompletion,
+		)
+	case kadmin.TopicListedErrorMsg:
+		m.cmdBar.notifier.ShowErrorMsg("Loading Topics Failed", msg.Err)
+	case kadmin.TopicListedMsg:
+		m.cmdBar.notifier.Idle()
+		m.topics = msg.Topics
 	case kadmin.TopicDeletedMsg:
-		t.cmdBar.notifier.Idle()
-		t.topics = slices.DeleteFunc(
-			t.topics,
+		m.cmdBar.notifier.Idle()
+		m.topics = slices.DeleteFunc(
+			m.topics,
 			func(t kadmin.Topic) bool { return msg.TopicName == t.Name },
 		)
-		m, c := t.cmdBar.Update(msg, "")
+		pmsg, c := m.cmdBar.Update(msg, "")
 		if c != nil {
 			cmds = append(cmds, c)
 		}
-		if m != nil {
-			t.table, c = t.table.Update(m)
+		if pmsg != nil {
+			m.table, c = m.table.Update(pmsg)
 			if c != nil {
 				cmds = append(cmds, c)
 			}
 		}
 	}
 
-	if t.cmdBar.HasSearchedAtLeastOneChar() {
-		t.table.GotoTop()
+	if m.cmdBar.HasSearchedAtLeastOneChar() {
+		m.table.GotoTop()
 	}
 
 	var rows []table.Row
-	for _, topic := range t.topics {
-		if t.cmdBar.GetSearchTerm() != "" {
-			if strings.Contains(strings.ToLower(topic.Name), strings.ToLower(t.cmdBar.GetSearchTerm())) {
+	for _, topic := range m.topics {
+		if m.cmdBar.GetSearchTerm() != "" {
+			if strings.Contains(strings.ToLower(topic.Name), strings.ToLower(m.cmdBar.GetSearchTerm())) {
 				rows = append(rows, table.Row{topic.Name, strconv.Itoa(topic.Partitions), strconv.Itoa(topic.Replicas), "N/A"})
 			}
 		} else {
 			rows = append(rows, table.Row{topic.Name, strconv.Itoa(topic.Partitions), strconv.Itoa(topic.Replicas), "N/A"})
 		}
 	}
-	t.rows = rows
-	sort.SliceStable(t.rows, func(i, j int) bool {
-		return t.rows[i][0] < t.rows[j][0]
+	m.rows = rows
+	sort.SliceStable(m.rows, func(i, j int) bool {
+		return m.rows[i][0] < m.rows[j][0]
 	})
-
-	if newTopic != "" {
-		for i, r := range t.rows {
-			if r[0] == newTopic {
-				t.moveCursor = func() {
-					t.table.GotoTop()
-					t.table.MoveDown(i)
-					t.moveCursor = nil
-				}
-				break
-			}
-		}
-	}
 
 	return tea.Batch(cmds...)
 }
 
-func (t *Model) Reset() {
-	t.cmdBar.Reset()
-	t.table.GotoTop()
+func (m *Model) Reset() {
+	m.cmdBar.Reset()
+	m.table.GotoTop()
 }
 
-func (t *Model) SelectedTopic() *kadmin.Topic {
-	selectedTopic := t.SelectedTopicName()
-	for _, t := range t.topics {
+func (m *Model) SelectedTopic() *kadmin.Topic {
+	selectedTopic := m.SelectedTopicName()
+	for _, t := range m.topics {
 		if t.Name == selectedTopic {
 			return &t
 		}
@@ -190,8 +168,8 @@ func (t *Model) SelectedTopic() *kadmin.Topic {
 	panic("selected topic not found")
 }
 
-func (t *Model) SelectedTopicName() string {
-	selectedRow := t.table.SelectedRow()
+func (m *Model) SelectedTopicName() string {
+	selectedRow := m.table.SelectedRow()
 	var selectedTopic string
 	if selectedRow != nil {
 		selectedTopic = selectedRow[0]
@@ -199,46 +177,44 @@ func (t *Model) SelectedTopicName() string {
 	return selectedTopic
 }
 
-func (t *Model) Title() string {
-	if t.cmdBar.IsFocused() {
-		return t.cmdBar.Title()
+func (m *Model) Title() string {
+	if m.cmdBar.IsFocused() {
+		return m.cmdBar.Title()
 	} else {
 		return "Topics"
 	}
 }
 
-func (t *Model) Shortcuts() []statusbar.Shortcut {
-	if t.cmdBar.IsFocused() {
-		return t.cmdBar.Shortcuts()
+func (m *Model) Shortcuts() []statusbar.Shortcut {
+	if m.cmdBar.IsFocused() {
+		return m.cmdBar.Shortcuts()
 	} else {
-		return t.shortcuts
+		return m.shortcuts
 	}
 }
 
 func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, tea.Cmd) {
-	var t = Model{}
-	t.shortcuts = []statusbar.Shortcut{
+	var m = Model{}
+	m.shortcuts = []statusbar.Shortcut{
 		{"Search", "/"},
 		{"Consume", "enter"},
 		{"Publish", "C-p"},
 		{"Create", "C-n"},
-		{"Delete", "C-d"},
+		{"Delete", "F2"},
 		{"Configs", "C-u"},
-		{"ACLs", "C-a"},
-		{"Groups", "C-g"},
-		{"Sort By Partitions", "F2"},
-		{"Sort By Name", "F3"},
+		{"Refresh", "F5"},
 	}
-	t.table = table.New(
+	m.table = table.New(
 		table.WithFocused(true),
 		table.WithStyles(styles.Table.Styles),
 	)
-	t.table.SetColumns([]table.Column{
+	m.table.SetColumns([]table.Column{
 		{"Name", 1},
 		{"Partitions", 1},
 		{"Replicas", 1},
 		{"In Sync Replicas", 1},
 	})
-	t.cmdBar = NewCmdBar(topicDeleter)
-	return &t, lister.ListTopics
+	m.cmdBar = NewCmdBar(topicDeleter)
+	m.lister = lister
+	return &m, lister.ListTopics
 }

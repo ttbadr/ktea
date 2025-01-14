@@ -16,7 +16,12 @@ func TestRecordDetailsPage(t *testing.T) {
 			Value:     "",
 			Partition: 0,
 			Offset:    0,
-			Headers:   nil,
+			Headers: []kadmin.Header{
+				{
+					Key:   "h1",
+					Value: "v2",
+				},
+			},
 		}, &kadmin.Topic{
 			Name:       "",
 			Partitions: 0,

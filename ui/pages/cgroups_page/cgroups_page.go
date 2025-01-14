@@ -27,6 +27,7 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 		{"Search", "/"},
 		{"View", "enter"},
 		{"Delete", "C-d"},
+		{"Refresh", "F5"},
 	}
 }
 
@@ -62,6 +63,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		switch msg.String() {
 		case "enter":
 			return ui.PublishMsg(nav.LoadCGroupTopicsPageMsg{GroupName: m.table.SelectedRow()[0]})
+		case "f5":
+			return m.lister.ListConsumerGroups
 		}
 	case kadmin.ConsumerGroupsListedMsg:
 		m.groups = msg.ConsumerGroups

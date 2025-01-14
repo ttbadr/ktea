@@ -90,7 +90,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case kadmin.PublicationStartedMsg:
 		return tea.Batch(
 			m.notifier.SpinWithLoadingMsg("Publishing record"),
-			func() tea.Msg { return msg.AwaitCompletion() },
+			msg.AwaitCompletion,
 		)
 	case kadmin.PublicationFailed:
 		m.state = none
@@ -158,7 +158,7 @@ func (m *Model) newForm(ktx *kontext.ProgramKtx) *huh.Form {
 		ShowLineNumbers(true).
 		Value(&m.formValues.Payload).
 		Title("Payload").
-		WithHeight(ktx.AvailableHeight - 8)
+		WithHeight(ktx.AvailableHeight - 10)
 	key := huh.NewInput().
 		Title("Key").
 		Description("Leave empty to use a null key for the message.").

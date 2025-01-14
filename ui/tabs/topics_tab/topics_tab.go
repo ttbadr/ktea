@@ -1,6 +1,7 @@
 package topics_tab
 
 import (
+	"context"
 	tea "github.com/charmbracelet/bubbletea"
 	"ktea/kadmin"
 	"ktea/kontext"
@@ -10,7 +11,6 @@ import (
 	"ktea/ui/pages/consumption_form_page"
 	"ktea/ui/pages/consumption_page"
 	"ktea/ui/pages/create_topic_page"
-	"ktea/ui/pages/error_page"
 	"ktea/ui/pages/nav"
 	"ktea/ui/pages/publish_page"
 	"ktea/ui/pages/record_details_page"
@@ -25,6 +25,7 @@ type Model struct {
 	ktx               *kontext.ProgramKtx
 	consumptionPage   nav.Page
 	recordDetailsPage nav.Page
+	ctx               context.Context
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -43,10 +44,14 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	switch msg := msg.(type) {
 
+	case kadmin.TopicListedMsg:
+		// Make sure TopicListedMsg is explicitly captured and
+		// properly propagated in the case when cgroupsPage
+		//isn't focused anymore.
+		return m.topicsPage.Update(msg)
+
 	case nav.LoadTopicsPageMsg:
-		var cmd tea.Cmd
-		m.active, cmd = topics_page.New(m.ka, m.ka)
-		cmds = append(cmds, cmd)
+		m.active = m.topicsPage
 
 	case nav.LoadConsumptionFormPageMsg:
 		if msg.ReadDetails != nil {
@@ -101,15 +106,6 @@ func New(ktx *kontext.ProgramKtx, ka *kadmin.SaramaKafkaAdmin) (*Model, tea.Cmd)
 	model.active = listTopicView
 	model.topicsPage = listTopicView
 	model.statusbar = statusbar.New(model.active)
-
-	return model, cmd
-}
-
-func NewInError(ktx *kontext.ProgramKtx) (*Model, tea.Cmd) {
-	var cmd tea.Cmd
-	model := &Model{}
-	model.ktx = ktx
-	model.active = error_page.New(nil)
 
 	return model, cmd
 }

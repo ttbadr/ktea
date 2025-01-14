@@ -101,9 +101,13 @@ func TestPublish(t *testing.T) {
 
 	assertRecords:
 		assert.Equal(t, "{\"id\":\"123\"}", receivedRecords[0].Value)
-		assert.Equal(t, map[string]string{
-			"id":   "123",
-			"user": "456",
+		assert.Equal(t, []Header{
+			{
+				"id", "123",
+			},
+			{
+				"user", "456",
+			},
 		}, receivedRecords[0].Headers)
 
 		// clean up

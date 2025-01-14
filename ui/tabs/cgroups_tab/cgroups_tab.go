@@ -14,10 +14,10 @@ import (
 
 type Model struct {
 	active              nav.Page
-	list                *cgroups_page.Model
 	statusbar           *statusbar.Model
 	offsetLister        kadmin.OffsetLister
 	consumerGroupLister kadmin.CGroupLister
+	cgroupsPage         *cgroups_page.Model
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -37,8 +37,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.active = cgroupsTopicsPage
 		return tea.Batch(cmds...)
 	case nav.LoadCGroupsPageMsg:
-		cgroupsPage, cmd := cgroups_page.New(m.consumerGroupLister)
-		m.active = cgroupsPage
+		var cmd tea.Cmd
+		if m.cgroupsPage == nil {
+			m.cgroupsPage, cmd = cgroups_page.New(m.consumerGroupLister)
+		}
+		m.active = m.cgroupsPage
 		return cmd
 	case kadmin.ConsumerGroupListingStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
@@ -62,7 +65,7 @@ func New(
 	m := &Model{}
 	m.offsetLister = consumerGroupOffsetLister
 	m.consumerGroupLister = consumerGroupLister
-	m.list = cgroupsPage
+	m.cgroupsPage = cgroupsPage
 	m.active = cgroupsPage
 	m.statusbar = statusbar.New(m.active)
 

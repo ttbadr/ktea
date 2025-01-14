@@ -22,15 +22,16 @@ import (
 )
 
 type Model struct {
-	tabs           tab.Model
-	tabCtrl        tabs.TabController
-	ktx            *kontext.ProgramKtx
-	activeTab      int
-	topicsTabCtrl  *topics_tab.Model
-	cgroupsTabCtrl *cgroups_tab.Model
-	ka             *kadmin.SaramaKafkaAdmin
-	sra            *sradmin.SrAdmin
-	renderer       *ui.Renderer
+	tabs                  tab.Model
+	tabCtrl               tabs.TabController
+	ktx                   *kontext.ProgramKtx
+	activeTab             int
+	topicsTabCtrl         *topics_tab.Model
+	cgroupsTabCtrl        *cgroups_tab.Model
+	ka                    *kadmin.SaramaKafkaAdmin
+	sra                   *sradmin.SrAdmin
+	renderer              *ui.Renderer
+	schemaRegistryTabCtrl *sr_tab.Model
 }
 
 // RetryClusterConnectionMsg is an internal Msg
@@ -75,6 +76,23 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC:
 			return m, tea.Quit
 		}
+
+	case kadmin.TopicListedMsg:
+		// Make sure TopicListedMsg is explicitly captured and
+		// properly propagated in the case when cgroupsTabCtrl hence
+		// cgroupsPage isn't focused anymore.
+		return m, m.topicsTabCtrl.Update(msg)
+	case kadmin.ConsumerGroupsListedMsg:
+		// Make sure ConsumerGroupsListedMsg is explicitly captured and
+		// properly propagated in the case when cgroupsTabCtrl hence
+		// cgroupsPage isn't focused anymore.
+		return m, m.cgroupsTabCtrl.Update(msg)
+	case sradmin.SubjectsListedMsg:
+		// Make sure SubjectsListedMsg is explicitly captured and
+		// properly propagated in the case when cgroupsTabCtrl hence
+		// subjectsPage isn't focused anymore.
+		return m, m.schemaRegistryTabCtrl.Update(msg)
+
 	case config.ClusterRegisteredMsg:
 		// if the active cluster has been updated it needs to be reloaded
 		if msg.Cluster.Active {
@@ -92,8 +110,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmd, func() tea.Msg {
 			return RetryClusterConnectionMsg{msg.Cluster}
 		})
+
 	case RetryClusterConnectionMsg:
 		return m.initTopicsTabOrError(msg.Cluster)
+
 	case config.LoadedMsg:
 		m.ktx.Config = msg.Config
 		if m.ktx.Config.HasClusters() {
@@ -105,6 +125,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.tabs.GoToTab(tabs.ClustersTab)
 			return m, c
 		}
+
 	case clusters_page.ClusterSwitchedMsg:
 		m.activateCluster(msg.Cluster)
 		// make sure we stay on the clusters tab because,
@@ -115,6 +136,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.tabs.GoToTab(2)
 		}
+		// reset all cached tabs, so they are loaded again for the new cluster
+		m.topicsTabCtrl = nil
+		m.cgroupsTabCtrl = nil
+		m.schemaRegistryTabCtrl = nil
+
 	case tea.WindowSizeMsg:
 		m.onWindowSizeUpdated(msg)
 	}
@@ -128,17 +154,23 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.activeTab = m.tabs.ActiveTab()
 		switch m.activeTab {
 		case 0:
-			m.topicsTabCtrl, cmd = topics_tab.New(m.ktx, m.ka)
+			if m.topicsTabCtrl == nil {
+				m.topicsTabCtrl, cmd = topics_tab.New(m.ktx, m.ka)
+			}
 			m.tabCtrl = m.topicsTabCtrl
 			return m, cmd
 		case 1:
-			m.cgroupsTabCtrl, cmd = cgroups_tab.New(m.ka, m.ka)
+			if m.cgroupsTabCtrl == nil {
+				m.cgroupsTabCtrl, cmd = cgroups_tab.New(m.ka, m.ka)
+			}
 			m.tabCtrl = m.cgroupsTabCtrl
 			return m, cmd
 		case 2:
 			if m.ktx.Config.ActiveCluster().HasSchemaRegistry() {
-				t, cmd := sr_tab.New(m.sra, m.sra, m.sra, m.ktx)
-				m.tabCtrl = t
+				if m.schemaRegistryTabCtrl == nil {
+					m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.ktx)
+				}
+				m.tabCtrl = m.schemaRegistryTabCtrl
 				return m, cmd
 			}
 			fallthrough

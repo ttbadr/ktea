@@ -16,9 +16,26 @@ func (msg *TopicCreationStartedMsg) AwaitCompletion() tea.Msg {
 	}
 }
 
+type TopicListedMsg struct {
+	Topics []Topic
+}
+
 type TopicListingStartedMsg struct {
 	Err    chan error
 	Topics chan []Topic
+}
+
+type TopicListedErrorMsg struct {
+	Err error
+}
+
+func (m *TopicListingStartedMsg) AwaitCompletion() tea.Msg {
+	select {
+	case topics := <-m.Topics:
+		return TopicListedMsg{Topics: topics}
+	case err := <-m.Err:
+		return TopicListedErrorMsg{Err: err}
+	}
 }
 
 type Topic struct {
@@ -34,7 +51,10 @@ func (ka *SaramaKafkaAdmin) ListTopics() tea.Msg {
 
 	go ka.doListTopics(errChan, topicsChan)
 
-	return TopicListingStartedMsg{errChan, topicsChan}
+	return TopicListingStartedMsg{
+		errChan,
+		topicsChan,
+	}
 }
 
 func (ka *SaramaKafkaAdmin) doListTopics(errChan chan error, topicsChan chan []Topic) {
