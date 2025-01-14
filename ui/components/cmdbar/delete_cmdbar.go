@@ -61,6 +61,7 @@ func (s *DeleteCmdBarModel[any]) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
 			return s.active, nil, nil
 		case "enter":
 			if s.deleteConfirm.GetValue().(bool) {
+				s.deleteConfirm = newDeleteConfirm()
 				return s.active, nil, s.deleteFunc(s.deleteValue)
 			}
 		}

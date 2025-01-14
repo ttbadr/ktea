@@ -10,17 +10,19 @@ import (
 	"ktea/ui/components/statusbar"
 	ktable "ktea/ui/components/table"
 	"ktea/ui/pages/nav"
+	"sort"
 	"strconv"
 	"strings"
 )
 
 type Model struct {
-	table         table.Model
-	rows          []table.Row
-	cmdBar        *SubjectsCmdBar
-	subjects      []sradmin.Subject
-	tableFocussed bool
-	lister        sradmin.SubjectLister
+	table            table.Model
+	rows             []table.Row
+	cmdBar           *SubjectsCmdBar
+	subjects         []sradmin.Subject
+	renderedSubjects []sradmin.Subject
+	tableFocussed    bool
+	lister           sradmin.SubjectLister
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -79,17 +81,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 	}
 
-	searchTerm := m.cmdBar.GetSearchTerm()
-	m.rows = make([]table.Row, 0)
-	for _, subject := range m.subjects {
-		if searchTerm != "" {
-			if strings.Contains(strings.ToUpper(subject.Name), strings.ToUpper(searchTerm)) {
-				m.rows = append(m.rows, table.Row{subject.Name, strconv.Itoa(len(subject.Versions))})
-			}
-		} else {
-			m.rows = append(m.rows, table.Row{subject.Name, strconv.Itoa(len(subject.Versions))})
-		}
-	}
+	subjects := m.filterSubjectsBySearchTerm()
+	subjects = m.sortSubjects(subjects)
+	m.renderedSubjects = subjects
+	m.rows = m.createRows(subjects)
 
 	t, cmd := m.table.Update(msg)
 	m.table = t
@@ -100,6 +95,39 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	}
 
 	return tea.Batch(cmds...)
+}
+
+func (m *Model) sortSubjects(subjects []sradmin.Subject) []sradmin.Subject {
+	sort.Slice(subjects, func(i int, y int) bool {
+		return subjects[i].Name < subjects[y].Name
+	})
+	return subjects
+}
+
+func (m *Model) createRows(subjects []sradmin.Subject) []table.Row {
+	var rows []table.Row
+	for _, subject := range subjects {
+		rows = append(rows, table.Row{
+			subject.Name,
+			strconv.Itoa(len(subject.Versions)),
+		})
+	}
+	return rows
+}
+
+func (m *Model) filterSubjectsBySearchTerm() []sradmin.Subject {
+	var subjects []sradmin.Subject
+	searchTerm := m.cmdBar.GetSearchTerm()
+	for _, subject := range m.subjects {
+		if searchTerm != "" {
+			if strings.Contains(strings.ToUpper(subject.Name), strings.ToUpper(searchTerm)) {
+				subjects = append(subjects, subject)
+			}
+		} else {
+			subjects = append(subjects, subject)
+		}
+	}
+	return subjects
 }
 
 func (m *Model) Shortcuts() []statusbar.Shortcut {
@@ -132,7 +160,7 @@ func (m *Model) SelectedSubject() sradmin.Subject {
 	selectedRow := m.table.SelectedRow()
 	var selectedTopic sradmin.Subject
 	if selectedRow != nil {
-		return m.subjects[m.table.Cursor()]
+		return m.renderedSubjects[m.table.Cursor()]
 	}
 	return selectedTopic
 }
