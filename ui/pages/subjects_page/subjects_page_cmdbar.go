@@ -26,7 +26,7 @@ func (s *SubjectsCmdBar) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) st
 	return ""
 }
 
-func (s *SubjectsCmdBar) Update(msg tea.Msg, selectedSubject sradmin.Subject) (tea.Msg, tea.Cmd) {
+func (s *SubjectsCmdBar) Update(msg tea.Msg, selectedSubject *sradmin.Subject) (tea.Msg, tea.Cmd) {
 	// when the notifier is active and has priority (because of a loading spinner)
 	if s.active == s.notifierWidget {
 		if s.notifierWidget.(*cmdbar.NotifierCmdBar).Notifier.HasPriority() {
@@ -56,7 +56,7 @@ func (s *SubjectsCmdBar) Update(msg tea.Msg, selectedSubject sradmin.Subject) (t
 			if _, ok := s.active.(*cmdbar.SearchCmdBarModel); ok {
 				s.searchPrevActive = true
 			}
-			s.deleteWidget.Delete(selectedSubject)
+			s.deleteWidget.Delete(*selectedSubject)
 			_, pmsg, cmd := s.deleteWidget.Update(msg)
 			s.active = s.deleteWidget
 			return pmsg, cmd

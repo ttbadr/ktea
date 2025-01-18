@@ -4,6 +4,7 @@ import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/log"
+	"slices"
 	"sync"
 )
 
@@ -42,6 +43,10 @@ func (s *SrAdmin) ListSubjects() tea.Msg {
 type Subject struct {
 	Name     string
 	Versions []int
+}
+
+func (s *Subject) LatestVersion() int {
+	return slices.Max(s.Versions)
 }
 
 func (s *SrAdmin) doListSubject(subjectsChan chan []Subject, errChan chan error) {

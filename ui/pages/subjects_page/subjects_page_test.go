@@ -8,6 +8,7 @@ import (
 	"ktea/tests"
 	"ktea/tests/keys"
 	"ktea/ui"
+	"ktea/ui/pages/nav"
 	"math/rand"
 	"strings"
 	"testing"
@@ -37,6 +38,27 @@ func (m *MockSubjectsDeleter) DeleteSubject(subject string) tea.Msg {
 
 func TestSubjectsPage(t *testing.T) {
 
+	t.Run("No subjects found", func(t *testing.T) {
+
+		subjectsPage, _ := New(
+			&MockSubjectsLister{},
+			&MockSubjectsDeleter{},
+		)
+
+		subjectsPage.Update(sradmin.SubjectsListedMsg{Subjects: []sradmin.Subject{}})
+
+		render := subjectsPage.View(ui.TestKontext, ui.TestRenderer)
+
+		assert.Contains(t, render, "No Subjects Found")
+
+		t.Run("enter is ignored", func(t *testing.T) {
+
+			cmd := subjectsPage.Update(keys.Key(tea.KeyEnter))
+
+			assert.Nil(t, cmd)
+		})
+	})
+
 	t.Run("Render listed subjects and number of versions", func(t *testing.T) {
 
 		subjectsPage, _ := New(
@@ -61,6 +83,39 @@ func TestSubjectsPage(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			assert.Regexp(t, fmt.Sprintf("subject%d\\W+%d", i, i+1), render)
 		}
+	})
+
+	t.Run("Enter opens schema detail page", func(t *testing.T) {
+
+		subjectsPage, _ := New(
+			&MockSubjectsLister{},
+			&MockSubjectsDeleter{},
+		)
+
+		var subjects []sradmin.Subject
+		var versions []int
+		for i := 0; i < 10; i++ {
+			versions = append(versions, i)
+			subjects = append(subjects,
+				sradmin.Subject{
+					Name:     fmt.Sprintf("subject%d", i),
+					Versions: versions,
+				})
+		}
+		subjectsPage.Update(sradmin.SubjectsListedMsg{Subjects: subjects})
+		// init table
+		subjectsPage.View(ui.NewTestKontext(), ui.TestRenderer)
+
+		subjectsPage.Update(keys.Key(tea.KeyDown))
+		subjectsPage.Update(keys.Key(tea.KeyDown))
+		cmd := subjectsPage.Update(keys.Key(tea.KeyEnter))
+
+		assert.Equal(t, nav.LoadSchemaDetailsPageMsg{
+			Subject: sradmin.Subject{
+				Name:     "subject2",
+				Versions: []int{0, 1, 2},
+			},
+		}, cmd())
 	})
 
 	t.Run("Remove delete subject from table", func(t *testing.T) {
@@ -134,6 +189,43 @@ func TestSubjectsPage(t *testing.T) {
 		assert.Less(t, subject1Idx, subject2Idx, "subject2 came before subject1")
 		assert.Less(t, subject2Idx, subject50Idx, "subject50 came before subject2")
 		assert.Less(t, subject50Idx, subject88Idx, "subject88 came before subject50")
+	})
+
+	t.Run("Loading details page (enter) after searching from selective list", func(t *testing.T) {
+		deleter := MockSubjectsDeleter{}
+		subjectsPage, _ := New(
+			&MockSubjectsLister{},
+			&deleter,
+		)
+
+		var subjects []sradmin.Subject
+		var versions []int
+		for i := 0; i < 100; i++ {
+			versions = append(versions, i)
+			subjects = append(subjects,
+				sradmin.Subject{
+					Name:     fmt.Sprintf("subject%d", i),
+					Versions: versions,
+				})
+		}
+		subjectsPage.Update(sradmin.SubjectsListedMsg{Subjects: subjects})
+		subjectsPage.View(ui.NewTestKontext(), ui.TestRenderer)
+
+		subjectsPage.Update(keys.Key('/'))
+		keys.UpdateKeys(subjectsPage, "1")
+		subjectsPage.Update(keys.Key(tea.KeyEnter))
+		subjectsPage.Update(keys.Key(tea.KeyDown))
+		subjectsPage.Update(keys.Key(tea.KeyDown))
+		cmd := subjectsPage.Update(keys.Key(tea.KeyEnter))
+
+		msgs := tests.ExecuteBatchCmd(cmd)
+
+		assert.Contains(t, msgs, nav.LoadSchemaDetailsPageMsg{
+			Subject: sradmin.Subject{
+				Name:     "subject11",
+				Versions: []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
+			},
+		})
 	})
 
 	t.Run("Delete subject", func(t *testing.T) {

@@ -1,12 +1,7 @@
 package record_details_page
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"github.com/alecthomas/chroma/v2/formatters"
-	"github.com/alecthomas/chroma/v2/lexers"
-	chrome_styles "github.com/alecthomas/chroma/v2/styles"
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -50,8 +45,13 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	payloadWidth := int(float64(ktx.WindowWidth) * 0.70)
 	height := ktx.AvailableHeight - 2
 	vp := viewport.New(payloadWidth, height)
-	vp.SetContent(m.prettyPrintRecordValue())
+	vp.SetContent(ui.PrettyPrintJson(m.record.Value))
 	m.contentVp = &vp
+
+	m.rows = []table.Row{}
+	for _, header := range m.record.Headers {
+		m.rows = append(m.rows, table.Row{header.Key})
+	}
 
 	metaInfoVp := fmt.Sprintf("key: %s\ntimestamp: %s", key, m.record.Timestamp.Format(time.UnixDate))
 	sideBarWidth := ktx.WindowWidth - (payloadWidth + 7)
@@ -115,30 +115,6 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 				lipgloss.NewStyle().Padding(1).Render(metaInfoVp),
 				headersTableStyle.Render(lipgloss.JoinVertical(lipgloss.Top, m.headersTable.View(), m.headerValueVp.View())),
 			)))
-}
-
-func (m *Model) prettyPrintRecordValue() string {
-	builder := &strings.Builder{}
-	formatter := formatters.TTY256
-	style := chrome_styles.Get("github-dark")
-
-	lexer := lexers.Fallback
-	var prettyJSON bytes.Buffer
-	if strings.Contains(m.record.Value, "{") &&
-		strings.Contains(m.record.Value, "}") {
-		json.Indent(&prettyJSON, []byte(m.record.Value), "", "\t")
-		lexer = lexers.Get("json")
-	}
-
-	m.rows = []table.Row{}
-	for _, header := range m.record.Headers {
-		m.rows = append(m.rows, table.Row{header.Key})
-	}
-
-	iterator, _ := lexer.Tokenise(nil, prettyJSON.String())
-	formatter.Format(builder, style, iterator)
-
-	return builder.String()
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {

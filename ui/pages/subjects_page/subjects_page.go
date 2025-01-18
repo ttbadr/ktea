@@ -16,6 +16,16 @@ import (
 	"strings"
 )
 
+type state int
+
+const (
+	initialized     state = 0
+	subjectsLoaded  state = 1
+	loading         state = 2
+	noSubjectsFound state = 3
+	deleting        state = 4
+)
+
 type Model struct {
 	table            table.Model
 	rows             []table.Row
@@ -24,9 +34,22 @@ type Model struct {
 	renderedSubjects []sradmin.Subject
 	tableFocussed    bool
 	lister           sradmin.SubjectLister
+	state            state
+	// when last subject in table is deleted no subject is focussed anymore
+	deletedLast bool
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
+	if m.state == noSubjectsFound {
+		return lipgloss.NewStyle().
+			Width(ktx.WindowWidth - 2).
+			Height(ktx.AvailableHeight - 2).
+			AlignVertical(lipgloss.Center).
+			AlignHorizontal(lipgloss.Center).
+			BorderStyle(lipgloss.RoundedBorder()).
+			Render("No Subjects Found")
+	}
+
 	cmdBarView := m.cmdBar.View(ktx, renderer)
 
 	m.table.SetHeight(ktx.AvailableHeight - 2)
@@ -37,14 +60,22 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	})
 	m.table.SetRows(m.rows)
 
-	var render string
-	if m.tableFocussed {
-		render = renderer.Render(styles.Table.Focus.Render(m.table.View()))
-	} else {
-		render = renderer.Render(styles.Table.Blur.Render(m.table.View()))
+	if m.deletedLast && m.table.SelectedRow() == nil {
+		m.table.GotoBottom()
+		m.deletedLast = false
+	}
+	if m.table.SelectedRow() == nil {
+		m.table.GotoTop()
 	}
 
-	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top, cmdBarView, render)
+	var tableView string
+	if m.tableFocussed {
+		tableView = renderer.Render(styles.Table.Focus.Render(m.table.View()))
+	} else {
+		tableView = renderer.Render(styles.Table.Blur.Render(m.table.View()))
+	}
+
+	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top, cmdBarView, tableView)
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
@@ -58,27 +89,49 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "f5":
+			m.state = loading
+			m.subjects = nil
 			return m.lister.ListSubjects
 		case "ctrl+n":
-			return ui.PublishMsg(nav.LoadCreateSubjectPageMsg{})
+			if m.state != loading && m.state != deleting {
+				return ui.PublishMsg(nav.LoadCreateSubjectPageMsg{})
+			}
 		case "enter":
-			return ui.PublishMsg(
-				nav.LoadSchemaDetailsPageMsg{
-					Subject: m.table.SelectedRow()[0],
-				},
-			)
+			// ignore enter when there are no schemas loaded
+			if m.state == subjectsLoaded && len(m.subjects) > 0 {
+				return ui.PublishMsg(
+					nav.LoadSchemaDetailsPageMsg{
+						Subject: *m.SelectedSubject(),
+					},
+				)
+			}
 		}
 	case sradmin.SubjectListingStartedMsg:
+		m.state = loading
 		cmds = append(cmds, msg.AwaitCompletion)
 	case sradmin.SubjectsListedMsg:
-		m.subjects = msg.Subjects
+		if len(msg.Subjects) > 0 {
+			m.state = subjectsLoaded
+			m.subjects = msg.Subjects
+		} else {
+			m.state = noSubjectsFound
+		}
 	case sradmin.SubjectDeletionStartedMsg:
+		m.state = deleting
 		cmds = append(cmds, msg.AwaitCompletion)
 	case sradmin.SubjectDeletedMsg:
+		// set state back to loaded after removing the deleted subject
+		m.state = subjectsLoaded
 		for i, subject := range m.subjects {
 			if subject.Name == msg.SubjectName {
+				if i == len(m.subjects)-1 {
+					m.deletedLast = true
+				}
 				m.subjects = append(m.subjects[:i], m.subjects[i+1:]...)
 			}
+		}
+		if len(m.subjects) == 0 {
+			m.state = noSubjectsFound
 		}
 	}
 
@@ -136,19 +189,23 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 	if shortcuts == nil {
 		return []statusbar.Shortcut{
 			{
-				Name:       "search",
+				Name:       "Search",
 				Keybinding: "/",
 			},
 			{
-				Name:       "register",
-				Keybinding: "C-n",
-			},
-			{
-				Name:       "delete",
+				Name:       "Delete",
 				Keybinding: "F2",
 			},
 			{
-				Name:       "refresh",
+				Name:       "Register New Schema",
+				Keybinding: "C-n",
+			},
+			//{
+			//	Name:       "Evolve Selected Schema",
+			//	Keybinding: "C-e",
+			//},
+			{
+				Name:       "Refresh",
 				Keybinding: "F5",
 			},
 		}
@@ -157,13 +214,15 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 	}
 }
 
-func (m *Model) SelectedSubject() sradmin.Subject {
-	selectedRow := m.table.SelectedRow()
-	var selectedTopic sradmin.Subject
-	if selectedRow != nil {
-		return m.renderedSubjects[m.table.Cursor()]
+func (m *Model) SelectedSubject() *sradmin.Subject {
+	if len(m.renderedSubjects) > 0 {
+		selectedRow := m.table.SelectedRow()
+		if selectedRow != nil {
+			return &m.renderedSubjects[m.table.Cursor()]
+		}
+		return nil
 	}
-	return selectedTopic
+	return nil
 }
 
 func (m *Model) Title() string {
@@ -176,5 +235,6 @@ func New(lister sradmin.SubjectLister, deleter sradmin.SubjectDeleter) (*Model, 
 		table:         ktable.NewDefaultTable(),
 		tableFocussed: true,
 		lister:        lister,
+		state:         initialized,
 	}, lister.ListSubjects
 }

@@ -1,4 +1,4 @@
-package create_schema_page
+package register_new_schema_page
 
 import (
 	"fmt"
@@ -13,7 +13,6 @@ import (
 	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
 	"ktea/ui/pages/nav"
-	"time"
 )
 
 type state int
@@ -30,12 +29,13 @@ type values struct {
 
 type Model struct {
 	values
-	form        *huh.Form
-	creator     sradmin.SubjectCreator
-	cmdBar      cmdbar.Widget
-	state       state
-	ktx         *kontext.ProgramKtx
-	schemaInput *huh.Text
+	form                    *huh.Form
+	schemaCreator           sradmin.SchemaCreator
+	cmdBar                  *cmdbar.NotifierCmdBar
+	state                   state
+	ktx                     *kontext.ProgramKtx
+	schemaInput             *huh.Text
+	createdAtLeastOneSchema bool
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -66,7 +66,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if m.form.State == huh.StateCompleted && m.state == entering {
 			m.state = creating
 			return func() tea.Msg {
-				return m.creator.CreateSchema(sradmin.SubjectCreationDetails{
+				return m.schemaCreator.CreateSchema(sradmin.SubjectCreationDetails{
 					Subject: m.subject,
 					Schema:  m.schema,
 				})
@@ -79,16 +79,25 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		{
 			switch msg.String() {
 			case "esc":
-				cmds = append(cmds, ui.PublishMsg(nav.LoadSubjectsPageMsg{}))
+				if m.state == creating {
+					return nil
+				}
+				cmds = append(cmds, ui.PublishMsg(nav.LoadSubjectsPageMsg{
+					Refresh: m.createdAtLeastOneSchema,
+				}))
+			default:
+				m.cmdBar.Notifier.Idle()
 			}
 		}
 	case sradmin.SchemaCreatedMsg:
+		m.createdAtLeastOneSchema = true
 		m.state = entering
 		m.form = nil
 	case sradmin.SchemaCreationErrMsg:
 		m.state = entering
 		m.form = nil
 	case sradmin.SchemaCreationStartedMsg:
+		m.state = creating
 		cmds = append(cmds, msg.AwaitCompletion)
 	}
 
@@ -109,7 +118,7 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 }
 
 func (m *Model) Title() string {
-	return "Create Subject"
+	return "Subjects / Register New"
 }
 
 func newForm(model *Model) *huh.Form {
@@ -143,10 +152,10 @@ func newForm(model *Model) *huh.Form {
 	return form
 }
 
-func New(creator sradmin.SubjectCreator, ktx *kontext.ProgramKtx) (*Model, tea.Cmd) {
+func New(schemaCreator sradmin.SchemaCreator, ktx *kontext.ProgramKtx) (*Model, tea.Cmd) {
 	model := &Model{}
 	model.ktx = ktx
-	model.creator = creator
+	model.schemaCreator = schemaCreator
 	model.state = entering
 	notifierCmdBar := cmdbar.NewNotifierCmdBar()
 	cmdbar.WithMapping(notifierCmdBar, func(msg sradmin.SchemaCreationStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
@@ -155,10 +164,7 @@ func New(creator sradmin.SubjectCreator, ktx *kontext.ProgramKtx) (*Model, tea.C
 	})
 	cmdbar.WithMapping(notifierCmdBar, func(msg sradmin.SchemaCreatedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowSuccessMsg("Schema created")
-		return true, func() tea.Msg {
-			time.Sleep(2 * time.Second)
-			return notifier.HideNotificationMsg{}
-		}
+		return true, nil
 	})
 	cmdbar.WithMapping(notifierCmdBar, func(msg notifier.HideNotificationMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.Idle()

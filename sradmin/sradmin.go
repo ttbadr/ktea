@@ -11,10 +11,14 @@ type SubjectCreationDetails struct {
 	Schema  string
 }
 
-type SubjectCreator interface {
+type SchemaCreator interface {
 	CreateSchema(details SubjectCreationDetails) tea.Msg
 }
 
 type SubjectDeleter interface {
 	DeleteSubject(subject string) tea.Msg
+}
+
+type VersionLister interface {
+	ListVersions(subject string, versions []int) tea.Msg
 }

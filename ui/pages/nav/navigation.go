@@ -2,6 +2,7 @@ package nav
 
 import (
 	"ktea/kadmin"
+	"ktea/sradmin"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
 )
@@ -49,8 +50,10 @@ type LoadCGroupTopicsPageMsg struct {
 
 type LoadCreateSubjectPageMsg struct{}
 
-type LoadSubjectsPageMsg struct{}
+type LoadSubjectsPageMsg struct {
+	Refresh bool
+}
 
 type LoadSchemaDetailsPageMsg struct {
-	Subject string
+	Subject sradmin.Subject
 }

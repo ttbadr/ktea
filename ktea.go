@@ -78,20 +78,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
+		// Make sure the events are explicitly captured and
+		// properly propagated in the case when the tabCtrl
+		// hence the page isn't focussed anymore
 	case kadmin.TopicListedMsg:
-		// Make sure TopicListedMsg is explicitly captured and
-		// properly propagated in the case when cgroupsTabCtrl hence
-		// cgroupsPage isn't focused anymore.
 		return m, m.topicsTabCtrl.Update(msg)
 	case kadmin.ConsumerGroupsListedMsg:
-		// Make sure ConsumerGroupsListedMsg is explicitly captured and
-		// properly propagated in the case when cgroupsTabCtrl hence
-		// cgroupsPage isn't focused anymore.
 		return m, m.cgroupsTabCtrl.Update(msg)
-	case sradmin.SubjectsListedMsg:
-		// Make sure SubjectsListedMsg is explicitly captured and
-		// properly propagated in the case when cgroupsTabCtrl hence
-		// subjectsPage isn't focused anymore.
+	case sradmin.SubjectsListedMsg, sradmin.SubjectDeletedMsg:
 		return m, m.schemaRegistryTabCtrl.Update(msg)
 
 	case config.ClusterRegisteredMsg:
@@ -169,7 +163,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case 2:
 			if m.ktx.Config.ActiveCluster().HasSchemaRegistry() {
 				if m.schemaRegistryTabCtrl == nil {
-					m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.ktx)
+					m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.sra, m.ktx)
 				}
 				m.tabCtrl = m.schemaRegistryTabCtrl
 				return m, cmd

@@ -57,13 +57,17 @@ func (s *SearchCmdBarModel) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
 			}
 			return s.state == searching || s.state == searched, nil, nil
 		case "enter":
+			var pmsg tea.Msg
+			if s.state == searched {
+				pmsg = msg
+			}
 			s.searchInput.Blur()
 			if s.GetSearchTerm() == "" {
 				s.state = hidden
 			} else {
 				s.state = searched
 			}
-			return s.state == searching || s.state == searched, nil, nil
+			return s.state == searching || s.state == searched, pmsg, nil
 		case "esc":
 			if s.state == searching {
 				s.searchInput.Blur()
