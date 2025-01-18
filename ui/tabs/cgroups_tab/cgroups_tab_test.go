@@ -8,6 +8,7 @@ import (
 	"ktea/kadmin"
 	"ktea/kontext"
 	"ktea/ui"
+	"strings"
 	"testing"
 )
 
@@ -63,5 +64,48 @@ func TestGroupsTab(t *testing.T) {
 
 		assert.Contains(t, render, "Group1")
 		assert.Contains(t, render, "Group2")
+
+		t.Run("Refresh resets table", func(t *testing.T) {
+			groupsTab.Update(kadmin.ConsumerGroupsListedMsg{
+				ConsumerGroups: []*kadmin.ConsumerGroup{
+					{
+						Name: "Group1",
+						Members: []kadmin.GroupMember{
+							{
+								MemberId:   "Group1Id1",
+								ClientId:   "Group1ClientId1",
+								ClientHost: "127.0.0.1",
+							},
+						},
+					},
+					{
+						Name:    "Group2",
+						Members: nil,
+					},
+				},
+			})
+
+			render = ansi.Strip(groupsTab.View(&kontext.ProgramKtx{
+				WindowWidth:     100,
+				WindowHeight:    100,
+				AvailableHeight: 100,
+				Config: &config.Config{
+					Clusters: []config.Cluster{
+						{
+							Name:             "PRD",
+							BootstrapServers: []string{"localhost:9092"},
+							SASLConfig:       nil,
+						},
+					},
+				},
+			}, ui.TestRenderer))
+
+			g1Count := strings.Count(render, "Group1")
+			g2Count := strings.Count(render, "Group2")
+
+			assert.Equal(t, 1, g1Count)
+			assert.Equal(t, 1, g2Count)
+		})
 	})
+
 }

@@ -67,6 +67,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 	case kadmin.ConsumerGroupsListedMsg:
 		m.groups = msg.ConsumerGroups
+		m.rows = []table.Row{}
 		for _, group := range m.groups {
 			m.rows = append(m.rows, table.Row{
 				group.Name,
