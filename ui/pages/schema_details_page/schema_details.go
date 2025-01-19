@@ -10,8 +10,8 @@ import (
 )
 
 type CmdBar struct {
-	notifierWidget cmdbar.Widget
-	active         cmdbar.Widget
+	notifierWidget cmdbar.CmdBar
+	active         cmdbar.CmdBar
 }
 
 func (c *CmdBar) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -42,7 +42,7 @@ func NewCmdBar() *CmdBar {
 		return false, nil
 	}
 	notifierCmdBar := cmdbar.NewNotifierCmdBar()
-	cmdbar.WithMapping(notifierCmdBar, schemaListingStartedNotifier)
-	cmdbar.WithMapping(notifierCmdBar, schemaListedNotifier)
+	cmdbar.WithMsgHandler(notifierCmdBar, schemaListingStartedNotifier)
+	cmdbar.WithMsgHandler(notifierCmdBar, schemaListedNotifier)
 	return &CmdBar{notifierWidget: notifierCmdBar, active: notifierCmdBar}
 }

@@ -12,7 +12,7 @@ type SaramaKafkaAdmin struct {
 	producer sarama.SyncProducer
 }
 
-func New(cd ConnectionDetails) (*SaramaKafkaAdmin, error) {
+func NewSaramaKadmin(cd ConnectionDetails) (*SaramaKafkaAdmin, error) {
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = true
 	config.Producer.Partitioner = sarama.NewRoundRobinPartitioner
@@ -48,19 +48,6 @@ func New(cd ConnectionDetails) (*SaramaKafkaAdmin, error) {
 		producer: producer,
 		config:   config,
 	}, nil
-}
-
-func (ka *SaramaKafkaAdmin) doCreateTopic(tcd TopicCreationDetails, created chan bool, errChan chan error) {
-	err := ka.admin.CreateTopic(tcd.Name, &sarama.TopicDetail{
-		NumPartitions:     int32(tcd.NumPartitions),
-		ReplicationFactor: 1,
-		ReplicaAssignment: nil,
-		ConfigEntries:     nil,
-	}, false)
-	if err != nil {
-		errChan <- err
-	}
-	created <- true
 }
 
 type TopicPartitionOffset struct {

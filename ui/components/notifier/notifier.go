@@ -64,7 +64,6 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return cmd
 	case HideNotificationMsg:
 		return func() tea.Msg {
-			time.Sleep(2 * time.Second)
 			m.Idle()
 			return NotificationHiddenMsg{}
 		}

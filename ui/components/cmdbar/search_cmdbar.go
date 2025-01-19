@@ -12,100 +12,126 @@ import (
 type state int
 
 const (
-	hidden    state = 0
-	searching state = 1
-	searched  state = 2
+	hidden state = iota
+	searching
+	searched
 )
 
-type SearchCmdBarModel struct {
+type SearchCmdBar struct {
 	searchInput *huh.Input
 	state       state
 	placeholder string
 }
 
-func (s *SearchCmdBarModel) Shortcuts() []statusbar.Shortcut {
-	return []statusbar.Shortcut{
-		{
-			Name:       "Confirm",
-			Keybinding: "enter",
-		},
-		{
-			Name:       "Cancel",
-			Keybinding: "esc",
-		},
-		{
-			Name:       "Toggle",
-			Keybinding: "/",
-		},
-	}
-}
-
-func (s *SearchCmdBarModel) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
-	return renderer.Render(styles.CmdBar.Render(s.searchInput.View()))
-}
-
-func (s *SearchCmdBarModel) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "/":
-			s.searchInput.Focus()
-			if s.state == searching {
-				s.state = hidden
-			} else {
-				s.state = searching
-			}
-			return s.state == searching || s.state == searched, nil, nil
-		case "enter":
-			var pmsg tea.Msg
-			if s.state == searched {
-				pmsg = msg
-			}
-			s.searchInput.Blur()
-			if s.GetSearchTerm() == "" {
-				s.state = hidden
-			} else {
-				s.state = searched
-			}
-			return s.state == searching || s.state == searched, pmsg, nil
-		case "esc":
-			if s.state == searching {
-				s.searchInput.Blur()
-				s.state = hidden
-				s.searchInput = newSearchInput(s.placeholder)
-			} else if s.state == searched {
-
-			} else {
-				s.state = hidden
-			}
-			return s.state == searching || s.state == searched, nil, nil
-		default:
-			input, _ := s.searchInput.Update(msg)
-			if i, ok := input.(*huh.Input); ok {
-				s.searchInput = i
-			}
-		}
-	}
-	return s.state == searching || s.state == searched, msg, nil
-}
-
-func (s *SearchCmdBarModel) GetSearchTerm() string {
-	return s.searchInput.GetValue().(string)
-}
-
-func (s *SearchCmdBarModel) IsSearching() bool {
+func (s *SearchCmdBar) IsFocussed() bool {
 	return s.state == searching
 }
 
+func (s *SearchCmdBar) Shortcuts() []statusbar.Shortcut {
+	return []statusbar.Shortcut{
+		{Name: "Confirm", Keybinding: "enter"},
+		{Name: "Cancel", Keybinding: "esc"},
+		{Name: "Toggle", Keybinding: "/"},
+	}
+}
+
+func (s *SearchCmdBar) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
+	return renderer.Render(styles.CmdBar.Render(s.searchInput.View()))
+}
+
+func (s *SearchCmdBar) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		return s.handleKeyMsg(msg)
+	}
+
+	return s.isActive(), msg, nil
+}
+
+func (s *SearchCmdBar) handleKeyMsg(msg tea.KeyMsg) (bool, tea.Msg, tea.Cmd) {
+	switch msg.String() {
+	case "/":
+		s.toggleSearch()
+	case "enter":
+		return s.confirmSearch(msg)
+	case "esc":
+		s.cancelSearch()
+	default:
+		if s.state == searching {
+			s.updateSearchInput(msg)
+		}
+	}
+
+	return s.isActive(), msg, nil
+}
+
+func (s *SearchCmdBar) toggleSearch() {
+	if s.state == searching {
+		s.state = hidden
+		s.searchInput.Blur()
+	} else {
+		s.state = searching
+		s.searchInput.Focus()
+	}
+}
+
+func (s *SearchCmdBar) confirmSearch(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
+	if s.state == searched {
+		return true, msg, nil
+	}
+
+	s.searchInput.Blur()
+	if s.GetSearchTerm() == "" {
+		s.state = hidden
+	} else {
+		s.state = searched
+	}
+
+	return s.isActive(), nil, nil
+}
+
+func (s *SearchCmdBar) cancelSearch() {
+	if s.state == searching {
+		s.searchInput.Blur()
+		s.state = hidden
+		s.resetSearchInput()
+	} else if s.state == searched {
+	} else {
+		s.state = hidden
+	}
+}
+
+func (s *SearchCmdBar) updateSearchInput(msg tea.Msg) {
+	input, _ := s.searchInput.Update(msg)
+	if i, ok := input.(*huh.Input); ok {
+		s.searchInput = i
+	}
+}
+
+func (s *SearchCmdBar) resetSearchInput() {
+	s.searchInput = newSearchInput(s.placeholder)
+}
+
+func (s *SearchCmdBar) GetSearchTerm() string {
+	return s.searchInput.GetValue().(string)
+}
+
+func (s *SearchCmdBar) IsSearching() bool {
+	return s.state == searching
+}
+
+func (s *SearchCmdBar) isActive() bool {
+	return s.state == searching || s.state == searched
+}
+
 func newSearchInput(placeholder string) *huh.Input {
-	searchInput := huh.NewInput().
-		Placeholder(placeholder)
+	searchInput := huh.NewInput().Placeholder(placeholder)
 	searchInput.Init()
 	return searchInput
 }
 
-func NewSearchCmdBar(placeholder string) Widget {
-	return &SearchCmdBarModel{
+func NewSearchCmdBar(placeholder string) *SearchCmdBar {
+	return &SearchCmdBar{
 		state:       hidden,
 		searchInput: newSearchInput(placeholder),
 		placeholder: placeholder,

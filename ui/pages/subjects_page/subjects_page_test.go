@@ -312,7 +312,7 @@ func TestSubjectsPage(t *testing.T) {
 				render = subjectsPage.View(ui.NewTestKontext(), ui.TestRenderer)
 
 				assert.NotContains(t, render, "Failed to delete subject: unable to delete subject")
-				assert.Contains(t, render, "> Search subject by name")
+				assert.Contains(t, render, "> Search subjects by name")
 			})
 		})
 
@@ -327,6 +327,25 @@ func TestSubjectsPage(t *testing.T) {
 			render := subjectsPage.View(ui.TestKontext, ui.TestRenderer)
 
 			assert.Contains(t, render, " ⏳ Deleting Subject")
+		})
+
+		t.Run("Disable delete when no subject selected", func(t *testing.T) {
+			emptyPage, _ := New(
+				&MockSubjectsLister{},
+				&deleter,
+			)
+
+			var subjects []sradmin.Subject
+			emptyPage.Update(sradmin.SubjectsListedMsg{Subjects: subjects})
+
+			render := emptyPage.View(ui.NewTestKontext(), ui.TestRenderer)
+
+			cmd := emptyPage.Update(keys.Key(tea.KeyF2))
+
+			render = emptyPage.View(ui.NewTestKontext(), ui.TestRenderer)
+
+			assert.Contains(t, render, "No Subjects Found")
+			assert.Nil(t, cmd)
 		})
 	})
 

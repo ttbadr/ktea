@@ -36,3 +36,23 @@ type GroupMember struct {
 type KAdminErrorMsg struct {
 	Error error
 }
+
+type Kadmin interface {
+	TopicCreator
+	TopicDeleter
+	TopicLister
+	Publisher
+	RecordReader
+	OffsetLister
+	CGroupLister
+	ConfigUpdater
+	TopicConfigLister
+}
+
+type Instantiator func(cd ConnectionDetails) (Kadmin, error)
+
+func SaramaInstantiator() Instantiator {
+	return func(cd ConnectionDetails) (Kadmin, error) {
+		return NewSaramaKadmin(cd)
+	}
+}

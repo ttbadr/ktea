@@ -44,7 +44,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	m.table.SetHeight(ktx.AvailableHeight - 2)
 	m.table.SetRows(m.rows)
 	tableRender := renderer.Render(styles.Table.Focus.Render(m.table.View()))
-	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top, cmdBarView, tableRender)
+	return ui.JoinVertical(lipgloss.Top, cmdBarView, tableRender)
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {

@@ -19,6 +19,7 @@ import (
 	"ktea/ui/tabs/sr_tab"
 	"ktea/ui/tabs/topics_tab"
 	"os"
+	"reflect"
 	"time"
 )
 
@@ -29,10 +30,14 @@ type Model struct {
 	activeTab             int
 	topicsTabCtrl         *topics_tab.Model
 	cgroupsTabCtrl        *cgroups_tab.Model
-	ka                    *kadmin.SaramaKafkaAdmin
+	kaInstantiator        kadmin.Instantiator
+	ka                    kadmin.Kadmin
 	sra                   *sradmin.SrAdmin
 	renderer              *ui.Renderer
 	schemaRegistryTabCtrl *sr_tab.Model
+	subjects              []sradmin.Subject
+	clustersTabCtrl       *clusters_tab.Model
+	configIO              config.IO
 }
 
 // RetryClusterConnectionMsg is an internal Msg
@@ -43,7 +48,7 @@ type RetryClusterConnectionMsg struct {
 
 func (m *Model) Init() tea.Cmd {
 	return tea.Batch(func() tea.Msg {
-		return config.LoadedMsg{config.New(config.NewDefaultConfigIO())}
+		return config.LoadedMsg{Config: config.New(m.configIO)}
 	}, tea.WindowSize())
 }
 
@@ -65,11 +70,13 @@ func (m *Model) View() string {
 		views = append(views, view)
 	}
 
-	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top, views...)
+	return ui.JoinVertical(lipgloss.Top, views...)
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
+	log.Debug(reflect.TypeOf(msg))
+
+	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -85,12 +92,20 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.topicsTabCtrl.Update(msg)
 	case kadmin.ConsumerGroupsListedMsg:
 		return m, m.cgroupsTabCtrl.Update(msg)
-	case sradmin.SubjectsListedMsg, sradmin.SubjectDeletedMsg:
+	case sradmin.SubjectDeletedMsg:
 		return m, m.schemaRegistryTabCtrl.Update(msg)
+	case sradmin.SubjectsListedMsg:
+		m.subjects = msg.Subjects
+		if m.schemaRegistryTabCtrl != nil {
+			return m, m.schemaRegistryTabCtrl.Update(msg)
+		}
+	case sradmin.SubjectListingStartedMsg:
+		cmds = append(cmds, msg.AwaitCompletion)
 
 	case config.ClusterRegisteredMsg:
 		// if the active cluster has been updated it needs to be reloaded
 		if msg.Cluster.Active {
+			// TODO check err
 			m.activateCluster(msg.Cluster)
 			// keep clusters tab focussed after recreating tabs
 			if msg.Cluster.HasSchemaRegistry() {
@@ -101,19 +116,31 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		}
 	case con_err_tab.RetryClusterConnectionMsg:
+		var cmd tea.Cmd
 		m.tabCtrl, cmd = loading_tab.New()
 		return m, tea.Batch(cmd, func() tea.Msg {
 			return RetryClusterConnectionMsg{msg.Cluster}
 		})
 
 	case RetryClusterConnectionMsg:
-		return m.initTopicsTabOrError(msg.Cluster)
+		c, _ := m.initTopicsTabOrError(msg.Cluster)
+		return m, c
 
 	case config.LoadedMsg:
 		m.ktx.Config = msg.Config
 		if m.ktx.Config.HasClusters() {
 			m.tabs.GoToTab(tabs.TopicsTab)
-			return m.initTopicsTabOrError(msg.Config.ActiveCluster())
+			cmds := []tea.Cmd{}
+			cmd, err := m.initTopicsTabOrError(msg.Config.ActiveCluster())
+			if err == nil {
+				// cluster has been activated and sradmin has been loaded only if a
+				// schema registry has been configured
+				if m.ktx.Config.ActiveCluster().HasSchemaRegistry() {
+					cmds = append(cmds, m.sra.ListSubjects)
+				}
+			}
+			cmds = append(cmds, cmd)
+			return m, tea.Batch(cmds...)
 		} else {
 			t, c := clusters_tab.New(m.ktx)
 			m.tabCtrl = t
@@ -122,9 +149,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case clusters_page.ClusterSwitchedMsg:
+		// TODO check err
 		m.activateCluster(msg.Cluster)
-		// make sure we stay on the clusters tab because,
 		// tabs were recreated due to cluster switch,
+		// make sure we stay on the clusters tab because,
 		// which might have introduced or removed the schema-registry tab
 		if msg.Cluster.HasSchemaRegistry() {
 			m.tabs.GoToTab(3)
@@ -150,40 +178,53 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch m.activeTab {
 		case 0:
 			if m.topicsTabCtrl == nil {
+				var cmd tea.Cmd
 				m.topicsTabCtrl, cmd = topics_tab.New(m.ktx, m.ka)
+				cmds = append(cmds, cmd)
 			}
 			m.tabCtrl = m.topicsTabCtrl
-			return m, cmd
 		case 1:
 			if m.cgroupsTabCtrl == nil {
+				var cmd tea.Cmd
 				m.cgroupsTabCtrl, cmd = cgroups_tab.New(m.ka, m.ka)
+				cmds = append(cmds, cmd)
 			}
 			m.tabCtrl = m.cgroupsTabCtrl
-			return m, cmd
 		case 2:
 			if m.ktx.Config.ActiveCluster().HasSchemaRegistry() {
 				if m.schemaRegistryTabCtrl == nil {
+					var cmd tea.Cmd
 					m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.sra, m.ktx)
+					cmds = append(cmds, cmd)
 				}
 				m.tabCtrl = m.schemaRegistryTabCtrl
-				return m, cmd
+				break
 			}
 			fallthrough
 		case 3:
-			t, cmd := clusters_tab.New(m.ktx)
-			m.tabCtrl = t
-			return m, cmd
+			if m.clustersTabCtrl == nil {
+				var cmd tea.Cmd
+				m.clustersTabCtrl, cmd = clusters_tab.New(m.ktx)
+				cmds = append(cmds, cmd)
+			}
+			m.tabCtrl = m.clustersTabCtrl
 		}
 	}
 
 	if m.tabCtrl == nil {
+		var cmd tea.Cmd
 		m.tabCtrl, cmd = loading_tab.New()
-		return m, cmd
+		cmds = append(cmds, cmd)
 	}
-	return m, m.tabCtrl.Update(msg)
+
+	var cmd tea.Cmd
+	cmd = m.tabCtrl.Update(msg)
+	cmds = append(cmds, cmd)
+
+	return m, tea.Batch(cmds...)
 }
 
-func (m *Model) recreateTabs(cluster *config.Cluster) {
+func (m *Model) createTabs(cluster *config.Cluster) {
 	if cluster.HasSchemaRegistry() {
 		m.tabs = tab.New("Topics", "Consumer Groups", "Schema Registry", "Clusters")
 		tabs.ClustersTab = 3
@@ -209,7 +250,7 @@ func (m *Model) activateCluster(cluster *config.Cluster) error {
 		BootstrapServers: cluster.BootstrapServers,
 		SASLConfig:       saslConfig,
 	}
-	if ka, err := kadmin.New(connDetails); err != nil {
+	if ka, err := m.kaInstantiator(connDetails); err != nil {
 		return err
 	} else {
 		m.ka = ka
@@ -219,7 +260,7 @@ func (m *Model) activateCluster(cluster *config.Cluster) error {
 		m.sra = sradmin.NewSrAdmin(m.ktx)
 	}
 
-	m.recreateTabs(cluster)
+	m.createTabs(cluster)
 
 	return nil
 }
@@ -230,27 +271,28 @@ func (m *Model) onWindowSizeUpdated(msg tea.WindowSizeMsg) {
 	m.ktx.AvailableHeight = msg.Height
 }
 
-func (m *Model) initTopicsTabOrError(cluster *config.Cluster) (tea.Model, tea.Cmd) {
+func (m *Model) initTopicsTabOrError(cluster *config.Cluster) (tea.Cmd, error) {
+	var cmd tea.Cmd
 	if err := m.activateCluster(cluster); err != nil {
-		var cmd tea.Cmd
 		m.tabCtrl, cmd = con_err_tab.New(err, cluster)
-		return m, cmd
+		return cmd, err
 	} else {
-		var cmd tea.Cmd
 		m.topicsTabCtrl, cmd = topics_tab.New(m.ktx, m.ka)
 		m.tabCtrl = m.topicsTabCtrl
-		return m, cmd
+		return cmd, nil
 	}
 }
 
-func NewModel() *Model {
+func NewModel(kai kadmin.Instantiator, configIO config.IO) *Model {
 	return &Model{
-		ktx: kontext.New(),
+		kaInstantiator: kai,
+		ktx:            kontext.New(),
+		configIO:       configIO,
 	}
 }
 
 func main() {
-	p := tea.NewProgram(NewModel(), tea.WithAltScreen())
+	p := tea.NewProgram(NewModel(kadmin.SaramaInstantiator(), config.NewDefaultIO()), tea.WithAltScreen())
 	var fileErr error
 	newConfigFile, fileErr := os.OpenFile("debug.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if fileErr == nil {

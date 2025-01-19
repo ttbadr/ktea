@@ -15,16 +15,19 @@ type DeleteMsgFunc[T any] func(T) string
 
 type DeleteFunc[T any] func(T) tea.Cmd
 
-type DeleteCmdBarModel[T any] struct {
+type ValidateFunc[T any] func(T) (bool, tea.Cmd)
+
+type DeleteCmdBar[T any] struct {
 	active        bool
 	deleteConfirm *huh.Confirm
 	msg           string
 	deleteValue   T
 	deleteMsgFunc DeleteMsgFunc[T]
 	deleteFunc    DeleteFunc[T]
+	validateFunc  ValidateFunc[T]
 }
 
-func (s *DeleteCmdBarModel[any]) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
+func (s *DeleteCmdBar[any]) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	s.deleteConfirm.Title(lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#FAFAFA")).
 		Render(lipgloss.NewStyle().MarginRight(2).Render("🗑️  " + s.deleteMsgFunc(s.deleteValue)))).
@@ -36,11 +39,11 @@ func (s *DeleteCmdBarModel[any]) View(ktx *kontext.ProgramKtx, renderer *ui.Rend
 	return renderer.RenderWithStyle(s.deleteConfirm.View(), styles.CmdBar)
 }
 
-func (s *DeleteCmdBarModel[any]) IsFocussed() bool {
-	return false
+func (s *DeleteCmdBar[any]) IsFocussed() bool {
+	return s.active
 }
 
-func (s *DeleteCmdBarModel[any]) Shortcuts() []statusbar.Shortcut {
+func (s *DeleteCmdBar[any]) Shortcuts() []statusbar.Shortcut {
 	return []statusbar.Shortcut{
 		{"Confirm", "enter"},
 		{"Select Cancel", "c"},
@@ -49,7 +52,7 @@ func (s *DeleteCmdBarModel[any]) Shortcuts() []statusbar.Shortcut {
 	}
 }
 
-func (s *DeleteCmdBarModel[any]) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
+func (s *DeleteCmdBar[any]) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -60,6 +63,12 @@ func (s *DeleteCmdBarModel[any]) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
 			s.active = false
 			return s.active, nil, nil
 		case "enter":
+			if s.validateFunc != nil {
+				valid, cmd := s.validateFunc(s.deleteValue)
+				if !valid {
+					return s.active, nil, cmd
+				}
+			}
 			if s.deleteConfirm.GetValue().(bool) {
 				s.deleteConfirm = newDeleteConfirm()
 				return s.active, nil, s.deleteFunc(s.deleteValue)
@@ -78,11 +87,7 @@ func (s *DeleteCmdBarModel[any]) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
 	return s.active, msg, nil
 }
 
-func (s *DeleteCmdBarModel[any]) DeleteMsg(msg string) {
-	s.msg = msg
-}
-
-func (s *DeleteCmdBarModel[T]) Delete(d T) {
+func (s *DeleteCmdBar[T]) Delete(d T) {
 	s.deleteValue = d
 }
 
@@ -101,10 +106,15 @@ func newDeleteConfirm() *huh.Confirm {
 		}).(*huh.Confirm)
 }
 
-func NewDeleteCmdBar[T any](deleteMsgFunc DeleteMsgFunc[T], deleteFunc DeleteFunc[T]) *DeleteCmdBarModel[T] {
-	return &DeleteCmdBarModel[T]{
+func NewDeleteCmdBar[T any](
+	deleteMsgFunc DeleteMsgFunc[T],
+	deleteFunc DeleteFunc[T],
+	validateFunc ValidateFunc[T],
+) *DeleteCmdBar[T] {
+	return &DeleteCmdBar[T]{
 		deleteFunc:    deleteFunc,
 		deleteMsgFunc: deleteMsgFunc,
 		deleteConfirm: newDeleteConfirm(),
+		validateFunc:  validateFunc,
 	}
 }

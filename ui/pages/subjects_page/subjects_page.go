@@ -4,10 +4,13 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 	"ktea/kontext"
 	"ktea/sradmin"
 	"ktea/styles"
 	"ktea/ui"
+	"ktea/ui/components/cmdbar"
+	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
 	ktable "ktea/ui/components/table"
 	"ktea/ui/pages/nav"
@@ -29,7 +32,7 @@ const (
 type Model struct {
 	table            table.Model
 	rows             []table.Row
-	cmdBar           *SubjectsCmdBar
+	cmdBar           *cmdbar.TableCmdsBar[sradmin.Subject]
 	subjects         []sradmin.Subject
 	renderedSubjects []sradmin.Subject
 	tableFocussed    bool
@@ -52,12 +55,12 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 
 	cmdBarView := m.cmdBar.View(ktx, renderer)
 
-	m.table.SetHeight(ktx.AvailableHeight - 2)
-	m.table.SetWidth(ktx.WindowWidth - 2)
 	m.table.SetColumns([]table.Column{
 		{"Subject Name", int(float64(ktx.WindowWidth-5) * 0.9)},
 		{"Version Count", int(float64(ktx.WindowWidth-5) * 0.1)},
 	})
+	m.table.SetHeight(ktx.AvailableHeight - 2)
+	m.table.SetWidth(ktx.WindowWidth - 2)
 	m.table.SetRows(m.rows)
 
 	if m.deletedLast && m.table.SelectedRow() == nil {
@@ -70,20 +73,17 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 
 	var tableView string
 	if m.tableFocussed {
-		tableView = renderer.Render(styles.Table.Focus.Render(m.table.View()))
+		tableView = renderer.RenderWithStyle(m.table.View(), styles.Table.Focus)
 	} else {
-		tableView = renderer.Render(styles.Table.Blur.Render(m.table.View()))
+		tableView = renderer.RenderWithStyle(m.table.View(), styles.Table.Blur)
 	}
 
-	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top, cmdBarView, tableView)
+	return ui.JoinVertical(lipgloss.Top, cmdBarView, tableView)
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
+	log.Debug(msg)
 	var cmds []tea.Cmd
-
-	msg, cmd := m.cmdBar.Update(msg, m.SelectedSubject())
-	m.tableFocussed = !m.cmdBar.IsFocussed()
-	cmds = append(cmds, cmd)
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -97,13 +97,16 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				return ui.PublishMsg(nav.LoadCreateSubjectPageMsg{})
 			}
 		case "enter":
-			// ignore enter when there are no schemas loaded
-			if m.state == subjectsLoaded && len(m.subjects) > 0 {
-				return ui.PublishMsg(
-					nav.LoadSchemaDetailsPageMsg{
-						Subject: *m.SelectedSubject(),
-					},
-				)
+			// only accept enter when the table is focussed
+			if !m.cmdBar.IsFocussed() {
+				// ignore enter when there are no schemas loaded
+				if m.state == subjectsLoaded && len(m.subjects) > 0 {
+					return ui.PublishMsg(
+						nav.LoadSchemaDetailsPageMsg{
+							Subject: *m.SelectedSubject(),
+						},
+					)
+				}
 			}
 		}
 	case sradmin.SubjectListingStartedMsg:
@@ -122,33 +125,44 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case sradmin.SubjectDeletedMsg:
 		// set state back to loaded after removing the deleted subject
 		m.state = subjectsLoaded
-		for i, subject := range m.subjects {
-			if subject.Name == msg.SubjectName {
-				if i == len(m.subjects)-1 {
-					m.deletedLast = true
-				}
-				m.subjects = append(m.subjects[:i], m.subjects[i+1:]...)
-			}
-		}
+		m.removeDeletedSubjectFromModel(msg.SubjectName)
 		if len(m.subjects) == 0 {
 			m.state = noSubjectsFound
 		}
 	}
+
+	msg, cmd := m.cmdBar.Update(msg, m.SelectedSubject())
+	m.tableFocussed = !m.cmdBar.IsFocussed()
+	cmds = append(cmds, cmd)
 
 	subjects := m.filterSubjectsBySearchTerm()
 	subjects = m.sortSubjects(subjects)
 	m.renderedSubjects = subjects
 	m.rows = m.createRows(subjects)
 
-	t, cmd := m.table.Update(msg)
-	m.table = t
-	cmds = append(cmds, cmd)
+	// make sure table navigation is off when the cmdbar is focussed
+	if !m.cmdBar.IsFocussed() {
+		t, cmd := m.table.Update(msg)
+		m.table = t
+		cmds = append(cmds, cmd)
+	}
 
 	if m.cmdBar.HasSearchedAtLeastOneChar() {
 		m.table.GotoTop()
 	}
 
 	return tea.Batch(cmds...)
+}
+
+func (m *Model) removeDeletedSubjectFromModel(subjectName string) {
+	for i, subject := range m.subjects {
+		if subject.Name == subjectName {
+			if i == len(m.subjects)-1 {
+				m.deletedLast = true
+			}
+			m.subjects = append(m.subjects[:i], m.subjects[i+1:]...)
+		}
+	}
 }
 
 func (m *Model) sortSubjects(subjects []sradmin.Subject) []sradmin.Subject {
@@ -230,8 +244,65 @@ func (m *Model) Title() string {
 }
 
 func New(lister sradmin.SubjectLister, deleter sradmin.SubjectDeleter) (*Model, tea.Cmd) {
+	deleteMsgFunc := func(subject sradmin.Subject) string {
+		message := subject.Name + lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#7571F9")).
+			Bold(true).
+			Render(" will be deleted permanently")
+		return message
+	}
+
+	deleteFunc := func(subject sradmin.Subject) tea.Cmd {
+		return func() tea.Msg {
+			return deleter.DeleteSubject(subject.Name)
+		}
+	}
+
+	notifierCmdBar := cmdbar.NewNotifierCmdBar()
+
+	subjectListingStartedNotifier := func(msg sradmin.SubjectListingStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
+		cmd := m.SpinWithLoadingMsg("Loading subjects")
+		return true, cmd
+	}
+	subjectsListedNotifier := func(msg sradmin.SubjectsListedMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.Idle()
+		return false, nil
+	}
+	// TODO maybe we can move this into the notifier
+	hideNotificationNotifier := func(msg notifier.HideNotificationMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.Idle()
+		return false, nil
+	}
+	subjectDeletionStartedNotifier := func(msg sradmin.SubjectDeletionStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
+		cmd := m.SpinWithLoadingMsg("Deleting Subject " + msg.Subject)
+		return true, cmd
+	}
+	subjectListingErrorMsg := func(msg sradmin.SubjectListingErrorMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.ShowErrorMsg("Error listing subjects", msg.Err)
+		return true, nil
+	}
+	subjectDeletedNotifier := func(msg sradmin.SubjectDeletedMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.ShowSuccessMsg("Subject deleted")
+		return true, m.AutoHideCmd()
+	}
+	subjectDeletionErrorNotifier := func(msg sradmin.SubjectDeletionErrorMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.ShowErrorMsg("Failed to delete subject", msg.Err)
+		return true, m.AutoHideCmd()
+	}
+	cmdbar.WithMsgHandler(notifierCmdBar, subjectListingStartedNotifier)
+	cmdbar.WithMsgHandler(notifierCmdBar, subjectsListedNotifier)
+	cmdbar.WithMsgHandler(notifierCmdBar, hideNotificationNotifier)
+	cmdbar.WithMsgHandler(notifierCmdBar, subjectDeletionStartedNotifier)
+	cmdbar.WithMsgHandler(notifierCmdBar, subjectListingErrorMsg)
+	cmdbar.WithMsgHandler(notifierCmdBar, subjectDeletedNotifier)
+	cmdbar.WithMsgHandler(notifierCmdBar, subjectDeletionErrorNotifier)
+
 	return &Model{
-		cmdBar:        NewCmdBar(deleter),
+		cmdBar: cmdbar.NewTableCmdsBar[sradmin.Subject](
+			cmdbar.NewDeleteCmdBar(deleteMsgFunc, deleteFunc, nil),
+			cmdbar.NewSearchCmdBar("Search subjects by name"),
+			notifierCmdBar,
+		),
 		table:         ktable.NewDefaultTable(),
 		tableFocussed: true,
 		lister:        lister,

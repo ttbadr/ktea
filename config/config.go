@@ -45,7 +45,7 @@ func (c *Cluster) HasSchemaRegistry() bool {
 
 type Config struct {
 	Clusters []Cluster `yaml:"clusters"`
-	ConfigIO ConfigIO  `yaml:"-"`
+	ConfigIO IO        `yaml:"-"`
 }
 
 func (c *Config) HasClusters() bool {
@@ -224,7 +224,7 @@ type LoadedMsg struct {
 	Config *Config
 }
 
-func New(configIO ConfigIO) *Config {
+func New(configIO IO) *Config {
 	config, err := configIO.read()
 	if err != nil {
 		fmt.Println("Error reading config file:", err)

@@ -1,6 +1,9 @@
 package kadmin
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	"github.com/IBM/sarama"
+	tea "github.com/charmbracelet/bubbletea"
+)
 
 type TopicCreator interface {
 	CreateTopic(tcd TopicCreationDetails) tea.Msg
@@ -30,5 +33,17 @@ func (ka *SaramaKafkaAdmin) CreateTopic(tcd TopicCreationDetails) tea.Msg {
 		Created: created,
 		Err:     err,
 	}
+}
 
+func (ka *SaramaKafkaAdmin) doCreateTopic(tcd TopicCreationDetails, created chan bool, errChan chan error) {
+	err := ka.admin.CreateTopic(tcd.Name, &sarama.TopicDetail{
+		NumPartitions:     int32(tcd.NumPartitions),
+		ReplicationFactor: 1,
+		ReplicaAssignment: nil,
+		ConfigEntries:     nil,
+	}, false)
+	if err != nil {
+		errChan <- err
+	}
+	created <- true
 }

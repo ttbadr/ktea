@@ -21,6 +21,10 @@ type NotifierCmdBar struct {
 	msgByNotification map[reflect.Type]Notification[any]
 }
 
+func (n *NotifierCmdBar) IsFocussed() bool {
+	return n.active && n.Notifier.HasPriority()
+}
+
 func (n *NotifierCmdBar) Shortcuts() []statusbar.Shortcut {
 	return nil
 }
@@ -40,12 +44,12 @@ func (n *NotifierCmdBar) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
 	if notification, ok := n.msgByNotification[msgType]; ok {
 		active, cmd := notification(msg, n.Notifier)
 		n.active = active
-		return n.active, msg, cmd
+		return n.active, nil, cmd
 	}
 	return n.active, msg, nil
 }
 
-func WithMapping[T any](bar *NotifierCmdBar, notification Notification[T]) *NotifierCmdBar {
+func WithMsgHandler[T any](bar *NotifierCmdBar, notification Notification[T]) *NotifierCmdBar {
 	msgType := reflect.TypeOf((*T)(nil)).Elem()
 	bar.msgByNotification[msgType] = WrapNotification(notification)
 	return bar

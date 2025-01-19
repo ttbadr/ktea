@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 )
 
-type ConfigIO interface {
+type IO interface {
 	write(config *Config) error
 	read() (*Config, error)
 }
@@ -17,7 +17,7 @@ type defaultConfigIO struct {
 	configPath string
 }
 
-func NewDefaultConfigIO() ConfigIO {
+func NewDefaultIO() IO {
 	return &defaultConfigIO{configPath()}
 }
 

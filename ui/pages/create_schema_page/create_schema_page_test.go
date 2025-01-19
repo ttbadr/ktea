@@ -1,4 +1,4 @@
-package register_new_schema_page
+package create_schema_page
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
@@ -13,7 +13,7 @@ import (
 
 type MockSubjectCreator struct{}
 
-func (m *MockSubjectCreator) RegsiterNewSubject(details sradmin.SubjectCreationDetails) tea.Msg {
+func (m *MockSubjectCreator) CreateSchema(details sradmin.SubjectCreationDetails) tea.Msg {
 	return details
 }
 

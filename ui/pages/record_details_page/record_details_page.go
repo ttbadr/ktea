@@ -60,12 +60,12 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	} else {
 		headerValueTableHeight := len(m.record.Headers) + 4
 
-		headerValueVp := viewport.New(sideBarWidth, height-headerValueTableHeight-5)
+		headerValueVp := viewport.New(sideBarWidth, height-headerValueTableHeight-4)
 		m.headerValueVp = &headerValueVp
-		m.headersTable.SetHeight(headerValueTableHeight)
 		m.headersTable.SetColumns([]table.Column{
 			{"Header Key", sideBarWidth},
 		})
+		m.headersTable.SetHeight(headerValueTableHeight)
 		m.headersTable.SetRows(m.rows)
 	}
 
@@ -110,7 +110,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 		Render(lipgloss.JoinHorizontal(
 			lipgloss.Top,
 			renderer.RenderWithStyle(m.contentVp.View(), contentStyle),
-			ui.JoinVerticalSkipEmptyViews(
+			ui.JoinVertical(
 				lipgloss.Top,
 				lipgloss.NewStyle().Padding(1).Render(metaInfoVp),
 				headersTableStyle.Render(lipgloss.JoinVertical(lipgloss.Top, m.headersTable.View(), m.headerValueVp.View())),

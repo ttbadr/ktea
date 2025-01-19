@@ -1,4 +1,4 @@
-package register_new_schema_page
+package create_schema_page
 
 import (
 	"fmt"
@@ -45,7 +45,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 		m.form = newForm(m)
 	}
 
-	return ui.JoinVerticalSkipEmptyViews(
+	return ui.JoinVertical(
 		lipgloss.Top,
 		cmdbarView,
 		renderer.RenderWithStyle(m.form.View(), styles.Form),
@@ -158,19 +158,19 @@ func New(schemaCreator sradmin.SchemaCreator, ktx *kontext.ProgramKtx) (*Model, 
 	model.schemaCreator = schemaCreator
 	model.state = entering
 	notifierCmdBar := cmdbar.NewNotifierCmdBar()
-	cmdbar.WithMapping(notifierCmdBar, func(msg sradmin.SchemaCreationStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
+	cmdbar.WithMsgHandler(notifierCmdBar, func(msg sradmin.SchemaCreationStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		cmd := m.SpinWithLoadingMsg("Creating Schema")
 		return true, cmd
 	})
-	cmdbar.WithMapping(notifierCmdBar, func(msg sradmin.SchemaCreatedMsg, m *notifier.Model) (bool, tea.Cmd) {
+	cmdbar.WithMsgHandler(notifierCmdBar, func(msg sradmin.SchemaCreatedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowSuccessMsg("Schema created")
 		return true, nil
 	})
-	cmdbar.WithMapping(notifierCmdBar, func(msg notifier.HideNotificationMsg, m *notifier.Model) (bool, tea.Cmd) {
+	cmdbar.WithMsgHandler(notifierCmdBar, func(msg notifier.HideNotificationMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.Idle()
 		return true, nil
 	})
-	cmdbar.WithMapping(notifierCmdBar, func(msg sradmin.SchemaCreationErrMsg, m *notifier.Model) (bool, tea.Cmd) {
+	cmdbar.WithMsgHandler(notifierCmdBar, func(msg sradmin.SchemaCreationErrMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowErrorMsg("Schema creation failed", msg.Err)
 		return true, nil
 	})

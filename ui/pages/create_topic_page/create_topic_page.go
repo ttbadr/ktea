@@ -62,7 +62,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 		}
 	}
 
-	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top, views...)
+	return ui.JoinVertical(lipgloss.Top, views...)
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {

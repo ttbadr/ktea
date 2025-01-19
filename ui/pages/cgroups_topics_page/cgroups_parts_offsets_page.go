@@ -64,7 +64,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	topicsTableView := renderer.RenderWithStyle(m.topicsTable.View(), topicTableStyle)
 	offsetsTableView := renderer.RenderWithStyle(m.offsetsTable.View(), offsetTableStyle)
 
-	return ui.JoinVerticalSkipEmptyViews(lg.Left,
+	return ui.JoinVertical(lg.Left,
 		cmdBarView,
 		lg.JoinHorizontal(
 			lg.Top,

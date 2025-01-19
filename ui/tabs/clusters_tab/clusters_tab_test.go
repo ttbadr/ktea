@@ -147,7 +147,8 @@ func TestClustersTab(t *testing.T) {
 			// when
 			clustersTab.Update(keys.Key(tea.KeyDown))
 			cmds := clustersTab.Update(keys.Key(tea.KeyEnter))
-			executeBatchCmd(cmds)
+			msgs := executeBatchCmd(cmds)
+			assert.NotNil(t, msgs)
 
 			// then
 			render := clustersTab.View(programKtx, ui.TestRenderer)
@@ -155,6 +156,11 @@ func TestClustersTab(t *testing.T) {
 			assert.Regexp(t, "│\\W+prd", render)
 			assert.Regexp(t, "│\\W+uat", render)
 			assert.NotRegexp(t, "X\\W+prd", render)
+
+			t.Run("Activated cluster is selected", func(t *testing.T) {
+				assert.Equal(t, "tst",
+					*(clustersTab.active.(*clusters_page.Model)).SelectedCluster())
+			})
 		})
 	})
 
@@ -185,14 +191,14 @@ func TestClustersTab(t *testing.T) {
 			AvailableHeight: 100,
 		}
 
-		t.Run("c-d raises delete confirmation", func(t *testing.T) {
+		t.Run("F2 raises delete confirmation", func(t *testing.T) {
 			// given
 			var clustersTab, _ = New(programKtx)
 			// and table has been initialized
 			render := clustersTab.View(programKtx, ui.TestRenderer)
 
 			// when
-			clustersTab.Update(keys.Key(tea.KeyCtrlD))
+			clustersTab.Update(keys.Key(tea.KeyF2))
 
 			// then
 			render = clustersTab.View(programKtx, ui.TestRenderer)
@@ -205,7 +211,7 @@ func TestClustersTab(t *testing.T) {
 			// and table has been initialized
 			render := clustersTab.View(programKtx, ui.TestRenderer)
 			// and delete confirmation has been raised
-			clustersTab.Update(keys.Key(tea.KeyCtrlD))
+			clustersTab.Update(keys.Key(tea.KeyF2))
 			render = clustersTab.View(programKtx, ui.TestRenderer)
 			assert.Contains(t, render, "🗑️  prd will be deleted permanently")
 
@@ -224,7 +230,8 @@ func TestClustersTab(t *testing.T) {
 			render := clustersTab.View(programKtx, ui.TestRenderer)
 
 			// when
-			clustersTab.Update(keys.Key(tea.KeyCtrlD))
+			clustersTab.Update(keys.Key(tea.KeyDown))
+			clustersTab.Update(keys.Key(tea.KeyF2))
 			clustersTab.Update(keys.Key('d'))
 			cmds := clustersTab.Update(keys.Key(tea.KeyEnter))
 			msgs := executeBatchCmd(cmds)
@@ -234,10 +241,10 @@ func TestClustersTab(t *testing.T) {
 
 			// then
 			render = clustersTab.View(programKtx, ui.TestRenderer)
-			assert.NotContains(t, render, "prd")
+			assert.NotContains(t, render, "tst")
 		})
 
-		t.Run("delete the active cluster will activate the next one", func(t *testing.T) {
+		t.Run("unable to delete active cluster", func(t *testing.T) {
 			// given
 			cfg := config.New(&config.InMemoryConfigIO{})
 			cfg.RegisterCluster(config.RegistrationDetails{
@@ -270,22 +277,17 @@ func TestClustersTab(t *testing.T) {
 			render := clustersTab.View(programKtx, ui.TestRenderer)
 
 			// when
-			clustersTab.Update(keys.Key(tea.KeyCtrlD))
+			clustersTab.Update(keys.Key(tea.KeyF2))
 			clustersTab.Update(keys.Key('d'))
 			cmds := clustersTab.Update(keys.Key(tea.KeyEnter))
 			msgs := executeBatchCmd(cmds)
-			var cmd tea.Cmd
 			for _, msg := range msgs {
-				cmd = clustersTab.Update(msg)
+				clustersTab.Update(msg)
 			}
 
 			// then
 			render = clustersTab.View(programKtx, ui.TestRenderer)
-			// deleting will always switch to make sure if the active
-			// cluster is deleted a switch is made to the new active cluster
-			assert.IsType(t, cmd(), clusters_page.ClusterSwitchedMsg{})
-			assert.NotContains(t, render, "prd")
-			assert.Regexp(t, "X\\W+tst", render)
+			assert.Contains(t, render, "Unable to delete: active cluster")
 		})
 	})
 

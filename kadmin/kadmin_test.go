@@ -37,7 +37,7 @@ func init() {
 	}
 	kc = k
 	brokers, _ = kc.Brokers(ctx)
-	ka, err = New(ConnectionDetails{
+	ka, err = NewSaramaKadmin(ConnectionDetails{
 		BootstrapServers: brokers,
 		SASLConfig:       nil,
 	})

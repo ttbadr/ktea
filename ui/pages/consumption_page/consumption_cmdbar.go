@@ -12,8 +12,8 @@ import (
 )
 
 type ConsumptionCmdBar struct {
-	notifierWidget cmdbar.Widget
-	active         cmdbar.Widget
+	notifierWidget cmdbar.CmdBar
+	active         cmdbar.CmdBar
 }
 
 func (c *ConsumptionCmdBar) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -64,9 +64,9 @@ func NewConsumptionCmdbar() *ConsumptionCmdBar {
 		return false, nil
 	}
 	notifierCmdBar := cmdbar.NewNotifierCmdBar()
-	cmdbar.WithMapping(notifierCmdBar, readingStartedNotifier)
-	cmdbar.WithMapping(notifierCmdBar, consumptionEndedNotifier)
-	cmdbar.WithMapping(notifierCmdBar, c)
+	cmdbar.WithMsgHandler(notifierCmdBar, readingStartedNotifier)
+	cmdbar.WithMsgHandler(notifierCmdBar, consumptionEndedNotifier)
+	cmdbar.WithMsgHandler(notifierCmdBar, c)
 	return &ConsumptionCmdBar{
 		notifierWidget: notifierCmdBar,
 	}

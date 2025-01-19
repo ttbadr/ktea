@@ -84,7 +84,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 		views = append(views, renderer.Render(builder.String()))
 	}
 	views = append(views, renderer.RenderWithStyle(m.form.View(), styles.Form))
-	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top, views...)
+	return ui.JoinVertical(lipgloss.Top, views...)
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {

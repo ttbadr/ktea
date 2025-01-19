@@ -15,3 +15,10 @@ func (i InMemoryConfigIO) read() (*Config, error) {
 	}
 	return i.config, nil
 }
+
+func NewInMemoryConfigIO(config *Config) IO {
+	io := InMemoryConfigIO{}
+	io.config = config
+	io.config.ConfigIO = &io
+	return &io
+}

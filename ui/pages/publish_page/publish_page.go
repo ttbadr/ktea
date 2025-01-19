@@ -66,7 +66,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	if m.topicForm == nil {
 		m.topicForm = m.newForm(ktx)
 	}
-	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top,
+	return ui.JoinVertical(lipgloss.Top,
 		notifierView,
 		renderer.RenderWithStyle(m.topicForm.View(), styles.Form),
 	)

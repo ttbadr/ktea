@@ -7,8 +7,8 @@ import (
 	"ktea/sradmin"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
+	"ktea/ui/pages/create_schema_page"
 	"ktea/ui/pages/nav"
-	"ktea/ui/pages/register_new_schema_page"
 	"ktea/ui/pages/schema_details_page"
 	"ktea/ui/pages/subjects_page"
 )
@@ -27,7 +27,7 @@ type Model struct {
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	statusBarView := m.statusbar.View(ktx, renderer)
-	return ui.JoinVerticalSkipEmptyViews(
+	return ui.JoinVertical(
 		lipgloss.Top,
 		statusBarView,
 		m.active.View(ktx, renderer),
@@ -41,7 +41,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case sradmin.SubjectsListedMsg:
 		return m.subjectsPage.Update(msg)
 	case nav.LoadCreateSubjectPageMsg:
-		createPage, cmd := register_new_schema_page.New(m.schemaCreator, m.ktx)
+		createPage, cmd := create_schema_page.New(m.schemaCreator, m.ktx)
 		cmds = append(cmds, cmd)
 		m.active = createPage
 	case nav.LoadSubjectsPageMsg:

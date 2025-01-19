@@ -22,7 +22,7 @@ type Model struct {
 	active            nav.Page
 	topicsPage        *topics_page.Model
 	statusbar         *statusbar.Model
-	ka                *kadmin.SaramaKafkaAdmin
+	ka                kadmin.Kadmin
 	ktx               *kontext.ProgramKtx
 	consumptionPage   nav.Page
 	recordDetailsPage nav.Page
@@ -37,7 +37,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 
 	views = append(views, m.active.View(ktx, renderer))
 
-	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top, views...)
+	return ui.JoinVertical(lipgloss.Top, views...)
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
@@ -97,7 +97,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func New(ktx *kontext.ProgramKtx, ka *kadmin.SaramaKafkaAdmin) (*Model, tea.Cmd) {
+func New(ktx *kontext.ProgramKtx, ka kadmin.Kadmin) (*Model, tea.Cmd) {
 	var cmd tea.Cmd
 	listTopicView, cmd := topics_page.New(ka, ka)
 

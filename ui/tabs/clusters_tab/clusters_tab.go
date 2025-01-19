@@ -2,6 +2,8 @@ package clusters_tab
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 	"ktea/config"
 	"ktea/kontext"
 	"ktea/ui"
@@ -9,7 +11,6 @@ import (
 	"ktea/ui/pages/clusters_page"
 	"ktea/ui/pages/create_cluster_page"
 	"ktea/ui/pages/nav"
-	"strings"
 )
 
 type state int
@@ -24,15 +25,21 @@ type Model struct {
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
-	builder := strings.Builder{}
+	var views []string
 	if m.config.HasClusters() && m.statusbar != nil {
-		builder.WriteString(m.statusbar.View(ktx, renderer))
+		views = append(views, m.statusbar.View(ktx, renderer))
 	}
-	builder.WriteString(m.active.View(ktx, renderer))
-	return builder.String()
+
+	views = append(views, m.active.View(ktx, renderer))
+
+	return ui.JoinVertical(
+		lipgloss.Top,
+		views...,
+	)
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
+	log.Debug(msg)
 	if m.active == nil {
 		return nil
 	}
@@ -44,10 +51,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return func() tea.Msg { return config.ReLoadConfig() }
 	case config.ClusterDeletedMsg:
 		if m.config.HasClusters() {
-			var listPage, _ = clusters_page.New(m.ktx)
-			m.active = create_cluster_page.NewForm(m.ktx.Config, m.ktx)
-			m.statusbar = statusbar.New(m.active)
-			m.active = listPage
+			m.active.Update(msg)
+			//var listPage, _ = clusters_page.New(m.ktx)
+			//m.active = create_cluster_page.NewForm(m.ktx.Config, m.ktx)
+			//m.statusbar = statusbar.New(m.active)
+			//m.active = listPage
 			// Emit switch cluster msg to make sure if the active cluster was deleted,
 			// a switch to the new active cluster is made.
 			return func() tea.Msg {

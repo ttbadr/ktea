@@ -55,7 +55,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 		}
 	}
 
-	return ui.JoinVerticalSkipEmptyViews(lipgloss.Top, views...)
+	return ui.JoinVertical(lipgloss.Top, views...)
 }
 
 func (m *Model) activeSchema() string {
@@ -70,8 +70,6 @@ func (m *Model) activeSchema() string {
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
-	msg, cmd := m.cmdbar.Update(msg)
-	cmds = append(cmds, cmd)
 
 	if m.versionChips != nil {
 		cmd := m.versionChips.Update(msg)
@@ -94,8 +92,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		})
 		m.activeVersion = m.latestSchema().Version
 	case sradmin.SchemaListingStarted:
-		return msg.AwaitCompletion
+		cmds = append(cmds, msg.AwaitCompletion)
 	}
+
+	msg, cmd := m.cmdbar.Update(msg)
+	cmds = append(cmds, cmd)
 
 	if m.vp != nil {
 		vp, cmd := m.vp.Update(msg)
