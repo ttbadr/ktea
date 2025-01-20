@@ -10,7 +10,7 @@ import (
 )
 
 func TestRecordDetailsPage(t *testing.T) {
-	t.Run("c-h toggles focus between content and headers", func(t *testing.T) {
+	t.Run("c-h or arrows toggles focus between content and headers", func(t *testing.T) {
 		m := New(&kadmin.ConsumerRecord{
 			Key:       "",
 			Value:     "",
@@ -38,6 +38,14 @@ func TestRecordDetailsPage(t *testing.T) {
 		assert.Equal(t, headers, m.focus)
 
 		m.Update(keys.Key(tea.KeyCtrlH))
+
+		assert.Equal(t, content, m.focus)
+
+		m.Update(keys.Key(tea.KeyRight))
+
+		assert.Equal(t, headers, m.focus)
+
+		m.Update(keys.Key(tea.KeyLeft))
 
 		assert.Equal(t, content, m.focus)
 	})

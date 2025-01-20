@@ -44,6 +44,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 
 	payloadWidth := int(float64(ktx.WindowWidth) * 0.70)
 	height := ktx.AvailableHeight - 2
+
 	vp := viewport.New(payloadWidth, height)
 	vp.SetContent(ui.PrettyPrintJson(m.record.Value))
 	m.contentVp = &vp
@@ -128,7 +129,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		switch msg.String() {
 		case "esc":
 			return ui.PublishMsg(nav.LoadCachedConsumptionPageMsg{})
-		case "ctrl+h":
+		case "ctrl+h", "left", "right":
 			m.focus = !m.focus
 		case "c":
 			if m.focus == content {
@@ -160,7 +161,7 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 		whatToCopy = "Content"
 	}
 	return []statusbar.Shortcut{
-		{"Toggle Headers/Content", "C-h"},
+		{"Toggle Headers/Content", "C-h/Arrows"},
 		{"Go Back", "esc"},
 		{"Copy " + whatToCopy, "c"},
 	}
