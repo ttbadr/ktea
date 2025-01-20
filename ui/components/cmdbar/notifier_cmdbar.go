@@ -38,6 +38,9 @@ func (n *NotifierCmdBar) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
 	case spinner.TickMsg:
 		cmd := n.Notifier.Update(msg)
 		return n.active, nil, cmd
+	case notifier.HideNotificationMsg:
+		cmd := n.Notifier.Update(msg)
+		return n.active, nil, cmd
 	}
 
 	msgType := reflect.TypeOf(msg)

@@ -85,9 +85,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
-		// Make sure the events are explicitly captured and
-		// properly propagated in the case when the tabCtrl
-		// hence the page isn't focussed anymore
+		// Make sure the events, because of their async nature,
+		// are explicitly captured and properly propagated
+		// in the case when the tabCtrl hence the page isn't focussed anymore
 	case kadmin.TopicListedMsg:
 		return m, m.topicsTabCtrl.Update(msg)
 	case kadmin.ConsumerGroupsListedMsg:
@@ -292,7 +292,13 @@ func NewModel(kai kadmin.Instantiator, configIO config.IO) *Model {
 }
 
 func main() {
-	p := tea.NewProgram(NewModel(kadmin.SaramaInstantiator(), config.NewDefaultIO()), tea.WithAltScreen())
+	p := tea.NewProgram(
+		NewModel(
+			kadmin.SaramaInstantiator(),
+			config.NewDefaultIO(),
+		),
+		tea.WithAltScreen(),
+	)
 	var fileErr error
 	newConfigFile, fileErr := os.OpenFile("debug.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if fileErr == nil {

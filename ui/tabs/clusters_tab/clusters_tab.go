@@ -51,18 +51,13 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return func() tea.Msg { return config.ReLoadConfig() }
 	case config.ClusterDeletedMsg:
 		if m.config.HasClusters() {
-			m.active.Update(msg)
-			//var listPage, _ = clusters_page.New(m.ktx)
-			//m.active = create_cluster_page.NewForm(m.ktx.Config, m.ktx)
-			//m.statusbar = statusbar.New(m.active)
-			//m.active = listPage
-			// Emit switch cluster msg to make sure if the active cluster was deleted,
-			// a switch to the new active cluster is made.
-			return func() tea.Msg {
+			cmd := m.active.Update(msg)
+			return tea.Batch(cmd, func() tea.Msg {
+				// Emit Msg to trigger table recreation without deleted cluster
 				return clusters_page.ClusterSwitchedMsg{
 					Cluster: m.ktx.Config.ActiveCluster(),
 				}
-			}
+			})
 		} else {
 			m.active = create_cluster_page.NewForm(m.ktx.Config, m.ktx)
 		}
