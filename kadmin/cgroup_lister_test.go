@@ -32,7 +32,7 @@ func TestConsumerGroups(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			groupName := fmt.Sprintf("test-group-%d", i)
 			expectedGroups[groupName] = false
-			consumerGroup, err := sarama.NewConsumerGroupFromClient(groupName, ka.client)
+			consumerGroup, err := sarama.NewConsumerGroupFromClient(groupName, kafkaClient())
 			if err != nil {
 				t.Fatal("Unable to create Consumer Group.", err)
 			}

@@ -32,10 +32,9 @@ type Model struct {
 	cgroupsTabCtrl        *cgroups_tab.Model
 	kaInstantiator        kadmin.Instantiator
 	ka                    kadmin.Kadmin
-	sra                   *sradmin.SrAdmin
+	sra                   sradmin.SrAdmin
 	renderer              *ui.Renderer
 	schemaRegistryTabCtrl *sr_tab.Model
-	subjects              []sradmin.Subject
 	clustersTabCtrl       *clusters_tab.Model
 	configIO              config.IO
 }
@@ -74,7 +73,7 @@ func (m *Model) View() string {
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	log.Debug(reflect.TypeOf(msg))
+	log.Debug("Update ktea", "msg", reflect.TypeOf(msg))
 
 	var cmds []tea.Cmd
 
@@ -95,7 +94,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case sradmin.SubjectDeletedMsg:
 		return m, m.schemaRegistryTabCtrl.Update(msg)
 	case sradmin.SubjectsListedMsg:
-		m.subjects = msg.Subjects
 		if m.schemaRegistryTabCtrl != nil {
 			return m, m.schemaRegistryTabCtrl.Update(msg)
 		}
@@ -257,7 +255,8 @@ func (m *Model) activateCluster(cluster *config.Cluster) error {
 	}
 
 	if cluster.HasSchemaRegistry() {
-		m.sra = sradmin.NewSrAdmin(m.ktx)
+		m.sra = sradmin.NewDefaultSrAdmin(m.ktx)
+		m.ka.SetSra(m.sra)
 	}
 
 	m.createTabs(cluster)

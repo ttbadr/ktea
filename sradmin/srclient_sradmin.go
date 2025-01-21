@@ -7,10 +7,30 @@ import (
 	"ktea/config"
 	"ktea/kontext"
 	"net/http"
+	"sync"
 )
 
-type SrAdmin struct {
-	client *srclient.SchemaRegistryClient
+type DefaultSrAdmin struct {
+	client   *srclient.SchemaRegistryClient
+	subjects []Subject
+	mu       sync.RWMutex
+}
+
+type SrAdmin interface {
+	SubjectDeleter
+	SubjectLister
+	SchemaCreator
+	VersionLister
+}
+
+func (s *DefaultSrAdmin) GetSubjects() []Subject {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// Return a copy of the slice to prevent external modifications
+	subjectsCopy := make([]Subject, len(s.subjects))
+	copy(subjectsCopy, s.subjects)
+	return subjectsCopy
 }
 
 type SchemaCreationStartedMsg struct {
@@ -33,7 +53,7 @@ func (msg *SchemaCreationStartedMsg) AwaitCompletion() tea.Msg {
 	}
 }
 
-func (s *SrAdmin) CreateSchema(details SubjectCreationDetails) tea.Msg {
+func (s *DefaultSrAdmin) CreateSchema(details SubjectCreationDetails) tea.Msg {
 	createdChan := make(chan bool)
 	errChan := make(chan error)
 
@@ -45,7 +65,7 @@ func (s *SrAdmin) CreateSchema(details SubjectCreationDetails) tea.Msg {
 	}
 }
 
-func (s *SrAdmin) doCreateSchema(details SubjectCreationDetails, createdChan chan bool, errChan chan error) {
+func (s *DefaultSrAdmin) doCreateSchema(details SubjectCreationDetails, createdChan chan bool, errChan chan error) {
 	maybeIntroduceLatency()
 	_, err := s.client.CreateSchema(details.Subject, details.Schema, srclient.Avro)
 	if err != nil {
@@ -55,10 +75,10 @@ func (s *SrAdmin) doCreateSchema(details SubjectCreationDetails, createdChan cha
 	createdChan <- true
 }
 
-func NewSrAdmin(ktx *kontext.ProgramKtx) *SrAdmin {
+func NewDefaultSrAdmin(ktx *kontext.ProgramKtx) *DefaultSrAdmin {
 	registry := ktx.Config.ActiveCluster().SchemaRegistry
 	client := createHttpClient(registry)
-	return &SrAdmin{
+	return &DefaultSrAdmin{
 		client: srclient.NewSchemaRegistryClient(registry.Url, srclient.WithClient(client)),
 	}
 }

@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-var ka *SaramaKafkaAdmin
+var ka Kadmin
 var ctx context.Context
 var kc *kafka.KafkaContainer
 var brokers []string
@@ -44,6 +44,19 @@ func init() {
 	if err != nil {
 		log.Fatal(fmt.Sprintf("failed to create connection: %s", err))
 	}
+}
+
+func kafkaClient() sarama.Client {
+	config := sarama.NewConfig()
+	config.Producer.Return.Successes = true
+	config.Producer.Partitioner = sarama.NewRoundRobinPartitioner
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
+
+	client, err := sarama.NewClient(brokers, config)
+	if err != nil {
+		panic("Unable to create client")
+	}
+	return client
 }
 
 type testConsumer struct {

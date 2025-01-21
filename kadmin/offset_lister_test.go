@@ -28,7 +28,7 @@ func TestConsumerGroupOffsets(t *testing.T) {
 		}
 
 		groupName := "offset-test-group"
-		consumerGroup, err := sarama.NewConsumerGroupFromClient(groupName, ka.client)
+		consumerGroup, err := sarama.NewConsumerGroupFromClient(groupName, kafkaClient())
 		if err != nil {
 			t.Fatal("Unable to create Consumer Group.", err)
 		}

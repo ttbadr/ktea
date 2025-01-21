@@ -55,6 +55,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/hamba/avro/v2 v2.27.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
@@ -63,7 +64,8 @@ require (
 	github.com/jcmturner/gofork v1.7.6 // indirect
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
-	github.com/klauspost/compress v1.17.9 // indirect
+	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/klauspost/compress v1.17.10 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/linkedin/goavro/v2 v2.13.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
@@ -73,11 +75,14 @@ require (
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/patternmatcher v0.6.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
 	github.com/moby/sys/user v0.1.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
@@ -105,7 +110,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.24.0 // indirect
 	go.opentelemetry.io/otel/trace v1.24.0 // indirect
 	golang.org/x/crypto v0.27.0 // indirect
-	golang.org/x/mod v0.17.0 // indirect
+	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/net v0.29.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.27.0 // indirect

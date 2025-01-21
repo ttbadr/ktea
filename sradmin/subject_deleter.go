@@ -25,7 +25,7 @@ func (msg *SubjectDeletionStartedMsg) AwaitCompletion() tea.Msg {
 	}
 }
 
-func (s *SrAdmin) DeleteSubject(subject string) tea.Msg {
+func (s *DefaultSrAdmin) DeleteSubject(subject string) tea.Msg {
 	deletedChan := make(chan bool)
 	errChan := make(chan error)
 
@@ -38,7 +38,7 @@ func (s *SrAdmin) DeleteSubject(subject string) tea.Msg {
 	}
 }
 
-func (s *SrAdmin) doDeleteSubject(
+func (s *DefaultSrAdmin) doDeleteSubject(
 	subject string,
 	deletedChan chan bool,
 	errChan chan error,

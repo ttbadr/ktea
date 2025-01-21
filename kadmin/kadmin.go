@@ -47,6 +47,7 @@ type Kadmin interface {
 	CGroupLister
 	ConfigUpdater
 	TopicConfigLister
+	SraSetter
 }
 
 type Instantiator func(cd ConnectionDetails) (Kadmin, error)

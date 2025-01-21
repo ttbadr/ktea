@@ -2,6 +2,7 @@ package kadmin
 
 import (
 	"github.com/IBM/sarama"
+	"ktea/sradmin"
 )
 
 type SaramaKafkaAdmin struct {
@@ -10,9 +11,10 @@ type SaramaKafkaAdmin struct {
 	addrs    []string
 	config   *sarama.Config
 	producer sarama.SyncProducer
+	sra      sradmin.SrAdmin
 }
 
-func NewSaramaKadmin(cd ConnectionDetails) (*SaramaKafkaAdmin, error) {
+func NewSaramaKadmin(cd ConnectionDetails) (Kadmin, error) {
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = true
 	config.Producer.Partitioner = sarama.NewRoundRobinPartitioner
@@ -48,10 +50,4 @@ func NewSaramaKadmin(cd ConnectionDetails) (*SaramaKafkaAdmin, error) {
 		producer: producer,
 		config:   config,
 	}, nil
-}
-
-type TopicPartitionOffset struct {
-	Topic     string
-	Partition int32
-	Offset    int64
 }

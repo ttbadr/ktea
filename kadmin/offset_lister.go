@@ -6,6 +6,12 @@ type OffsetLister interface {
 	ListOffsets(group string) tea.Msg
 }
 
+type TopicPartitionOffset struct {
+	Topic     string
+	Partition int32
+	Offset    int64
+}
+
 type OffsetListingStartedMsg struct {
 	Err     chan error
 	Offsets chan []TopicPartitionOffset

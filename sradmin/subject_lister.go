@@ -31,7 +31,7 @@ func (msg *SubjectListingStartedMsg) AwaitCompletion() tea.Msg {
 	}
 }
 
-func (s *SrAdmin) ListSubjects() tea.Msg {
+func (s *DefaultSrAdmin) ListSubjects() tea.Msg {
 	subjectsChan := make(chan []Subject)
 	errChan := make(chan error)
 
@@ -49,7 +49,7 @@ func (s *Subject) LatestVersion() int {
 	return slices.Max(s.Versions)
 }
 
-func (s *SrAdmin) doListSubject(subjectsChan chan []Subject, errChan chan error) {
+func (s *DefaultSrAdmin) doListSubject(subjectsChan chan []Subject, errChan chan error) {
 	maybeIntroduceLatency()
 
 	subjects, err := s.client.GetSubjects()
@@ -90,5 +90,10 @@ func (s *SrAdmin) doListSubject(subjectsChan chan []Subject, errChan chan error)
 			Versions: results[i],
 		})
 	}
+
+	s.mu.Lock()
+	s.subjects = subjectPtrs
+	s.mu.Unlock()
+
 	subjectsChan <- subjectPtrs
 }
