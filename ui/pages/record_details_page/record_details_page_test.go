@@ -31,22 +31,41 @@ func TestRecordDetailsPage(t *testing.T) {
 		// init ui
 		m.View(ui.TestKontext, ui.TestRenderer)
 
-		assert.Equal(t, content, m.focus)
+		assert.Equal(t, payloadFocus, m.focus)
 
 		m.Update(keys.Key(tea.KeyCtrlH))
 
-		assert.Equal(t, headers, m.focus)
+		assert.Equal(t, headersFocus, m.focus)
 
 		m.Update(keys.Key(tea.KeyCtrlH))
 
-		assert.Equal(t, content, m.focus)
+		assert.Equal(t, payloadFocus, m.focus)
 
 		m.Update(keys.Key(tea.KeyRight))
 
-		assert.Equal(t, headers, m.focus)
+		assert.Equal(t, headersFocus, m.focus)
 
 		m.Update(keys.Key(tea.KeyLeft))
 
-		assert.Equal(t, content, m.focus)
+		assert.Equal(t, payloadFocus, m.focus)
+	})
+
+	t.Run("Display record without headers", func(t *testing.T) {
+		m := New(&kadmin.ConsumerRecord{
+			Key:       "",
+			Value:     "",
+			Partition: 0,
+			Offset:    0,
+			Headers:   nil,
+		}, &kadmin.Topic{
+			Name:       "",
+			Partitions: 0,
+			Replicas:   0,
+			Isr:        0,
+		})
+
+		render := m.View(ui.NewTestKontext(), ui.TestRenderer)
+
+		assert.Contains(t, render, "No headers present")
 	})
 }

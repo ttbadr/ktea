@@ -22,72 +22,101 @@ import (
 type focus bool
 
 const (
-	content focus = true
-	headers focus = false
+	payloadFocus focus = true
+	headersFocus focus = false
 )
 
 type Model struct {
-	record        *kadmin.ConsumerRecord
-	contentVp     *viewport.Model
-	headerValueVp *viewport.Model
-	topic         *kadmin.Topic
-	headersTable  *table.Model
-	rows          []table.Row
-	focus         focus
+	record         *kadmin.ConsumerRecord
+	payloadVp      *viewport.Model
+	headerValueVp  *viewport.Model
+	topic          *kadmin.Topic
+	headerKeyTable *table.Model
+	headerRows     []table.Row
+	focus          focus
+	payload        string
+	metaInfo       string
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
-	key := m.record.Key
-	if key == "" {
-		key = "<null>"
-	}
+	contentStyle, headersTableStyle := m.determineStyles()
 
 	payloadWidth := int(float64(ktx.WindowWidth) * 0.70)
 	height := ktx.AvailableHeight - 2
 
-	vp := viewport.New(payloadWidth, height)
-	vp.SetContent(ui.PrettyPrintJson(m.record.Value))
-	m.contentVp = &vp
+	m.createPayloadViewPort(payloadWidth, height)
 
-	m.rows = []table.Row{}
-	for _, header := range m.record.Headers {
-		m.rows = append(m.rows, table.Row{header.Key})
-	}
+	headerSideBar := m.createSidebar(ktx, payloadWidth, height, headersTableStyle)
 
-	metaInfoVp := fmt.Sprintf("key: %s\ntimestamp: %s", key, m.record.Timestamp.Format(time.UnixDate))
+	return lipgloss.NewStyle().
+		Render(lipgloss.JoinHorizontal(
+			lipgloss.Top,
+			renderer.RenderWithStyle(m.payloadVp.View(), contentStyle),
+			headerSideBar,
+		))
+}
+
+func (m *Model) createSidebar(ktx *kontext.ProgramKtx, payloadWidth int, height int, headersTableStyle lipgloss.Style) string {
 	sideBarWidth := ktx.WindowWidth - (payloadWidth + 7)
-	if len(m.record.Headers) == 0 {
 
+	var headerSideBar string
+	if len(m.record.Headers) == 0 {
+		headerSideBar = ui.JoinVertical(
+			lipgloss.Top,
+			lipgloss.NewStyle().Padding(1).Render(m.metaInfo),
+			lipgloss.JoinVertical(lipgloss.Center, lipgloss.NewStyle().Padding(1).Render("No headers present")),
+		)
 	} else {
 		headerValueTableHeight := len(m.record.Headers) + 4
 
 		headerValueVp := viewport.New(sideBarWidth, height-headerValueTableHeight-4)
 		m.headerValueVp = &headerValueVp
-		m.headersTable.SetColumns([]table.Column{
+		m.headerKeyTable.SetColumns([]table.Column{
 			{"Header Key", sideBarWidth},
 		})
-		m.headersTable.SetHeight(headerValueTableHeight)
-		m.headersTable.SetRows(m.rows)
-	}
+		m.headerKeyTable.SetHeight(headerValueTableHeight)
+		m.headerKeyTable.SetRows(m.headerRows)
 
-	row := m.headersTable.SelectedRow()
-	var headerValue string
-	if row == nil {
-		if len(m.record.Headers) > 0 {
-			headerValue = m.record.Headers[0].Value
+		headerValueLine := strings.Builder{}
+		for i := 0; i < sideBarWidth; i++ {
+			headerValueLine.WriteString("─")
 		}
-	} else {
-		headerValue = m.record.Headers[m.headersTable.Cursor()].Value
-	}
-	headerValueLine := strings.Builder{}
-	for i := 0; i < sideBarWidth; i++ {
-		headerValueLine.WriteString("─")
-	}
-	m.headerValueVp.SetContent("Header Value\n" + headerValueLine.String() + "\n" + headerValue)
 
+		var headerValue string
+		selectedRow := m.headerKeyTable.SelectedRow()
+		if selectedRow == nil {
+			if len(m.record.Headers) > 0 {
+				headerValue = m.record.Headers[0].Value
+			}
+		} else {
+			headerValue = m.record.Headers[m.headerKeyTable.Cursor()].Value
+		}
+		m.headerValueVp.SetContent("Header Value\n" + headerValueLine.String() + "\n" + headerValue)
+
+		headerSideBar = ui.JoinVertical(
+			lipgloss.Top,
+			lipgloss.NewStyle().Padding(1).Render(m.metaInfo),
+			headersTableStyle.Render(lipgloss.JoinVertical(lipgloss.Top, m.headerKeyTable.View(), m.headerValueVp.View())),
+		)
+	}
+	return headerSideBar
+}
+
+func (m *Model) createPayloadViewPort(payloadWidth int, height int) {
+	if m.payloadVp == nil {
+		payloadVp := viewport.New(payloadWidth, height)
+		m.payloadVp = &payloadVp
+	} else {
+		m.payloadVp.Height = height
+		m.payloadVp.Width = payloadWidth
+	}
+	m.payloadVp.SetContent(m.payload)
+}
+
+func (m *Model) determineStyles() (lipgloss.Style, lipgloss.Style) {
 	var contentStyle lipgloss.Style
 	var headersTableStyle lipgloss.Style
-	if m.focus == content {
+	if m.focus == payloadFocus {
 		contentStyle = lipgloss.NewStyle().
 			Inherit(styles.TextViewPort).
 			BorderForeground(lipgloss.Color(styles.ColorFocusBorder))
@@ -106,20 +135,11 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 			Margin(0).
 			BorderForeground(lipgloss.Color(styles.ColorFocusBorder))
 	}
-
-	return lipgloss.NewStyle().
-		Render(lipgloss.JoinHorizontal(
-			lipgloss.Top,
-			renderer.RenderWithStyle(m.contentVp.View(), contentStyle),
-			ui.JoinVertical(
-				lipgloss.Top,
-				lipgloss.NewStyle().Padding(1).Render(metaInfoVp),
-				headersTableStyle.Render(lipgloss.JoinVertical(lipgloss.Top, m.headersTable.View(), m.headerValueVp.View())),
-			)))
+	return contentStyle, headersTableStyle
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
-	if m.contentVp == nil {
+	if m.payloadVp == nil {
 		return nil
 	}
 
@@ -132,7 +152,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		case "ctrl+h", "left", "right":
 			m.focus = !m.focus
 		case "c":
-			if m.focus == content {
+			if m.focus == payloadFocus {
 				err := clipboard.WriteAll(m.record.Value)
 				if err != nil {
 					return nil
@@ -140,24 +160,29 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			} else {
 			}
 		default:
-			if m.focus == content {
-				vp, cmd := m.contentVp.Update(msg)
-				cmds = append(cmds, cmd)
-				m.contentVp = &vp
-			} else {
-				t, cmd := m.headersTable.Update(msg)
-				cmds = append(cmds, cmd)
-				m.headersTable = &t
-			}
+			cmds = m.updatedFocussedArea(msg, cmds)
 		}
 	}
 
 	return tea.Batch(cmds...)
 }
 
+func (m *Model) updatedFocussedArea(msg tea.Msg, cmds []tea.Cmd) []tea.Cmd {
+	if m.focus == payloadFocus {
+		vp, cmd := m.payloadVp.Update(msg)
+		cmds = append(cmds, cmd)
+		m.payloadVp = &vp
+	} else {
+		t, cmd := m.headerKeyTable.Update(msg)
+		cmds = append(cmds, cmd)
+		m.headerKeyTable = &t
+	}
+	return cmds
+}
+
 func (m *Model) Shortcuts() []statusbar.Shortcut {
 	whatToCopy := "Header Value"
-	if m.focus == content {
+	if m.focus == payloadFocus {
 		whatToCopy = "Content"
 	}
 	return []statusbar.Shortcut{
@@ -173,10 +198,28 @@ func (m *Model) Title() string {
 
 func New(record *kadmin.ConsumerRecord, topic *kadmin.Topic) *Model {
 	headersTable := ktable.NewDefaultTable()
+
+	var headerRows []table.Row
+	for _, header := range record.Headers {
+		headerRows = append(headerRows, table.Row{header.Key})
+	}
+
+	payload := ui.PrettyPrintJson(record.Value)
+
+	key := record.Key
+	if key == "" {
+		key = "<null>"
+	}
+
+	metaInfo := fmt.Sprintf("key: %s\ntimestamp: %s", key, record.Timestamp.Format(time.UnixDate))
+
 	return &Model{
-		record:       record,
-		topic:        topic,
-		headersTable: &headersTable,
-		focus:        content,
+		record:         record,
+		topic:          topic,
+		headerKeyTable: &headersTable,
+		focus:          payloadFocus,
+		headerRows:     headerRows,
+		payload:        payload,
+		metaInfo:       metaInfo,
 	}
 }
