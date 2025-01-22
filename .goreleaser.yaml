@@ -1,0 +1,71 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: ktea
+    binary: ktea
+    env:
+      - CGO_ENABLED=0
+    tags: prd
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - arm64
+      - arm
+      - amd64
+
+archives:
+  - formats: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+brews:
+  - name: ktea
+    url_template: "https://github.com/jonas-grgt/ktea/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    homepage: https://github.com/jonas-grgt/ktea
+    description: Kafka Terminal UI
+    commit_author:
+      name: jonas-grgt
+      email: jonas.grgt@gmail.com
+    repository:
+      owner: jonas-grgt
+      name: ktea-brew
+      branch: main
+      token: "{{ .Env.KTEA_HOMEBREW_TOKEN }}"
+
+nfpms:
+  - file_name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}'
+    maintainer: Jonas Geiregat
+    homepage: https://github.com/jonas-grgt/ktea
+    description: Kafka Terminal UI
+    license: "Apache-2.0"
+    formats:
+      - deb
+      - rpm
+      - apk
+      - archlinux
+    bindir: /usr/bin
+    section: utils
+    contents:
+      - src: ./LICENSE
+        dst: /usr/share/doc/k9s/copyright
+        file_info:
+          mode: 0644
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+release:
+  footer: >-
+
+    ---
+
+    Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
