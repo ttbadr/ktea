@@ -1,11 +1,15 @@
 package record_details_page
 
 import (
+	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"ktea/kadmin"
+	"ktea/tests"
 	"ktea/tests/keys"
 	"ktea/ui"
+	"ktea/ui/clipper"
 	"testing"
 )
 
@@ -22,12 +26,15 @@ func TestRecordDetailsPage(t *testing.T) {
 					Value: "v2",
 				},
 			},
-		}, &kadmin.Topic{
-			Name:       "",
-			Partitions: 0,
-			Replicas:   0,
-			Isr:        0,
-		})
+		},
+			&kadmin.Topic{
+				Name:       "",
+				Partitions: 0,
+				Replicas:   0,
+				Isr:        0,
+			},
+			clipper.NewMock(),
+		)
 		// init ui
 		m.View(ui.TestKontext, ui.TestRenderer)
 
@@ -62,10 +69,190 @@ func TestRecordDetailsPage(t *testing.T) {
 			Partitions: 0,
 			Replicas:   0,
 			Isr:        0,
-		})
+		},
+			clipper.NewMock(),
+		)
 
 		render := m.View(ui.NewTestKontext(), ui.TestRenderer)
 
 		assert.Contains(t, render, "No headers present")
+	})
+
+	t.Run("Copy payload", func(t *testing.T) {
+		var clippedText string
+		clipMock := clipper.NewMock()
+		clipMock.WriteFunc = func(text string) error {
+			clippedText = text
+			return nil
+		}
+		m := New(&kadmin.ConsumerRecord{
+			Key:       "740ed9fd-195f-427e-8e0d-adb63d9c16ed",
+			Value:     `{"name":"John"}`,
+			Partition: 0,
+			Offset:    123,
+			Headers: []kadmin.Header{
+				{
+					Key:   "h1",
+					Value: "v1",
+				},
+			},
+		}, &kadmin.Topic{
+			Name:       "",
+			Partitions: 0,
+			Replicas:   0,
+			Isr:        0,
+		},
+			clipMock,
+		)
+
+		m.View(ui.NewTestKontext(), ui.TestRenderer)
+
+		cmds := m.Update(keys.Key('c'))
+		for _, msg := range tests.ExecuteBatchCmd(cmds) {
+			m.Update(msg)
+		}
+
+		render := ansi.Strip(m.View(ui.NewTestKontext(), ui.TestRenderer))
+
+		assert.Equal(t, "{\n\t\"name\": \"John\"\n}", clippedText)
+		assert.Contains(t, render, "Payload copied")
+	})
+
+	t.Run("Copy header value", func(t *testing.T) {
+		var clippedText string
+		clipMock := clipper.NewMock()
+		clipMock.WriteFunc = func(text string) error {
+			clippedText = text
+			return nil
+		}
+		m := New(&kadmin.ConsumerRecord{
+			Key:       "740ed9fd-195f-427e-8e0d-adb63d9c16ed",
+			Value:     `{"name":"John"}`,
+			Partition: 0,
+			Offset:    123,
+			Headers: []kadmin.Header{
+				{
+					Key:   "h1",
+					Value: "v1",
+				},
+				{
+					Key:   "h2",
+					Value: "v2",
+				},
+				{
+					Key:   "h3",
+					Value: "v3\nv3",
+				},
+			},
+		}, &kadmin.Topic{
+			Name:       "",
+			Partitions: 0,
+			Replicas:   0,
+			Isr:        0,
+		},
+			clipMock,
+		)
+
+		m.View(ui.NewTestKontext(), ui.TestRenderer)
+
+		m.Update(keys.Key(tea.KeyCtrlH))
+		m.Update(keys.Key(tea.KeyDown))
+		m.Update(keys.Key(tea.KeyDown))
+
+		cmds := m.Update(keys.Key('c'))
+		for _, msg := range tests.ExecuteBatchCmd(cmds) {
+			m.Update(msg)
+		}
+
+		render := ansi.Strip(m.View(ui.NewTestKontext(), ui.TestRenderer))
+
+		assert.Equal(t, "v3\nv3", clippedText)
+		assert.Contains(t, render, "Header Value copied")
+	})
+
+	t.Run("Copy header value failed", func(t *testing.T) {
+		clipMock := clipper.NewMock()
+		clipMock.WriteFunc = func(text string) error {
+			return fmt.Errorf("unable to access clipboard")
+		}
+		m := New(&kadmin.ConsumerRecord{
+			Key:       "740ed9fd-195f-427e-8e0d-adb63d9c16ed",
+			Value:     `{"name":"John"}`,
+			Partition: 0,
+			Offset:    123,
+			Headers: []kadmin.Header{
+				{
+					Key:   "h1",
+					Value: "v1",
+				},
+				{
+					Key:   "h2",
+					Value: "v2",
+				},
+				{
+					Key:   "h3",
+					Value: "v3\nv3",
+				},
+			},
+		}, &kadmin.Topic{
+			Name:       "",
+			Partitions: 0,
+			Replicas:   0,
+			Isr:        0,
+		},
+			clipMock,
+		)
+
+		m.View(ui.NewTestKontext(), ui.TestRenderer)
+
+		m.Update(keys.Key(tea.KeyCtrlH))
+		m.Update(keys.Key(tea.KeyDown))
+		m.Update(keys.Key(tea.KeyDown))
+
+		cmds := m.Update(keys.Key('c'))
+		for _, msg := range tests.ExecuteBatchCmd(cmds) {
+			m.Update(msg)
+		}
+
+		render := ansi.Strip(m.View(ui.NewTestKontext(), ui.TestRenderer))
+
+		assert.Contains(t, render, "Copy failed: unable to access clipboard")
+	})
+
+	t.Run("Copy payload failed", func(t *testing.T) {
+		clipMock := clipper.NewMock()
+		clipMock.WriteFunc = func(text string) error {
+			return fmt.Errorf("unable to access clipboard")
+		}
+		m := New(&kadmin.ConsumerRecord{
+			Key:       "740ed9fd-195f-427e-8e0d-adb63d9c16ed",
+			Value:     `{"name":"John"}`,
+			Partition: 0,
+			Offset:    123,
+			Headers: []kadmin.Header{
+				{
+					Key:   "h1",
+					Value: "v1",
+				},
+			},
+		}, &kadmin.Topic{
+			Name:       "",
+			Partitions: 0,
+			Replicas:   0,
+			Isr:        0,
+		},
+			clipMock,
+		)
+
+		m.View(ui.NewTestKontext(), ui.TestRenderer)
+
+		cmds := m.Update(keys.Key('c'))
+		for _, msg := range tests.ExecuteBatchCmd(cmds) {
+			m.Update(msg)
+		}
+
+		render := ansi.Strip(m.View(ui.NewTestKontext(), ui.TestRenderer))
+
+		assert.Contains(t, render, "Copy failed: unable to access clipboard")
 	})
 }

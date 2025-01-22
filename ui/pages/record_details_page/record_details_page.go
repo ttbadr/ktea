@@ -2,15 +2,18 @@ package record_details_page
 
 import (
 	"fmt"
-	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"ktea/kadmin"
 	"ktea/kontext"
 	"ktea/styles"
 	"ktea/ui"
+	"ktea/ui/clipper"
+	"ktea/ui/components/cmdbar"
+	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
 	ktable "ktea/ui/components/table"
 	"ktea/ui/pages/nav"
@@ -28,6 +31,7 @@ const (
 )
 
 type Model struct {
+	notifierCmdbar *cmdbar.NotifierCmdBar
 	record         *kadmin.ConsumerRecord
 	payloadVp      *viewport.Model
 	headerValueVp  *viewport.Model
@@ -37,10 +41,23 @@ type Model struct {
 	focus          focus
 	payload        string
 	metaInfo       string
+	clipWriter     clipper.Writer
+}
+
+type PayloadCopiedMsg struct {
+}
+
+type HeaderValueCopiedMsg struct {
+}
+
+type CopyErrorMsg struct {
+	Err error
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	contentStyle, headersTableStyle := m.determineStyles()
+
+	notifierCmdbarView := m.notifierCmdbar.View(ktx, renderer)
 
 	payloadWidth := int(float64(ktx.WindowWidth) * 0.70)
 	height := ktx.AvailableHeight - 2
@@ -49,8 +66,10 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 
 	headerSideBar := m.createSidebar(ktx, payloadWidth, height, headersTableStyle)
 
-	return lipgloss.NewStyle().
-		Render(lipgloss.JoinHorizontal(
+	return ui.JoinVertical(
+		lipgloss.Top,
+		notifierCmdbarView,
+		lipgloss.JoinHorizontal(
 			lipgloss.Top,
 			renderer.RenderWithStyle(m.payloadVp.View(), contentStyle),
 			headerSideBar,
@@ -83,15 +102,7 @@ func (m *Model) createSidebar(ktx *kontext.ProgramKtx, payloadWidth int, height 
 			headerValueLine.WriteString("─")
 		}
 
-		var headerValue string
-		selectedRow := m.headerKeyTable.SelectedRow()
-		if selectedRow == nil {
-			if len(m.record.Headers) > 0 {
-				headerValue = m.record.Headers[0].Value
-			}
-		} else {
-			headerValue = m.record.Headers[m.headerKeyTable.Cursor()].Value
-		}
+		headerValue := m.selectedHeaderValue()
 		m.headerValueVp.SetContent("Header Value\n" + headerValueLine.String() + "\n" + headerValue)
 
 		headerSideBar = ui.JoinVertical(
@@ -101,6 +112,18 @@ func (m *Model) createSidebar(ktx *kontext.ProgramKtx, payloadWidth int, height 
 		)
 	}
 	return headerSideBar
+}
+
+func (m *Model) selectedHeaderValue() string {
+	selectedRow := m.headerKeyTable.SelectedRow()
+	if selectedRow == nil {
+		if len(m.record.Headers) > 0 {
+			return m.record.Headers[0].Value
+		}
+	} else {
+		return m.record.Headers[m.headerKeyTable.Cursor()].Value
+	}
+	return ""
 }
 
 func (m *Model) createPayloadViewPort(payloadWidth int, height int) {
@@ -145,6 +168,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	}
 
 	var cmds []tea.Cmd
+
+	_, _, cmd := m.notifierCmdbar.Update(msg)
+	cmds = append(cmds, cmd)
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -153,19 +180,32 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		case "ctrl+h", "left", "right":
 			m.focus = !m.focus
 		case "c":
-			if m.focus == payloadFocus {
-				err := clipboard.WriteAll(m.record.Value)
-				if err != nil {
-					return nil
-				}
-			} else {
-			}
+			cmds = m.handleCopy(cmds)
 		default:
 			cmds = m.updatedFocussedArea(msg, cmds)
 		}
 	}
 
 	return tea.Batch(cmds...)
+}
+
+func (m *Model) handleCopy(cmds []tea.Cmd) []tea.Cmd {
+	if m.focus == payloadFocus {
+		err := m.clipWriter.Write(ansi.Strip(m.payload))
+		if err != nil {
+			cmds = append(cmds, ui.PublishMsg(CopyErrorMsg{Err: err}))
+		} else {
+			cmds = append(cmds, ui.PublishMsg(PayloadCopiedMsg{}))
+		}
+	} else {
+		err := m.clipWriter.Write(m.selectedHeaderValue())
+		if err != nil {
+			cmds = append(cmds, ui.PublishMsg(CopyErrorMsg{Err: err}))
+		} else {
+			cmds = append(cmds, ui.PublishMsg(HeaderValueCopiedMsg{}))
+		}
+	}
+	return cmds
 }
 
 func (m *Model) updatedFocussedArea(msg tea.Msg, cmds []tea.Cmd) []tea.Cmd {
@@ -197,7 +237,11 @@ func (m *Model) Title() string {
 	return "Topics / " + m.topic.Name + " / Records / " + strconv.FormatInt(m.record.Offset, 10)
 }
 
-func New(record *kadmin.ConsumerRecord, topic *kadmin.Topic) *Model {
+func New(
+	record *kadmin.ConsumerRecord,
+	topic *kadmin.Topic,
+	clipWriter clipper.Writer,
+) *Model {
 	headersTable := ktable.NewDefaultTable()
 
 	var headerRows []table.Row
@@ -217,6 +261,20 @@ func New(record *kadmin.ConsumerRecord, topic *kadmin.Topic) *Model {
 
 	metaInfo := fmt.Sprintf("key: %s\ntimestamp: %s", key, record.Timestamp.Format(time.UnixDate))
 
+	notifierCmdBar := cmdbar.NewNotifierCmdBar()
+	cmdbar.WithMsgHandler(notifierCmdBar, func(msg PayloadCopiedMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.ShowSuccessMsg("Payload copied")
+		return true, m.AutoHideCmd()
+	})
+	cmdbar.WithMsgHandler(notifierCmdBar, func(msg HeaderValueCopiedMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.ShowSuccessMsg("Header Value copied")
+		return true, m.AutoHideCmd()
+	})
+	cmdbar.WithMsgHandler(notifierCmdBar, func(msg CopyErrorMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.ShowErrorMsg("Copy failed", msg.Err)
+		return true, m.AutoHideCmd()
+	})
+
 	return &Model{
 		record:         record,
 		topic:          topic,
@@ -225,5 +283,7 @@ func New(record *kadmin.ConsumerRecord, topic *kadmin.Topic) *Model {
 		headerRows:     headerRows,
 		payload:        payload,
 		metaInfo:       metaInfo,
+		clipWriter:     clipWriter,
+		notifierCmdbar: notifierCmdBar,
 	}
 }

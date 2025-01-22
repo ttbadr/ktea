@@ -7,6 +7,7 @@ import (
 	"ktea/kadmin"
 	"ktea/kontext"
 	"ktea/ui"
+	"ktea/ui/clipper"
 	"ktea/ui/components/statusbar"
 	"ktea/ui/pages/configs_page"
 	"ktea/ui/pages/consumption_form_page"
@@ -62,7 +63,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 
 	case nav.LoadRecordDetailPageMsg:
-		m.active = record_details_page.New(msg.Record, msg.Topic)
+		m.active = record_details_page.New(msg.Record, msg.Topic, clipper.New())
 		m.recordDetailsPage = m.active
 
 	case nav.LoadTopicConfigPageMsg:
