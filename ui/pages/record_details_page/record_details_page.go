@@ -14,6 +14,7 @@ import (
 	"ktea/ui/components/statusbar"
 	ktable "ktea/ui/components/table"
 	"ktea/ui/pages/nav"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -200,6 +201,9 @@ func New(record *kadmin.ConsumerRecord, topic *kadmin.Topic) *Model {
 	headersTable := ktable.NewDefaultTable()
 
 	var headerRows []table.Row
+	sort.SliceStable(record.Headers, func(i, j int) bool {
+		return record.Headers[i].Key < record.Headers[j].Key
+	})
 	for _, header := range record.Headers {
 		headerRows = append(headerRows, table.Row{header.Key})
 	}

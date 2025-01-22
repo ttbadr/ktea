@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"ktea/config"
@@ -10,55 +9,10 @@ import (
 	"testing"
 )
 
-type MockKadmin struct {
-}
-
-func (m MockKadmin) CreateTopic(tcd kadmin.TopicCreationDetails) tea.Msg {
-	return nil
-}
-
-func (m MockKadmin) DeleteTopic(topic string) tea.Msg {
-	return nil
-}
-
-func (m MockKadmin) ListTopics() tea.Msg {
-	return nil
-}
-
-func (m MockKadmin) PublishRecord(p *kadmin.ProducerRecord) kadmin.PublicationStartedMsg {
-	return kadmin.PublicationStartedMsg{}
-}
-
-func (m MockKadmin) ReadRecords(ctx context.Context, rd kadmin.ReadDetails) kadmin.ReadingStartedMsg {
-	return kadmin.ReadingStartedMsg{}
-}
-
-func (m MockKadmin) ListOffsets(group string) tea.Msg {
-	return nil
-}
-
-func (m MockKadmin) ListConsumerGroups() tea.Msg {
-	return nil
-}
-
-func (m MockKadmin) UpdateConfig(t kadmin.TopicConfigToUpdate) tea.Msg {
-	return nil
-}
-
-func (m MockKadmin) ListConfigs(topic string) tea.Msg {
-	return nil
-}
-
-func newMockKadmin() kadmin.Instantiator {
-	return func(cd kadmin.ConnectionDetails) (kadmin.Kadmin, error) {
-		return &MockKadmin{}, nil
-	}
-}
-
 func TestKtea(t *testing.T) {
 	t.Run("No clusters configured", func(t *testing.T) {
 		t.Run("Shows create cluster page", func(t *testing.T) {
-			model := NewModel(newMockKadmin(), config.NewInMemoryConfigIO(&config.Config{}))
+			model := NewModel(kadmin.NewMockKadmin(), config.NewInMemoryConfigIO(&config.Config{}))
 			model.Update(config.LoadedMsg{
 				Config: &config.Config{},
 			})
@@ -97,7 +51,7 @@ func TestKtea(t *testing.T) {
 					},
 				},
 			)
-			model := NewModel(newMockKadmin(), io)
+			model := NewModel(kadmin.NewMockKadmin(), io)
 			model.Update(config.LoadedMsg{Config: config.New(io)})
 			//model.Update(config.LoadedMsg{
 			//	Config: &config.Config{

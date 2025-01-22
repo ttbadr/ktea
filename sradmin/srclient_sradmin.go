@@ -11,9 +11,10 @@ import (
 )
 
 type DefaultSrAdmin struct {
-	client   *srclient.SchemaRegistryClient
-	subjects []Subject
-	mu       sync.RWMutex
+	client      *srclient.SchemaRegistryClient
+	subjects    []Subject
+	mu          sync.RWMutex
+	schemaCache map[int]Schema
 }
 
 type SrAdmin interface {
@@ -21,6 +22,7 @@ type SrAdmin interface {
 	SubjectLister
 	SchemaCreator
 	VersionLister
+	SchemaFetcher
 }
 
 func (s *DefaultSrAdmin) GetSubjects() []Subject {
@@ -75,7 +77,7 @@ func (s *DefaultSrAdmin) doCreateSchema(details SubjectCreationDetails, createdC
 	createdChan <- true
 }
 
-func NewDefaultSrAdmin(ktx *kontext.ProgramKtx) *DefaultSrAdmin {
+func New(ktx *kontext.ProgramKtx) *DefaultSrAdmin {
 	registry := ktx.Config.ActiveCluster().SchemaRegistry
 	client := createHttpClient(registry)
 	return &DefaultSrAdmin{

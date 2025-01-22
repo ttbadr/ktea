@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/IBM/sarama"
 	"github.com/charmbracelet/log"
-	"sort"
+	"ktea/serdes"
 	"sync"
 	"time"
 )
@@ -114,13 +114,17 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) Rea
 							string(h.Value),
 						})
 					}
-					sort.SliceStable(headers, func(i, j int) bool {
-						return headers[i].Key < headers[j].Key
-					})
+
+					deserializer := serdes.NewAvroDeserializer(ka.sra)
+					var payload string
+					payload, err = deserializer.Deserialize(msg.Value)
+					if err != nil {
+						payload = err.Error()
+					}
 
 					consumerRecord := ConsumerRecord{
 						Key:       string(msg.Key),
-						Value:     string(msg.Value),
+						Value:     payload,
 						Partition: int64(msg.Partition),
 						Offset:    msg.Offset,
 						Headers:   headers,
