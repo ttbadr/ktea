@@ -18,7 +18,14 @@ var TextViewPort = lipgloss.NewStyle().
 	PaddingLeft(1).
 	BorderStyle(lipgloss.RoundedBorder())
 var Notifier NotifierStyle
-var clusterColors map[string]string
+var clusterColors = map[string]string{
+	ColorRed:    ColorWhite,
+	ColorYellow: ColorBlack,
+	ColorGreen:  ColorBlack,
+	ColorOrange: ColorBlack,
+	ColorPurple: ColorWhite,
+	ColorBlue:   ColorWhite,
+}
 
 const ColorRed = "#FF0000"
 const ColorGreen = "#00FF00"
@@ -65,7 +72,9 @@ func FG(color lipgloss.Color) lipgloss.Style {
 }
 
 func (s *StatusBarStyle) Cluster(color string) lipgloss.Style {
-	return s.cluster.Background(lipgloss.Color(color))
+	return s.cluster.
+		Background(lipgloss.Color(color)).
+		Foreground(lipgloss.Color(clusterColors[color]))
 }
 
 type TabStyle struct {
@@ -207,42 +216,42 @@ func init() {
 	{
 		envStyle := EnvStyle{}
 		envStyle.Colors.Red = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFFFF")).
+			Foreground(lipgloss.Color(clusterColors[ColorRed])).
 			Background(lipgloss.Color(ColorRed)).
 			PaddingLeft(1).
 			PaddingRight(1).
 			Width(10).
 			Bold(true)
 		envStyle.Colors.Green = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#000000")).
+			Foreground(lipgloss.Color(clusterColors[ColorGreen])).
 			Background(lipgloss.Color(ColorGreen)).
 			PaddingLeft(1).
 			PaddingRight(1).
 			Width(10).
 			Bold(true)
 		envStyle.Colors.Blue = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFFFF")).
+			Foreground(lipgloss.Color(clusterColors[ColorBlue])).
 			Background(lipgloss.Color(ColorBlue)).
 			PaddingLeft(1).
 			PaddingRight(1).
 			Width(10).
 			Bold(true)
 		envStyle.Colors.Orange = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFFFF")).
+			Foreground(lipgloss.Color(clusterColors[ColorOrange])).
 			Background(lipgloss.Color(ColorOrange)).
 			PaddingLeft(1).
 			PaddingRight(1).
 			Width(10).
 			Bold(true)
 		envStyle.Colors.Purple = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFFFF")).
+			Foreground(lipgloss.Color(clusterColors[ColorPurple])).
 			Background(lipgloss.Color(ColorPurple)).
 			PaddingLeft(1).
 			PaddingRight(1).
 			Width(10).
 			Bold(true)
 		envStyle.Colors.Yellow = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#000000")).
+			Foreground(lipgloss.Color(clusterColors[ColorYellow])).
 			Background(lipgloss.Color(ColorYellow)).
 			PaddingLeft(1).
 			PaddingRight(1).
