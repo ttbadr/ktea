@@ -13,7 +13,7 @@ type Page interface {
 }
 
 type LoadTopicsPageMsg struct {
-	Reload bool
+	Refresh bool
 }
 
 type LoadCreateTopicPageMsg struct{}

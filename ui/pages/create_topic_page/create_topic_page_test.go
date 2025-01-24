@@ -47,23 +47,38 @@ func (m *MockTopicCreator) CreateTopic(tcd kadmin.TopicCreationDetails) tea.Msg 
 	return nil
 }
 
-var ktx = &kontext.ProgramKtx{
-	WindowWidth:     100,
-	WindowHeight:    100,
-	AvailableHeight: 100,
-}
-
 func TestCreateTopic(t *testing.T) {
 
 	type CapturedTopicCreationDetails struct {
 		kadmin.TopicCreationDetails
 	}
-	t.Run("esc goes back to topic list page", func(t *testing.T) {
-		m := New(&MockTopicCreator{})
 
-		cmd := m.Update(keys.Key(tea.KeyEsc))
+	t.Run("esc", func(t *testing.T) {
+		mockCreator := MockTopicCreator{
+			CreateTopicFunc: func(details kadmin.TopicCreationDetails) tea.Msg {
+				if details.Name == "" {
+					return errors.New("topic name cannot be empty")
+				}
+				return CapturedTopicCreationDetails{details}
+			},
+		}
+		m := New(&mockCreator)
 
-		assert.IsType(t, nav.LoadTopicsPageMsg{}, cmd())
+		t.Run("goes back to topic list page", func(t *testing.T) {
+			cmd := m.Update(keys.Key(tea.KeyEsc))
+
+			assert.Equal(t, nav.LoadTopicsPageMsg{Refresh: false}, cmd())
+		})
+
+		t.Run("after at least one created topic refreshes topics list", func(t *testing.T) {
+			m = New(&mockCreator)
+
+			m.Update(kadmin.TopicCreatedMsg{})
+
+			cmd := m.Update(keys.Key(tea.KeyEsc))
+
+			assert.Equal(t, nav.LoadTopicsPageMsg{Refresh: true}, cmd())
+		})
 	})
 
 	t.Run("c-r resets form", func(t *testing.T) {
@@ -88,12 +103,12 @@ func TestCreateTopic(t *testing.T) {
 		// next group
 		cmd = m.Update(cmd())
 
-		render := m.View(ktx, ui.TestRenderer)
+		render := m.View(ui.NewTestKontext(), ui.TestRenderer)
 
 		assert.Contains(t, render, "Custom Topic configurations:")
 
 		m.Update(tea.KeyMsg{Type: tea.KeyCtrlR})
-		render = m.View(ktx, ui.TestRenderer)
+		render = m.View(ui.NewTestKontext(), ui.TestRenderer)
 
 		assert.NotContains(t, render, "Custom Topic configurations:")
 	})
@@ -122,13 +137,8 @@ func TestCreateTopic(t *testing.T) {
 		m.Update(keys.Key(tea.KeyDown))
 		cmd = m.Update(keys.Key(tea.KeyEnter))
 		m.Update(cmd())
-		// config
-		cmd = m.Update(keys.Key(tea.KeyEnter))
-		// next field
-		cmd = m.Update(cmd())
-		// next group
-		cmd = m.Update(cmd())
-		msgs := executeBatchCmd(cmd)
+		// config - submit
+		msgs := keys.Submit(m)
 
 		var capturedDetails CapturedTopicCreationDetails
 		for _, msg := range msgs {
@@ -223,7 +233,7 @@ func TestCreateTopic_Validation(t *testing.T) {
 		t.Run("When field is not a number", func(t *testing.T) {
 			m := CreateTopicSectionWithCursorAtPartitionsField()
 
-			cmd := m.Update(key('a'))
+			cmd := m.Update(keys.Key('a'))
 			batchUpdate(m, cmd)
 			cmd = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 			batchUpdate(m, cmd)
@@ -254,7 +264,7 @@ func TestCreateTopic_Validation(t *testing.T) {
 			keys.UpdateKeys(m, "foo:bar")
 			cmd = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 
-			render := m.View(ktx, ui.TestRenderer)
+			render := m.View(ui.NewTestKontext(), ui.TestRenderer)
 
 			assert.Contains(t, render, "please enter configurations in the format \"config=value\"")
 		})
@@ -278,42 +288,9 @@ func TestCreateTopic_Validation(t *testing.T) {
 			cmd = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 			batchUpdate(m, cmd)
 
-			render := m.View(ktx, ui.TestRenderer)
+			render := m.View(ui.NewTestKontext(), ui.TestRenderer)
 
 			assert.NotContains(t, render, "please enter configurations in the format \"config=value\"")
 		})
 	})
-}
-
-func key(r rune) tea.KeyMsg {
-	return tea.KeyMsg{
-		Type:  tea.KeyRunes,
-		Runes: []rune{r},
-	}
-}
-
-func executeBatchCmd(cmd tea.Cmd) []tea.Msg {
-	var msgs []tea.Msg
-	if cmd == nil {
-		return msgs
-	}
-
-	msg := cmd()
-	if msg == nil {
-		return msgs
-	}
-
-	// If the message is a batch, process its commands
-	if batch, ok := msg.(tea.BatchMsg); ok {
-		for _, subCmd := range batch {
-			if subCmd != nil {
-				msgs = append(msgs, executeBatchCmd(subCmd)...)
-			}
-		}
-		return msgs
-	}
-
-	// Otherwise, it's a normal message
-	msgs = append(msgs, msg)
-	return msgs
 }

@@ -28,12 +28,13 @@ const (
 )
 
 type Model struct {
-	shortcuts    []statusbar.Shortcut
-	form         *huh.Form
-	notifier     *notifier.Model
-	topicCreator kadmin.TopicCreator
-	formValues   topicFormValues
-	formState    formState
+	shortcuts              []statusbar.Shortcut
+	form                   *huh.Form
+	notifier               *notifier.Model
+	topicCreator           kadmin.TopicCreator
+	formValues             topicFormValues
+	formState              formState
+	createdAtLeastOneTopic bool
 }
 
 type config struct {
@@ -74,7 +75,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return cmd
 	case tea.KeyMsg:
 		if msg.String() == "esc" && m.formState != loading {
-			return ui.PublishMsg(nav.LoadTopicsPageMsg{})
+			return ui.PublishMsg(nav.LoadTopicsPageMsg{Refresh: m.createdAtLeastOneTopic})
 		} else if msg.String() == "ctrl+r" {
 			m.formValues.name = ""
 			m.formValues.cleanupPolicy = ""
@@ -97,6 +98,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.formValues.config = ""
 		m.formValues.numPartitions = ""
 		m.formValues.configs = []config{}
+		m.createdAtLeastOneTopic = true
 		m.initForm(initial)
 		return nil
 	default:

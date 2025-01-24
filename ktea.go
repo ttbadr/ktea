@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
@@ -19,7 +20,6 @@ import (
 	"ktea/ui/tabs/sr_tab"
 	"ktea/ui/tabs/topics_tab"
 	"os"
-	"reflect"
 	"time"
 )
 
@@ -75,8 +75,6 @@ func (m *Model) View() string {
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	log.Debug("Update ktea", "msg", reflect.TypeOf(msg))
-
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -293,6 +291,10 @@ func NewModel(kai kadmin.Instantiator, configIO config.IO) *Model {
 }
 
 func main() {
+	var debug bool
+	flag.BoolVar(&debug, "debug", false, "enable debug")
+	flag.Parse()
+
 	p := tea.NewProgram(
 		NewModel(
 			kadmin.SaramaInstantiator(),
@@ -300,17 +302,21 @@ func main() {
 		),
 		tea.WithAltScreen(),
 	)
-	var fileErr error
-	newConfigFile, fileErr := os.OpenFile("debug.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if fileErr == nil {
-		log.SetOutput(newConfigFile)
-		log.SetTimeFormat(time.Kitchen)
-		log.SetReportCaller(true)
-		log.SetLevel(log.DebugLevel)
-		log.Debug("Logging to debug.log")
-		log.Info("started")
-		if _, err := p.Run(); err != nil {
-			log.Fatal("Failed starting the TUI", err)
+
+	if debug {
+		var fileErr error
+		debugFile, fileErr := os.OpenFile("debug.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if fileErr == nil {
+			log.SetOutput(debugFile)
+			log.SetTimeFormat(time.Kitchen)
+			log.SetReportCaller(true)
+			log.SetLevel(log.DebugLevel)
+			log.Debug("Logging to debug.log")
+			log.Info("started")
 		}
+	}
+
+	if _, err := p.Run(); err != nil {
+		log.Fatal("Failed starting the TUI", err)
 	}
 }

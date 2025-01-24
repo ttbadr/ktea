@@ -53,6 +53,9 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return m.topicsPage.Update(msg)
 
 	case nav.LoadTopicsPageMsg:
+		if msg.Refresh {
+			cmds = append(cmds, m.topicsPage.Refresh())
+		}
 		m.active = m.topicsPage
 
 	case nav.LoadConsumptionFormPageMsg:

@@ -28,7 +28,6 @@ type Model struct {
 	rows       []table.Row
 	moveCursor func()
 	lister     kadmin.TopicLister
-	Ctx        context.Context
 	ctx        context.Context
 }
 
@@ -190,6 +189,10 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 	} else {
 		return m.shortcuts
 	}
+}
+
+func (m *Model) Refresh() tea.Cmd {
+	return m.lister.ListTopics
 }
 
 func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, tea.Cmd) {

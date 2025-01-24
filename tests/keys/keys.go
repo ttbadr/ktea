@@ -3,6 +3,7 @@ package keys
 import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
+	"ktea/tests"
 	"ktea/ui"
 	"ktea/ui/pages/nav"
 )
@@ -57,7 +58,7 @@ func Submit(page nav.Page) []tea.Msg {
 	cmd = page.Update(cmd())
 	// next group and submit
 	cmd = page.Update(cmd())
-	return executeBatchCmd(cmd)
+	return tests.ExecuteBatchCmd(cmd)
 }
 
 func NextGroup(page nav.Page, cmd tea.Cmd) {
@@ -65,30 +66,4 @@ func NextGroup(page nav.Page, cmd tea.Cmd) {
 	cmd = page.Update(cmd())
 	// next group
 	cmd = page.Update(cmd())
-}
-
-func executeBatchCmd(cmd tea.Cmd) []tea.Msg {
-	var msgs []tea.Msg
-	if cmd == nil {
-		return msgs
-	}
-
-	msg := cmd()
-	if msg == nil {
-		return msgs
-	}
-
-	// If the message is a batch, process its commands
-	if batch, ok := msg.(tea.BatchMsg); ok {
-		for _, subCmd := range batch {
-			if subCmd != nil {
-				msgs = append(msgs, executeBatchCmd(subCmd)...)
-			}
-		}
-		return msgs
-	}
-
-	// Otherwise, it's a normal message
-	msgs = append(msgs, msg)
-	return msgs
 }
