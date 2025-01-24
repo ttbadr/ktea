@@ -18,9 +18,22 @@ type TopicCreationDetails struct {
 type TopicCreatedMsg struct {
 }
 
+type TopicCreationErrMsg struct {
+	Err error
+}
+
 type TopicCreationStartedMsg struct {
 	Created chan bool
 	Err     chan error
+}
+
+func (msg *TopicCreationStartedMsg) AwaitCompletion() tea.Msg {
+	select {
+	case <-msg.Created:
+		return TopicCreatedMsg{}
+	case err := <-msg.Err:
+		return TopicCreationErrMsg{Err: err}
+	}
 }
 
 func (ka *SaramaKafkaAdmin) CreateTopic(tcd TopicCreationDetails) tea.Msg {
@@ -36,11 +49,15 @@ func (ka *SaramaKafkaAdmin) CreateTopic(tcd TopicCreationDetails) tea.Msg {
 }
 
 func (ka *SaramaKafkaAdmin) doCreateTopic(tcd TopicCreationDetails, created chan bool, errChan chan error) {
+	properties := make(map[string]*string)
+	for k, v := range tcd.Properties {
+		properties[k] = &v
+	}
 	err := ka.admin.CreateTopic(tcd.Name, &sarama.TopicDetail{
 		NumPartitions:     int32(tcd.NumPartitions),
 		ReplicationFactor: 1,
 		ReplicaAssignment: nil,
-		ConfigEntries:     nil,
+		ConfigEntries:     properties,
 	}, false)
 	if err != nil {
 		errChan <- err

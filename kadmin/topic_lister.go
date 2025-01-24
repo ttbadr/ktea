@@ -9,13 +9,6 @@ type TopicLister interface {
 	ListTopics() tea.Msg
 }
 
-func (msg *TopicCreationStartedMsg) AwaitCompletion() tea.Msg {
-	select {
-	case <-msg.Created:
-		return TopicCreatedMsg{}
-	}
-}
-
 type TopicListedMsg struct {
 	Topics []Topic
 }

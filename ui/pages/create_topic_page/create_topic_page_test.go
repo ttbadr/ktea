@@ -2,6 +2,7 @@ package create_topic_page
 
 import (
 	"errors"
+	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"ktea/kadmin"
@@ -113,6 +114,24 @@ func TestCreateTopic(t *testing.T) {
 		assert.NotContains(t, render, "Custom Topic configurations:")
 	})
 
+	t.Run("creation failed", func(t *testing.T) {
+		mockCreator := MockTopicCreator{
+			CreateTopicFunc: func(details kadmin.TopicCreationDetails) tea.Msg {
+				return nil
+			},
+		}
+		m := New(&mockCreator)
+
+		m.Update(kadmin.TopicCreationErrMsg{
+			Err: fmt.Errorf("Topic with this name already exists - Topic 'topic-0' already exists."),
+		})
+
+		render := m.View(ui.NewTestKontext(), ui.TestRenderer)
+
+		assert.Contains(t, render, "Topic creation failure: Topic with this name already exists - Topic 'topic-0' already exists.")
+
+	})
+
 	t.Run("create topic", func(t *testing.T) {
 		mockCreator := MockTopicCreator{
 			CreateTopicFunc: func(details kadmin.TopicCreationDetails) tea.Msg {
@@ -137,7 +156,11 @@ func TestCreateTopic(t *testing.T) {
 		m.Update(keys.Key(tea.KeyDown))
 		cmd = m.Update(keys.Key(tea.KeyEnter))
 		m.Update(cmd())
-		// config - submit
+		keys.UpdateKeys(m, "delete.retention.ms=1029394")
+		cmd = m.Update(keys.Key(tea.KeyEnter))
+		keys.Submit(m)
+
+		// actual submit
 		msgs := keys.Submit(m)
 
 		var capturedDetails CapturedTopicCreationDetails
@@ -154,7 +177,8 @@ func TestCreateTopic(t *testing.T) {
 				"topicA",
 				2,
 				map[string]string{
-					"cleanup.policy": "delete-compact",
+					"cleanup.policy":      "delete-compact",
+					"delete.retention.ms": "1029394",
 				},
 			},
 		}, capturedDetails)
@@ -171,7 +195,7 @@ func TestCreateTopic_Validation(t *testing.T) {
 
 			render := m.View(&kontext.ProgramKtx{}, ui.TestRenderer)
 
-			assert.Contains(t, render, "* Topic Name cannot be empty.")
+			assert.Contains(t, render, "* topic Name cannot be empty")
 		})
 	})
 
@@ -185,7 +209,7 @@ func TestCreateTopic_Validation(t *testing.T) {
 
 			render := m.View(&kontext.ProgramKtx{}, ui.TestRenderer)
 
-			assert.Contains(t, render, "* Number of Partitions cannot be empty.")
+			assert.Contains(t, render, "* number of Partitions cannot be empty")
 		})
 
 		t.Run("When field is zero", func(t *testing.T) {
@@ -203,7 +227,7 @@ func TestCreateTopic_Validation(t *testing.T) {
 
 			render := m.View(&kontext.ProgramKtx{}, ui.TestRenderer)
 
-			assert.Contains(t, render, "Value must be greater than zero")
+			assert.Contains(t, render, "value must be greater than zero")
 		})
 
 		t.Run("When field is negative", func(t *testing.T) {
@@ -227,7 +251,7 @@ func TestCreateTopic_Validation(t *testing.T) {
 
 			render := m.View(&kontext.ProgramKtx{}, ui.TestRenderer)
 
-			assert.Contains(t, render, "Value must be greater than zero")
+			assert.Contains(t, render, "value must be greater than zero")
 		})
 
 		t.Run("When field is not a number", func(t *testing.T) {

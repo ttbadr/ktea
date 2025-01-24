@@ -70,6 +70,9 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case kadmin.TopicCreationStartedMsg:
 		return msg.AwaitCompletion
+	case kadmin.TopicCreationErrMsg:
+		m.initForm(initial)
+		return m.notifier.ShowErrorMsg("Topic creation failure", msg.Err)
 	case bsp.TickMsg:
 		cmd := m.notifier.Update(msg)
 		return cmd
@@ -87,10 +90,6 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		} else {
 			return propagateMsgToForm(m, msg)
 		}
-	//case kadmin.TopicCreationErrorMsg:
-	//	log.Debug("TopicCreationError", msg.Err)
-	//	m.aTopicCreated = false
-	//	return nil
 	case kadmin.TopicCreatedMsg:
 		m.notifier.ShowSuccessMsg("Topic created!")
 		m.formValues.name = ""
@@ -121,13 +120,17 @@ func propagateMsgToForm(m *Model, msg tea.Msg) tea.Cmd {
 				m.notifier.SpinWithRocketMsg("Creating topic"),
 				func() tea.Msg {
 					numPartitions, _ := strconv.Atoi(m.formValues.numPartitions)
+					configs := map[string]string{
+						"cleanup.policy": m.formValues.cleanupPolicy,
+					}
+					for _, c := range m.formValues.configs {
+						configs[c.key] = c.value
+					}
 					return m.topicCreator.CreateTopic(
 						kadmin.TopicCreationDetails{
 							Name:          m.formValues.name,
 							NumPartitions: numPartitions,
-							Properties: map[string]string{
-								"cleanup.policy": m.formValues.cleanupPolicy,
-							},
+							Properties:    configs,
 						})
 				})
 		} else {
@@ -156,7 +159,7 @@ func (m *Model) initForm(fs formState) {
 		Value(&m.formValues.name).
 		Validate(func(str string) error {
 			if str == "" {
-				return errors.New("Topic Name cannot be empty.")
+				return errors.New("topic Name cannot be empty")
 			}
 			return nil
 		})
@@ -166,12 +169,12 @@ func (m *Model) initForm(fs formState) {
 		Value(&m.formValues.numPartitions).
 		Validate(func(str string) error {
 			if str == "" {
-				return errors.New("Number of Partitions cannot be empty.")
+				return errors.New("number of Partitions cannot be empty")
 			}
 			if n, e := strconv.Atoi(str); e != nil {
 				return errors.New(fmt.Sprintf("'%s' is not a valid numeric partition count value", str))
 			} else if n <= 0 {
-				return errors.New("Value must be greater than zero")
+				return errors.New("value must be greater than zero")
 			}
 			return nil
 		})

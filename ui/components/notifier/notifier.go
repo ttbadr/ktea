@@ -84,7 +84,11 @@ func (m *Model) SpinWithRocketMsg(msg string) tea.Cmd {
 
 func (m *Model) ShowErrorMsg(msg string, error error) tea.Cmd {
 	m.state = err
-	m.msg = "🚨 " + styles.FG(styles.ColorRed).Render(msg+": ") +
+	s := ": "
+	if msg == "" {
+		s = ""
+	}
+	m.msg = "🚨 " + styles.FG(styles.ColorRed).Render(msg+s) +
 		styles.FG(styles.ColorWhite).Render(strings.TrimSuffix(error.Error(), "\n"))
 	return nil
 }
