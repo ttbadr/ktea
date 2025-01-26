@@ -25,6 +25,7 @@ type Model struct {
 	records            []kadmin.ConsumerRecord
 	readDetails        kadmin.ReadDetails
 	consuming          bool
+	noRecordsAvailable bool
 }
 
 type ConsumerRecordReceived struct {
@@ -34,17 +35,30 @@ type ConsumerRecordReceived struct {
 type ConsumptionEndedMsg struct{}
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
-	cmdBarView := m.cmdBar.View(ktx, renderer)
+	var views []string
+	views = append(views, m.cmdBar.View(ktx, renderer))
 
-	m.table.SetColumns([]table.Column{
-		{Title: "Key", Width: int(float64(ktx.WindowWidth-7) * 0.5)},
-		{Title: "Partition", Width: int(float64(ktx.WindowWidth-7) * 0.25)},
-		{Title: "Offset", Width: int(float64(ktx.WindowWidth-7) * 0.25)},
-	})
-	m.table.SetHeight(ktx.AvailableHeight - 2)
-	m.table.SetRows(m.rows)
-	tableRender := renderer.Render(styles.Table.Focus.Render(m.table.View()))
-	return ui.JoinVertical(lipgloss.Top, cmdBarView, tableRender)
+	if m.noRecordsAvailable {
+		views = append(views, lipgloss.NewStyle().
+			Width(ktx.WindowWidth-2).
+			Height(ktx.AvailableHeight).
+			AlignVertical(lipgloss.Center).
+			AlignHorizontal(lipgloss.Center).
+			Bold(true).
+			Foreground(lipgloss.Color(styles.ColorPink)).
+			Render("👀 Empty topic"))
+	} else if len(m.rows) > 0 {
+		m.table.SetColumns([]table.Column{
+			{Title: "Key", Width: int(float64(ktx.WindowWidth-7) * 0.5)},
+			{Title: "Partition", Width: int(float64(ktx.WindowWidth-7) * 0.25)},
+			{Title: "Offset", Width: int(float64(ktx.WindowWidth-7) * 0.25)},
+		})
+		m.table.SetHeight(ktx.AvailableHeight - 2)
+		m.table.SetRows(m.rows)
+		views = append(views, renderer.Render(styles.Table.Focus.Render(m.table.View())))
+	}
+
+	return ui.JoinVertical(lipgloss.Top, views...)
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
@@ -76,6 +90,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			m.table = &t
 			cmds = append(cmds, cmd)
 		}
+	case kadmin.EmptyTopicMsg:
+		m.noRecordsAvailable = true
 	case kadmin.ReadingStartedMsg:
 		m.consuming = true
 		m.consumerRecordChan = msg.ConsumerRecord
@@ -129,6 +145,10 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 		return []statusbar.Shortcut{
 			{"View Record", "enter"},
 			{"Stop consuming", "F2"},
+			{"Go Back", "esc"},
+		}
+	} else if m.noRecordsAvailable {
+		return []statusbar.Shortcut{
 			{"Go Back", "esc"},
 		}
 	} else {

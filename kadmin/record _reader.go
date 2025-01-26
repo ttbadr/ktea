@@ -57,7 +57,7 @@ func (o *offsets) newest() int64 {
 	return o.firstAvailable - 1
 }
 
-type NoRecordsReadableMsg struct {
+type EmptyTopicMsg struct {
 }
 
 func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) tea.Msg {
@@ -182,7 +182,7 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) tea
 	if atLeastOnePartitionReadable {
 		return startedMsg
 	} else {
-		return NoRecordsReadableMsg{}
+		return EmptyTopicMsg{}
 	}
 }
 
