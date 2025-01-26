@@ -17,6 +17,7 @@ type SaramaKafkaAdmin struct {
 func NewSaramaKadmin(cd ConnectionDetails) (Kadmin, error) {
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = true
+	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Partitioner = sarama.NewRoundRobinPartitioner
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 

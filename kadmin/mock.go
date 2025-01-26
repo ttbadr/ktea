@@ -25,7 +25,7 @@ func (m MockKadmin) PublishRecord(p *ProducerRecord) PublicationStartedMsg {
 	return PublicationStartedMsg{}
 }
 
-func (m MockKadmin) ReadRecords(ctx context.Context, rd ReadDetails) ReadingStartedMsg {
+func (m MockKadmin) ReadRecords(ctx context.Context, rd ReadDetails) tea.Msg {
 	return ReadingStartedMsg{}
 }
 
