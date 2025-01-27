@@ -314,6 +314,9 @@ func main() {
 			log.Debug("Logging to debug.log")
 			log.Info("started")
 		}
+	} else {
+		log.SetOutput(os.Stderr)
+		log.SetLevel(log.FatalLevel)
 	}
 
 	if _, err := p.Run(); err != nil {
