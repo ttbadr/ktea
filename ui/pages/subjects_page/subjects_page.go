@@ -4,7 +4,6 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/log"
 	"ktea/kontext"
 	"ktea/sradmin"
 	"ktea/styles"
@@ -82,7 +81,6 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
-	log.Debug(msg)
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -268,11 +266,6 @@ func New(lister sradmin.SubjectLister, deleter sradmin.SubjectDeleter) (*Model, 
 		m.Idle()
 		return false, nil
 	}
-	// TODO maybe we can move this into the notifier
-	hideNotificationNotifier := func(msg notifier.HideNotificationMsg, m *notifier.Model) (bool, tea.Cmd) {
-		m.Idle()
-		return false, nil
-	}
 	subjectDeletionStartedNotifier := func(msg sradmin.SubjectDeletionStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		cmd := m.SpinWithLoadingMsg("Deleting Subject " + msg.Subject)
 		return true, cmd
@@ -291,7 +284,6 @@ func New(lister sradmin.SubjectLister, deleter sradmin.SubjectDeleter) (*Model, 
 	}
 	cmdbar.WithMsgHandler(notifierCmdBar, subjectListingStartedNotifier)
 	cmdbar.WithMsgHandler(notifierCmdBar, subjectsListedNotifier)
-	cmdbar.WithMsgHandler(notifierCmdBar, hideNotificationNotifier)
 	cmdbar.WithMsgHandler(notifierCmdBar, subjectDeletionStartedNotifier)
 	cmdbar.WithMsgHandler(notifierCmdBar, subjectListingErrorMsg)
 	cmdbar.WithMsgHandler(notifierCmdBar, subjectDeletedNotifier)

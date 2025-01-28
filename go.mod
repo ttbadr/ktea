@@ -2,14 +2,14 @@ module ktea
 
 go 1.23.2
 
-replace github.com/charmbracelet/huh v0.6.0 => github.com/jonas-grgt/huh v0.0.0-20241117173306-c5787a7a63c7
+replace github.com/charmbracelet/huh v0.6.0 => github.com/jonas-grgt/huh v0.0.0-20250128201054-5def46fb981f
 
 require (
 	github.com/IBM/sarama v1.42.1
 	github.com/alecthomas/chroma/v2 v2.15.0
 	github.com/atotto/clipboard v0.1.4
 	github.com/charmbracelet/bubbles v0.20.0
-	github.com/charmbracelet/bubbletea v1.2.2
+	github.com/charmbracelet/bubbletea v1.2.5-0.20241205214244-9306010a31ee
 	github.com/charmbracelet/huh v0.6.0
 	github.com/charmbracelet/lipgloss v1.0.0
 	github.com/charmbracelet/log v0.4.0
@@ -108,7 +108,7 @@ require (
 	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/net v0.29.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.27.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.18.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
 )

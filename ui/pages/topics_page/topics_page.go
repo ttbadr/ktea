@@ -10,6 +10,8 @@ import (
 	"ktea/kontext"
 	"ktea/styles"
 	"ktea/ui"
+	"ktea/ui/components/cmdbar"
+	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
 	"ktea/ui/pages/nav"
 	"slices"
@@ -21,14 +23,15 @@ import (
 type state int
 
 type Model struct {
-	topics     []kadmin.Topic
-	table      table.Model
-	shortcuts  []statusbar.Shortcut
-	cmdBar     *CmdBarModel
-	rows       []table.Row
-	moveCursor func()
-	lister     kadmin.TopicLister
-	ctx        context.Context
+	topics        []kadmin.Topic
+	table         table.Model
+	shortcuts     []statusbar.Shortcut
+	cmdBar        *cmdbar.TableCmdsBar[string]
+	rows          []table.Row
+	moveCursor    func()
+	lister        kadmin.TopicLister
+	ctx           context.Context
+	tableFocussed bool
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -36,7 +39,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	cmdBarView := m.cmdBar.View(ktx, renderer)
 	views = append(views, cmdBarView)
 
-	m.table.SetHeight(ktx.AvailableHeight)
+	m.table.SetHeight(ktx.AvailableHeight - 2)
 	m.table.SetWidth(ktx.WindowWidth - 2)
 	m.table.SetColumns([]table.Column{
 		{"Name", int(float64(ktx.WindowWidth-9) * 0.7)},
@@ -50,13 +53,13 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 		m.moveCursor()
 	}
 
-	if m.cmdBar.IsFocused() {
-		render := renderer.Render(styles.Table.Blur.Render(m.table.View()))
-		views = append(views, render)
+	var tableView string
+	if m.tableFocussed {
+		tableView = renderer.RenderWithStyle(m.table.View(), styles.Table.Focus)
 	} else {
-		render := renderer.Render(styles.Table.Focus.Render(m.table.View()))
-		views = append(views, render)
+		tableView = renderer.RenderWithStyle(m.table.View(), styles.Table.Blur)
 	}
+	views = append(views, tableView)
 
 	return ui.JoinVertical(lipgloss.Top, views...)
 }
@@ -75,85 +78,87 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		case "ctrl+p":
 			return ui.PublishMsg(nav.LoadPublishPageMsg{Topic: m.SelectedTopic()})
 		case "f5":
+			m.topics = nil
 			return m.lister.ListTopics
 		case "enter":
-			if m.cmdBar.IsNotFocused() {
+			// only accept enter when the table is focussed
+			if !m.cmdBar.IsFocussed() {
+				// TODO ignore enter when there are no topics loaded
 				return ui.PublishMsg(nav.LoadConsumptionFormPageMsg{
 					Topic: m.SelectedTopic(),
 				})
 			}
 		}
-		selectedTopic := m.SelectedTopicName()
-		pmsg, c := m.cmdBar.Update(msg, selectedTopic)
-		if c != nil {
-			cmds = append(cmds, c)
-		}
-		if pmsg != nil {
-			m.table, c = m.table.Update(pmsg)
-			if c != nil {
-				cmds = append(cmds, c)
-			}
-		}
 	case spinner.TickMsg:
 		selectedTopic := m.SelectedTopicName()
-		_, c := m.cmdBar.Update(msg, selectedTopic)
+		_, c := m.cmdBar.Update(msg, &selectedTopic)
 		if c != nil {
 			cmds = append(cmds, c)
 		}
+	case kadmin.TopicDeletionStartedMsg:
+		cmds = append(cmds, msg.AwaitCompletion)
 	case kadmin.TopicListingStartedMsg:
-		tickCmd := m.cmdBar.notifier.SpinWithLoadingMsg("Loading Topics")
-		return tea.Batch(
-			tickCmd,
-			msg.AwaitCompletion,
-		)
-	case kadmin.TopicListedErrorMsg:
-		m.cmdBar.notifier.ShowErrorMsg("Loading Topics Failed", msg.Err)
+		cmds = append(cmds, msg.AwaitCompletion)
 	case kadmin.TopicListedMsg:
-		m.cmdBar.notifier.Idle()
 		m.topics = msg.Topics
 	case kadmin.TopicDeletedMsg:
-		m.cmdBar.notifier.Idle()
 		m.topics = slices.DeleteFunc(
 			m.topics,
 			func(t kadmin.Topic) bool { return msg.TopicName == t.Name },
 		)
-		pmsg, c := m.cmdBar.Update(msg, "")
-		if c != nil {
-			cmds = append(cmds, c)
-		}
-		if pmsg != nil {
-			m.table, c = m.table.Update(pmsg)
-			if c != nil {
-				cmds = append(cmds, c)
-			}
-		}
+	}
+
+	name := m.SelectedTopicName()
+	msg, cmd := m.cmdBar.Update(msg, &name)
+	m.tableFocussed = !m.cmdBar.IsFocussed()
+	cmds = append(cmds, cmd)
+
+	m.rows = m.filterTopicsBySearchTerm()
+
+	// make sure table navigation is off when the cmdbar is focussed
+	if !m.cmdBar.IsFocussed() {
+		t, cmd := m.table.Update(msg)
+		m.table = t
+		cmds = append(cmds, cmd)
 	}
 
 	if m.cmdBar.HasSearchedAtLeastOneChar() {
 		m.table.GotoTop()
 	}
+	return tea.Batch(cmds...)
+}
 
+func (m *Model) filterTopicsBySearchTerm() []table.Row {
 	var rows []table.Row
 	for _, topic := range m.topics {
 		if m.cmdBar.GetSearchTerm() != "" {
 			if strings.Contains(strings.ToLower(topic.Name), strings.ToLower(m.cmdBar.GetSearchTerm())) {
-				rows = append(rows, table.Row{topic.Name, strconv.Itoa(topic.Partitions), strconv.Itoa(topic.Replicas), "N/A"})
+				rows = append(
+					rows,
+					table.Row{
+						topic.Name,
+						strconv.Itoa(topic.Partitions),
+						strconv.Itoa(topic.Replicas),
+						"N/A",
+					},
+				)
 			}
 		} else {
-			rows = append(rows, table.Row{topic.Name, strconv.Itoa(topic.Partitions), strconv.Itoa(topic.Replicas), "N/A"})
+			rows = append(
+				rows,
+				table.Row{
+					topic.Name,
+					strconv.Itoa(topic.Partitions),
+					strconv.Itoa(topic.Replicas),
+					"N/A",
+				},
+			)
 		}
 	}
-	m.rows = rows
-	sort.SliceStable(m.rows, func(i, j int) bool {
-		return m.rows[i][0] < m.rows[j][0]
+	sort.SliceStable(rows, func(i, j int) bool {
+		return rows[i][0] < rows[j][0]
 	})
-
-	return tea.Batch(cmds...)
-}
-
-func (m *Model) Reset() {
-	m.cmdBar.Reset()
-	m.table.GotoTop()
+	return rows
 }
 
 func (m *Model) SelectedTopic() *kadmin.Topic {
@@ -176,22 +181,15 @@ func (m *Model) SelectedTopicName() string {
 }
 
 func (m *Model) Title() string {
-	if m.cmdBar.IsFocused() {
-		return m.cmdBar.Title()
-	} else {
-		return "Topics"
-	}
+	return "Topics"
 }
 
 func (m *Model) Shortcuts() []statusbar.Shortcut {
-	if m.cmdBar.IsFocused() {
-		return m.cmdBar.Shortcuts()
-	} else {
-		return m.shortcuts
-	}
+	return m.shortcuts
 }
 
 func (m *Model) Refresh() tea.Cmd {
+	m.topics = nil
 	return m.lister.ListTopics
 }
 
@@ -216,7 +214,94 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 		{"Replicas", 1},
 		{"In Sync Replicas", 1},
 	})
-	m.cmdBar = NewCmdBar(topicDeleter)
+
+	deleteMsgFunc := func(topic string) string {
+		message := topic + lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#7571F9")).
+			Bold(true).
+			Render(" will be deleted permanently")
+		return message
+	}
+
+	deleteFunc := func(topic string) tea.Cmd {
+		return func() tea.Msg {
+			return topicDeleter.DeleteTopic(topic)
+		}
+	}
+
+	notifierCmdBar := cmdbar.NewNotifierCmdBar()
+
+	cmdbar.WithMsgHandler(
+		notifierCmdBar,
+		func(
+			msg kadmin.TopicListingStartedMsg,
+			m *notifier.Model,
+		) (bool, tea.Cmd) {
+			cmd := m.SpinWithLoadingMsg("Loading Topics")
+			return true, cmd
+		},
+	)
+
+	cmdbar.WithMsgHandler(
+		notifierCmdBar,
+		func(
+			msg kadmin.TopicListedMsg,
+			m *notifier.Model,
+		) (bool, tea.Cmd) {
+			m.Idle()
+			return true, m.AutoHideCmd()
+		},
+	)
+
+	cmdbar.WithMsgHandler(
+		notifierCmdBar,
+		func(
+			msg kadmin.TopicListedErrorMsg,
+			m *notifier.Model,
+		) (bool, tea.Cmd) {
+			m.ShowErrorMsg("Error listing Topics", msg.Err)
+			return true, nil
+		},
+	)
+
+	cmdbar.WithMsgHandler(
+		notifierCmdBar,
+		func(
+			msg kadmin.TopicDeletedMsg,
+			m *notifier.Model,
+		) (bool, tea.Cmd) {
+			m.ShowSuccessMsg("Topic Deleted")
+			return true, m.AutoHideCmd()
+		},
+	)
+
+	cmdbar.WithMsgHandler(
+		notifierCmdBar,
+		func(
+			msg kadmin.TopicDeletionStartedMsg,
+			m *notifier.Model,
+		) (bool, tea.Cmd) {
+			cmd := m.SpinWithLoadingMsg("Deleting Topic")
+			return true, cmd
+		},
+	)
+
+	cmdbar.WithMsgHandler(
+		notifierCmdBar,
+		func(
+			msg kadmin.TopicDeletionErrorMsg,
+			m *notifier.Model,
+		) (bool, tea.Cmd) {
+			m.ShowErrorMsg("Error Deleting Topic", msg.Err)
+			return true, m.AutoHideCmd()
+		},
+	)
+
+	m.cmdBar = cmdbar.NewTableCmdsBar[string](
+		cmdbar.NewDeleteCmdBar(deleteMsgFunc, deleteFunc, nil),
+		cmdbar.NewSearchCmdBar("Search topics by name"),
+		notifierCmdBar,
+	)
 	m.lister = lister
 	return &m, lister.ListTopics
 }

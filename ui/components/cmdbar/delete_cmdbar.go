@@ -36,7 +36,7 @@ func (s *DeleteCmdBar[any]) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer)
 
 	s.deleteConfirm.WithTheme(huh.ThemeCharm())
 
-	return renderer.RenderWithStyle(s.deleteConfirm.View(), styles.CmdBar)
+	return renderer.RenderWithStyle(s.deleteConfirm.View(), styles.CmdBarWithWidth(ktx.WindowWidth-borderedPadding))
 }
 
 func (s *DeleteCmdBar[any]) IsFocussed() bool {

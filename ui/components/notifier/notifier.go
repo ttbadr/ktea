@@ -115,6 +115,10 @@ func (m *Model) HasPriority() bool {
 	return m.state == spinning
 }
 
+func (m *Model) IsIdle() bool {
+	return m.state == idle
+}
+
 func New() *Model {
 	l := Model{}
 	l.state = idle

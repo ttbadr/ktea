@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/IBM/sarama"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/log"
 	"ktea/serdes"
 	"sync"
 	"time"
@@ -109,7 +108,6 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) tea
 					readingOffsets.start,
 				)
 				if err != nil {
-					log.Error(err)
 					startedMsg.Err <- err
 					cancelFunc()
 					return

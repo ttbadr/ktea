@@ -17,6 +17,13 @@ func (m *MockTopicLister) ListTopics() tea.Msg {
 	return ListTopicsCalledMsg{}
 }
 
+type MockTopicDeleter struct {
+}
+
+func (m *MockTopicDeleter) DeleteTopic(_ string) tea.Msg {
+	return nil
+}
+
 func TestTopicsPage(t *testing.T) {
 	t.Run("Ignore KeyMsg when topics aren't loaded yet", func(t *testing.T) {
 		page, _ := New(&MockTopicDeleter{}, &MockTopicLister{})

@@ -133,7 +133,7 @@ func newForm(model *Model) *huh.Form {
 			}
 			return nil
 		}).
-		WithHeight(model.ktx.AvailableHeight - 7).(*huh.Text)
+		WithHeight(model.ktx.AvailableHeight - 9).(*huh.Text)
 	model.schemaInput = schemaInput
 	form := huh.NewForm(huh.NewGroup(
 		huh.NewInput().

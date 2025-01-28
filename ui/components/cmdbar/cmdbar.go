@@ -7,6 +7,8 @@ import (
 	"ktea/ui/components/statusbar"
 )
 
+const borderedPadding = 2
+
 type CmdBar interface {
 	View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string
 

@@ -24,7 +24,7 @@ func (m *TableCmdsBar[T]) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) s
 	return ""
 }
 
-func (m *TableCmdsBar[T]) Update(msg tea.Msg, selectedSubject *T) (tea.Msg, tea.Cmd) {
+func (m *TableCmdsBar[T]) Update(msg tea.Msg, selection *T) (tea.Msg, tea.Cmd) {
 	// when the notifier is active and has priority (because of a loading spinner)
 	if m.active == m.notifierWidget {
 		if m.notifierWidget.(*NotifierCmdBar).Notifier.HasPriority() {
@@ -55,11 +55,11 @@ func (m *TableCmdsBar[T]) Update(msg tea.Msg, selectedSubject *T) (tea.Msg, tea.
 			}
 			return pmsg, cmd
 		case "f2":
-			if selectedSubject != nil {
+			if selection != nil {
 				if _, ok := m.active.(*SearchCmdBar); ok {
 					m.searchPrevActive = true
 				}
-				m.deleteWidget.Delete(*selectedSubject)
+				m.deleteWidget.Delete(*selection)
 				_, pmsg, cmd := m.deleteWidget.Update(msg)
 				m.active = m.deleteWidget
 				return pmsg, cmd

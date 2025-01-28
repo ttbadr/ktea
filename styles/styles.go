@@ -66,6 +66,10 @@ type StatusBarStyle struct {
 	cluster     lipgloss.Style
 }
 
+func CmdBarWithWidth(width int) lipgloss.Style {
+	return CmdBar.Width(width)
+}
+
 func FG(color lipgloss.Color) lipgloss.Style {
 	return lipgloss.NewStyle().
 		Foreground(color)
@@ -186,25 +190,26 @@ func init() {
 
 	{
 		CmdBar = lipgloss.NewStyle().
-			MarginTop(1).
-			MarginBottom(0)
+			MarginTop(0).
+			MarginBottom(0).
+			BorderStyle(lipgloss.RoundedBorder())
 	}
 
 	{
 		Notifier.Spinner = lipgloss.NewStyle().
-			MarginTop(1).
+			MarginTop(0).
 			MarginBottom(0).
 			MarginLeft(2).
 			Height(1)
 		Notifier.Success = lipgloss.NewStyle().
-			MarginTop(1).
+			MarginTop(0).
 			MarginBottom(0).
 			MarginLeft(2).
 			Height(1).
 			Foreground(lipgloss.Color(ColorGreen)).
 			Bold(true)
 		Notifier.Error = lipgloss.NewStyle().
-			MarginTop(1).
+			MarginTop(0).
 			MarginBottom(0).
 			MarginLeft(2).
 			Height(1).

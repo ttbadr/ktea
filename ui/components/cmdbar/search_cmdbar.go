@@ -3,6 +3,7 @@ package cmdbar
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
 	"ktea/kontext"
 	"ktea/styles"
 	"ktea/ui"
@@ -36,7 +37,16 @@ func (s *SearchCmdBar) Shortcuts() []statusbar.Shortcut {
 }
 
 func (s *SearchCmdBar) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
-	return renderer.Render(styles.CmdBar.Render(s.searchInput.View()))
+	if s.state != hidden {
+		style := styles.CmdBarWithWidth(ktx.WindowWidth - borderedPadding)
+		if s.state == searching {
+			style = style.BorderForeground(lipgloss.Color(styles.ColorFocusBorder))
+		} else {
+			style = style.BorderForeground(lipgloss.Color(styles.ColorBlurBorder))
+		}
+		return renderer.RenderWithStyle(s.searchInput.View(), style)
+	}
+	return ""
 }
 
 func (s *SearchCmdBar) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {

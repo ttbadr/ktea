@@ -4,6 +4,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"ktea/kontext"
+	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
@@ -30,7 +31,14 @@ func (n *NotifierCmdBar) Shortcuts() []statusbar.Shortcut {
 }
 
 func (n *NotifierCmdBar) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
-	return n.Notifier.View(ktx, renderer)
+	view := n.Notifier.View(ktx, renderer)
+	// when empty no border style should be applied
+	if view == "" {
+		return view
+	}
+	// subtract padding, because of the rounded border of the cmdbar
+	ktx.AvailableHeight -= borderedPadding
+	return styles.CmdBarWithWidth(ktx.WindowWidth - borderedPadding).Render(view)
 }
 
 func (n *NotifierCmdBar) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
@@ -40,7 +48,7 @@ func (n *NotifierCmdBar) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
 		return n.active, nil, cmd
 	case notifier.HideNotificationMsg:
 		cmd := n.Notifier.Update(msg)
-		return n.active, nil, cmd
+		return false, nil, cmd
 	}
 
 	msgType := reflect.TypeOf(msg)

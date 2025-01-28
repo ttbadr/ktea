@@ -2,7 +2,6 @@ package kadmin
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/log"
 )
 
 type TopicLister interface {
@@ -54,7 +53,6 @@ func (ka *SaramaKafkaAdmin) doListTopics(errChan chan error, topicsChan chan []T
 	maybeIntroduceLatency()
 	listResult, err := ka.admin.ListTopics()
 	if err != nil {
-		log.Errorf("Error %v while listing topics.", err)
 		errChan <- err
 	}
 	partByTopic := make(map[string]Topic)
