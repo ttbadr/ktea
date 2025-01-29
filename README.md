@@ -3,7 +3,7 @@
   <a href="https://github.com/jonas-grgt/ktea/actions"><img src="https://github.com/jonas-grgt/ktea/actions/workflows/ci.yml/badge.svg?branch=main" alt="Build Status"></a>
 </p>
 
-# ktea - kafka terminal client
+# 🫖 ktea - kafka terminal client
 
 ktea is a tool designed to simplify and accelerate interactions with Kafka clusters.
 
