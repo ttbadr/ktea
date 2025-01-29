@@ -63,7 +63,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				return ui.PublishMsg(nav.LoadCGroupTopicsPageMsg{GroupName: *m.SelectedCGroup()})
 			}
 		case "f5":
-			return m.lister.ListConsumerGroups
+			return m.lister.ListCGroups
 		}
 	case kadmin.ConsumerGroupsListedMsg:
 		m.groups = msg.ConsumerGroups
@@ -188,5 +188,5 @@ func New(lister kadmin.CGroupLister) (*Model, tea.Cmd) {
 		cmdbar.NewSearchCmdBar("Search Consumer Group"),
 		notifierCmdBar,
 	)
-	return m, m.lister.ListConsumerGroups
+	return m, m.lister.ListCGroups
 }

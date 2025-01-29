@@ -23,7 +23,6 @@ func TestReadRecords(t *testing.T) {
 			case TopicCreatedMsg:
 			case TopicCreationErrMsg:
 				t.Fatal("Unable to create topic", msg.Err)
-				return
 			}
 			// when
 			assert.EventuallyWithT(t, func(c *assert.CollectT) {
@@ -86,7 +85,6 @@ func TestReadRecords(t *testing.T) {
 			case TopicCreatedMsg:
 			case TopicCreationErrMsg:
 				t.Fatal("Unable to create topic", msg.Err)
-				return
 			}
 
 			// when
@@ -103,7 +101,6 @@ func TestReadRecords(t *testing.T) {
 					select {
 					case err := <-psm.Err:
 						t.Fatal("Unable to publish", err)
-						return
 					case p := <-psm.Published:
 						assert.True(c, p)
 					}
@@ -154,7 +151,6 @@ func TestReadRecords(t *testing.T) {
 			case TopicCreatedMsg:
 			case TopicCreationErrMsg:
 				t.Fatal("Unable to create topic", msg.Err)
-				return
 			}
 
 			// when
@@ -216,7 +212,6 @@ func TestReadRecords(t *testing.T) {
 			case TopicCreatedMsg:
 			case TopicCreationErrMsg:
 				t.Fatal("Unable to create topic", msg.Err)
-				return
 			}
 
 			// when

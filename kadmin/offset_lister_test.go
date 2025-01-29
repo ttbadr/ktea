@@ -22,7 +22,6 @@ func TestConsumerGroupOffsets(t *testing.T) {
 		case TopicCreatedMsg:
 		case TopicCreationErrMsg:
 			t.Fatal("Unable to create topic", msg.Err)
-			return
 		}
 
 		for i := 0; i < 10; i++ {

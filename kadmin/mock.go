@@ -33,7 +33,11 @@ func (m MockKadmin) ListOffsets(group string) tea.Msg {
 	return nil
 }
 
-func (m MockKadmin) ListConsumerGroups() tea.Msg {
+func (m MockKadmin) ListCGroups() tea.Msg {
+	return nil
+}
+
+func (m MockKadmin) DeleteCGroup(name string) tea.Msg {
 	return nil
 }
 

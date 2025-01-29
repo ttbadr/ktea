@@ -20,7 +20,7 @@ func (m *MockConsumerGroupOffsetLister) ListOffsets(group string) tea.Msg {
 
 type MockConsumerGroupLister struct{}
 
-func (m *MockConsumerGroupLister) ListConsumerGroups() tea.Msg {
+func (m *MockConsumerGroupLister) ListCGroups() tea.Msg {
 	return nil
 }
 

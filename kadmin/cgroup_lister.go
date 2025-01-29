@@ -3,7 +3,7 @@ package kadmin
 import tea "github.com/charmbracelet/bubbletea"
 
 type CGroupLister interface {
-	ListConsumerGroups() tea.Msg
+	ListCGroups() tea.Msg
 }
 
 type ConsumerGroup struct {
@@ -33,7 +33,7 @@ type ConsumerGroupListingErrorMsg struct {
 	Err error
 }
 
-func (ka *SaramaKafkaAdmin) ListConsumerGroups() tea.Msg {
+func (ka *SaramaKafkaAdmin) ListCGroups() tea.Msg {
 	errChan := make(chan error)
 	groupsChan := make(chan []*ConsumerGroup)
 

@@ -45,6 +45,7 @@ type Kadmin interface {
 	RecordReader
 	OffsetLister
 	CGroupLister
+	CGroupDeleter
 	ConfigUpdater
 	TopicConfigLister
 	SraSetter

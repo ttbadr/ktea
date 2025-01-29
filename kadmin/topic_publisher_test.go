@@ -127,9 +127,8 @@ func TestPublish(t *testing.T) {
 		case TopicCreatedMsg:
 		case TopicCreationErrMsg:
 			t.Fatal("Unable to create topic", msg.Err)
-			return
 		}
-	
+
 		// when
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			var partition = 2
