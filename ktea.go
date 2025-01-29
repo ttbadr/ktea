@@ -184,7 +184,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case 1:
 			if m.cgroupsTabCtrl == nil {
 				var cmd tea.Cmd
-				m.cgroupsTabCtrl, cmd = cgroups_tab.New(m.ka, m.ka)
+				m.cgroupsTabCtrl, cmd = cgroups_tab.New(m.ka, m.ka, m.ka)
 				cmds = append(cmds, cmd)
 			}
 			m.tabCtrl = m.cgroupsTabCtrl

@@ -67,6 +67,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 	case kadmin.ConsumerGroupsListedMsg:
 		m.groups = msg.ConsumerGroups
+	case kadmin.CGroupDeletionStartedMsg:
+		cmds = append(cmds, msg.AwaitCompletion)
 	}
 
 	var cmd tea.Cmd
@@ -140,7 +142,7 @@ func (m *Model) Title() string {
 	return "Consumer Groups"
 }
 
-func New(lister kadmin.CGroupLister) (*Model, tea.Cmd) {
+func New(lister kadmin.CGroupLister, deleter kadmin.CGroupDeleter) (*Model, tea.Cmd) {
 	m := &Model{}
 	m.lister = lister
 	m.table = table.New(
@@ -155,9 +157,9 @@ func New(lister kadmin.CGroupLister) (*Model, tea.Cmd) {
 		return message
 	}
 
-	deleteFunc := func(topic string) tea.Cmd {
+	deleteFunc := func(group string) tea.Cmd {
 		return func() tea.Msg {
-			return nil
+			return deleter.DeleteCGroup(group)
 		}
 	}
 	notifierCmdBar := cmdbar.NewNotifierCmdBar()
@@ -180,6 +182,39 @@ func New(lister kadmin.CGroupLister) (*Model, tea.Cmd) {
 		) (bool, tea.Cmd) {
 			m.Idle()
 			return true, nil
+		},
+	)
+
+	cmdbar.WithMsgHandler(
+		notifierCmdBar,
+		func(
+			msg kadmin.CGroupDeletionStartedMsg,
+			m *notifier.Model,
+		) (bool, tea.Cmd) {
+			cmd := m.SpinWithLoadingMsg("Deleting Consumer Group")
+			return true, cmd
+		},
+	)
+
+	cmdbar.WithMsgHandler(
+		notifierCmdBar,
+		func(
+			msg kadmin.CGroupDeletedMsg,
+			m *notifier.Model,
+		) (bool, tea.Cmd) {
+			m.Idle()
+			return false, nil
+		},
+	)
+
+	cmdbar.WithMsgHandler(
+		notifierCmdBar,
+		func(
+			msg kadmin.CGroupDeletionErrMsg,
+			m *notifier.Model,
+		) (bool, tea.Cmd) {
+			cmd := m.ShowErrorMsg("Failed to delete group", msg.Err)
+			return true, cmd
 		},
 	)
 

@@ -24,9 +24,15 @@ func (m *MockConsumerGroupLister) ListCGroups() tea.Msg {
 	return nil
 }
 
+type MockConsumerGroupDeleter struct{}
+
+func (m *MockConsumerGroupDeleter) DeleteCGroup(name string) tea.Msg {
+	return nil
+}
+
 func TestGroupsTab(t *testing.T) {
 	t.Run("List consumer groups", func(t *testing.T) {
-		groupsTab, _ := New(&MockConsumerGroupLister{}, &MockConsumerGroupOffsetLister{})
+		groupsTab, _ := New(&MockConsumerGroupLister{}, &MockConsumerGroupDeleter{}, &MockConsumerGroupOffsetLister{})
 
 		groupsTab.Update(kadmin.ConsumerGroupsListedMsg{
 			ConsumerGroups: []*kadmin.ConsumerGroup{
