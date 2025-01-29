@@ -14,11 +14,17 @@ func TestReadRecords(t *testing.T) {
 		t.Run("with one partition", func(t *testing.T) {
 			topic := topicName()
 			// given
-			ka.CreateTopic(TopicCreationDetails{
+			msg := ka.CreateTopic(TopicCreationDetails{
 				Name:          topic,
 				NumPartitions: 1,
-			})
+			}).(TopicCreationStartedMsg)
 
+			switch msg.AwaitCompletion().(type) {
+			case TopicCreatedMsg:
+			case TopicCreationErrMsg:
+				t.Fatal("Unable to create topic", msg.Err)
+				return
+			}
 			// when
 			assert.EventuallyWithT(t, func(c *assert.CollectT) {
 				for i := 0; i < 55; i++ {
@@ -71,10 +77,17 @@ func TestReadRecords(t *testing.T) {
 		t.Run("with multiple partitions", func(t *testing.T) {
 			topic := topicName()
 			// given
-			ka.CreateTopic(TopicCreationDetails{
+			msg := ka.CreateTopic(TopicCreationDetails{
 				Name:          topic,
 				NumPartitions: 4,
-			})
+			}).(TopicCreationStartedMsg)
+
+			switch msg.AwaitCompletion().(type) {
+			case TopicCreatedMsg:
+			case TopicCreationErrMsg:
+				t.Fatal("Unable to create topic", msg.Err)
+				return
+			}
 
 			// when
 			assert.EventuallyWithT(t, func(c *assert.CollectT) {
@@ -89,7 +102,8 @@ func TestReadRecords(t *testing.T) {
 
 					select {
 					case err := <-psm.Err:
-						t.Fatal(c, "Unable to publish", err)
+						t.Fatal("Unable to publish", err)
+						return
 					case p := <-psm.Published:
 						assert.True(c, p)
 					}
@@ -131,10 +145,17 @@ func TestReadRecords(t *testing.T) {
 		t.Run("with specific in range limit", func(t *testing.T) {
 			topic := topicName()
 			// given
-			ka.CreateTopic(TopicCreationDetails{
+			msg := ka.CreateTopic(TopicCreationDetails{
 				Name:          topic,
 				NumPartitions: 1,
-			})
+			}).(TopicCreationStartedMsg)
+
+			switch msg.AwaitCompletion().(type) {
+			case TopicCreatedMsg:
+			case TopicCreationErrMsg:
+				t.Fatal("Unable to create topic", msg.Err)
+				return
+			}
 
 			// when
 			assert.EventuallyWithT(t, func(c *assert.CollectT) {
@@ -186,10 +207,17 @@ func TestReadRecords(t *testing.T) {
 		t.Run("with specific in out of range limit", func(t *testing.T) {
 			topic := topicName()
 			// given
-			ka.CreateTopic(TopicCreationDetails{
+			msg := ka.CreateTopic(TopicCreationDetails{
 				Name:          topic,
 				NumPartitions: 1,
-			})
+			}).(TopicCreationStartedMsg)
+
+			switch msg.AwaitCompletion().(type) {
+			case TopicCreatedMsg:
+			case TopicCreationErrMsg:
+				t.Fatal("Unable to create topic", msg.Err)
+				return
+			}
 
 			// when
 			assert.EventuallyWithT(t, func(c *assert.CollectT) {

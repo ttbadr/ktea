@@ -13,11 +13,18 @@ func TestConsumerGroups(t *testing.T) {
 	t.Run("List groups", func(t *testing.T) {
 		topic := topicName()
 		// given
-		ka.CreateTopic(TopicCreationDetails{
+		msg := ka.CreateTopic(TopicCreationDetails{
 			Name:          topic,
 			NumPartitions: 1,
 			Properties:    nil,
-		})
+		}).(TopicCreationStartedMsg)
+
+		switch msg := msg.AwaitCompletion().(type) {
+		case TopicCreatedMsg:
+		case TopicCreationErrMsg:
+			t.Fatal("Unable to create topic", msg.Err)
+			return
+		}
 
 		for i := 0; i < 10; i++ {
 			ka.PublishRecord(&ProducerRecord{
@@ -43,10 +50,10 @@ func TestConsumerGroups(t *testing.T) {
 			defer consumerGroup.Close()
 		}
 
-		msg := ka.ListConsumerGroups().(ConsumerGroupListingStartedMsg)
+		cgroupListingStartedMsg := ka.ListConsumerGroups().(ConsumerGroupListingStartedMsg)
 
 		select {
-		case groups := <-msg.ConsumerGroups:
+		case groups := <-cgroupListingStartedMsg.ConsumerGroups:
 			assert.Len(t, groups, 10, "Expected 10 consumer groups")
 
 			// Verify that all expected groups are present

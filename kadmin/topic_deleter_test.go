@@ -27,10 +27,15 @@ func TestDeleteTopic(t *testing.T) {
 			})
 
 			// when
-			msg := ka.DeleteTopic(topic2)
+			msg := ka.DeleteTopic(topic2).(TopicDeletionStartedMsg)
+
+			switch msg := msg.AwaitCompletion().(type) {
+			case TopicDeletionErrorMsg:
+				t.Fatal("Unable to delete topic", msg.Err)
+			case TopicDeletedMsg:
+			}
 
 			// then
-			assert.IsType(t, TopicDeletedMsg{}, msg)
 			assert.EventuallyWithT(t, func(c *assert.CollectT) {
 				listTopicsMsg := ka.ListTopics().(TopicListingStartedMsg)
 				var topics []Topic
@@ -56,19 +61,19 @@ func TestDeleteTopic(t *testing.T) {
 					NumPartitions:     2,
 					ReplicationFactor: 1,
 				},
-				{
-					Topic:             topic2,
-					NumPartitions:     1,
-					ReplicationFactor: 1,
-				},
 			})
 
 			// when
 			noneExistingTopic := topicName()
-			msg := ka.DeleteTopic(noneExistingTopic)
+			msg := ka.DeleteTopic(topic2).(TopicDeletionStartedMsg)
 
 			// then
-			assert.IsType(t, KAdminErrorMsg{}, msg)
+			switch msg := msg.AwaitCompletion().(type) {
+			case TopicDeletionErrorMsg:
+				assert.Equal(t, "kafka server: Request was for a topic or partition that does not exist on this broker", msg.Err.Error())
+			case TopicDeletedMsg:
+				t.Fatal("Expected topic to not be deleted but was")
+			}
 
 			// clean up
 			ka.DeleteTopic(topic1)

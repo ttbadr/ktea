@@ -12,11 +12,18 @@ func TestConsumerGroupOffsets(t *testing.T) {
 	t.Run("List Offsets", func(t *testing.T) {
 		topic := topicName()
 		// given
-		ka.CreateTopic(TopicCreationDetails{
+		msg := ka.CreateTopic(TopicCreationDetails{
 			Name:          topic,
 			NumPartitions: 1,
 			Properties:    nil,
-		})
+		}).(TopicCreationStartedMsg)
+
+		switch msg.AwaitCompletion().(type) {
+		case TopicCreatedMsg:
+		case TopicCreationErrMsg:
+			t.Fatal("Unable to create topic", msg.Err)
+			return
+		}
 
 		for i := 0; i < 10; i++ {
 			ka.PublishRecord(&ProducerRecord{

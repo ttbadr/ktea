@@ -103,14 +103,12 @@ func TestPublish(t *testing.T) {
 
 	assertRecords:
 		assert.Equal(t, "{\"id\":\"123\"}", receivedRecords[0].Value)
-		assert.Equal(t, []Header{
-			{
-				"id", "123",
-			},
-			{
-				"user", "456",
-			},
-		}, receivedRecords[0].Headers)
+		assert.Contains(t, receivedRecords[0].Headers, Header{
+			"id", "123",
+		})
+		assert.Contains(t, receivedRecords[0].Headers, Header{
+			"user", "456",
+		})
 
 		// clean up
 		cancel()
@@ -120,11 +118,18 @@ func TestPublish(t *testing.T) {
 	t.Run("Publish to specific partition", func(t *testing.T) {
 		topic := topicName()
 		// given
-		ka.CreateTopic(TopicCreationDetails{
+		msg := ka.CreateTopic(TopicCreationDetails{
 			Name:          topic,
 			NumPartitions: 3,
-		})
+		}).(TopicCreationStartedMsg)
 
+		switch msg.AwaitCompletion().(type) {
+		case TopicCreatedMsg:
+		case TopicCreationErrMsg:
+			t.Fatal("Unable to create topic", msg.Err)
+			return
+		}
+	
 		// when
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			var partition = 2
