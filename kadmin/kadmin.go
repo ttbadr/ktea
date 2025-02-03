@@ -1,6 +1,8 @@
 package kadmin
 
 import (
+	tea "github.com/charmbracelet/bubbletea"
+	"ktea/config"
 	"time"
 )
 
@@ -52,6 +54,8 @@ type Kadmin interface {
 }
 
 type Instantiator func(cd ConnectionDetails) (Kadmin, error)
+
+type ConnChecker func(cluster *config.Cluster) tea.Msg
 
 func SaramaInstantiator() Instantiator {
 	return func(cd ConnectionDetails) (Kadmin, error) {

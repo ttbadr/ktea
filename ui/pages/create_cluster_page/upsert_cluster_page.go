@@ -6,9 +6,12 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"ktea/config"
+	"ktea/kadmin"
 	"ktea/kontext"
 	"ktea/styles"
 	"ktea/ui"
+	"ktea/ui/components/cmdbar"
+	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
 	"strings"
 )
@@ -37,8 +40,10 @@ const (
 type Model struct {
 	form               *huh.Form
 	formValues         *FormValues
+	notifierCmdBar     *cmdbar.NotifierCmdBar
 	ktx                *kontext.ProgramKtx
 	clusterRegisterer  config.ClusterRegisterer
+	connChecker        kadmin.ConnChecker
 	authSelectionState authSelection
 	srSelectionState   srSelection
 	state              formState
@@ -83,12 +88,37 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 		builder.WriteString("\n")
 		views = append(views, renderer.Render(builder.String()))
 	}
-	views = append(views, renderer.RenderWithStyle(m.form.View(), styles.Form))
+
+	notifierView := m.notifierCmdBar.View(ktx, renderer)
+	formView := renderer.RenderWithStyle(m.form.View(), styles.Form)
+	views = append(views, notifierView, formView)
+
 	return ui.JoinVertical(lipgloss.Top, views...)
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
+	var cmds []tea.Cmd
+
+	switch msg := msg.(type) {
+	case kadmin.ConnectivityCheckStartedMsg:
+		cmds = append(cmds, msg.AwaitCompletion)
+	case kadmin.ConnectionCheckSucceeded:
+		cmds = append(cmds, func() tea.Msg {
+			details := m.getRegistrationDetails()
+			return m.clusterRegisterer.RegisterCluster(details)
+		})
+	}
+
+	_, msg, cmd := m.notifierCmdBar.Update(msg)
+	if cmd != nil {
+		cmds = append(cmds, cmd)
+	}
+	if msg == nil {
+		return tea.Batch(cmds...)
+	}
+
 	form, cmd := m.form.Update(msg)
+	cmds = append(cmds, cmd)
 	if f, ok := form.(*huh.Form); ok {
 		m.form = f
 	}
@@ -127,50 +157,61 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	}
 
 	if m.form.State == huh.StateCompleted && m.state != loading {
-		m.state = loading
-		return func() tea.Msg {
-			var name string
-			var newName *string
-			if m.preEditName == nil { // When creating a cluster
-				name = m.formValues.Name
-				newName = nil
-			} else { // When updating a cluster.
-				name = *m.preEditName
-				if m.formValues.Name != *m.preEditName {
-					newName = &m.formValues.Name
-				}
-			}
+		return m.processFormSubmission()
+	}
+	return tea.Batch(cmds...)
+}
 
-			var authMethod config.AuthMethod
-			var securityProtocol config.SecurityProtocol
-			if m.formValues.HasSASLAuthMethodSelected() {
-				authMethod = config.SASLAuthMethod
-				securityProtocol = m.formValues.SecurityProtocol
-			} else {
-				authMethod = config.NoneAuthMethod
-			}
+func (m *Model) processFormSubmission() tea.Cmd {
+	m.state = loading
+	details := m.getRegistrationDetails()
 
-			details := config.RegistrationDetails{
-				Name:             name,
-				NewName:          newName,
-				Color:            m.formValues.Color,
-				Host:             m.formValues.Host,
-				AuthMethod:       authMethod,
-				SecurityProtocol: securityProtocol,
-				Username:         m.formValues.Username,
-				Password:         m.formValues.Password,
-			}
-			if m.formValues.SrEnabled {
-				details.SchemaRegistry = &config.SchemaRegistryDetails{
-					Url:      m.formValues.SrUrl,
-					Username: m.formValues.SrUsername,
-					Password: m.formValues.SrPassword,
-				}
-			}
-			return m.clusterRegisterer.RegisterCluster(details)
+	cluster := config.ToCluster(details)
+	return func() tea.Msg {
+		return m.connChecker(&cluster)
+	}
+}
+
+func (m *Model) getRegistrationDetails() config.RegistrationDetails {
+	var name string
+	var newName *string
+	if m.preEditName == nil { // When creating a cluster
+		name = m.formValues.Name
+		newName = nil
+	} else { // When updating a cluster.
+		name = *m.preEditName
+		if m.formValues.Name != *m.preEditName {
+			newName = &m.formValues.Name
 		}
 	}
-	return cmd
+
+	var authMethod config.AuthMethod
+	var securityProtocol config.SecurityProtocol
+	if m.formValues.HasSASLAuthMethodSelected() {
+		authMethod = config.SASLAuthMethod
+		securityProtocol = m.formValues.SecurityProtocol
+	} else {
+		authMethod = config.NoneAuthMethod
+	}
+
+	details := config.RegistrationDetails{
+		Name:             name,
+		NewName:          newName,
+		Color:            m.formValues.Color,
+		Host:             m.formValues.Host,
+		AuthMethod:       authMethod,
+		SecurityProtocol: securityProtocol,
+		Username:         m.formValues.Username,
+		Password:         m.formValues.Password,
+	}
+	if m.formValues.SrEnabled {
+		details.SchemaRegistry = &config.SchemaRegistryDetails{
+			Url:      m.formValues.SrUrl,
+			Username: m.formValues.SrUsername,
+			Password: m.formValues.SrPassword,
+		}
+	}
+	return details
 }
 
 func (f *FormValues) HasSASLAuthMethodSelected() bool {
@@ -279,10 +320,15 @@ func (m *Model) createForm() *huh.Form {
 	return form
 }
 
-func NewForm(registerer config.ClusterRegisterer, ktx *kontext.ProgramKtx) *Model {
+func NewForm(
+	connChecker kadmin.ConnChecker,
+	registerer config.ClusterRegisterer,
+	ktx *kontext.ProgramKtx,
+) *Model {
 	var formValues = &FormValues{}
 	model := Model{
-		formValues: formValues,
+		formValues:  formValues,
+		connChecker: connChecker,
 	}
 
 	model.form = model.createForm()
@@ -303,12 +349,32 @@ func NewForm(registerer config.ClusterRegisterer, ktx *kontext.ProgramKtx) *Mode
 		model.authSelectionState = saslSelected
 	}
 	model.srSelectionState = srNothingSelected
+
+	model.notifierCmdBar = cmdbar.NewNotifierCmdBar()
+	cmdbar.WithMsgHandler(model.notifierCmdBar, func(msg kadmin.ConnectivityCheckStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
+		return true, m.SpinWithLoadingMsg("Testing cluster connectivity")
+	})
+	cmdbar.WithMsgHandler(model.notifierCmdBar, func(msg kadmin.ConnectionCheckSucceeded, m *notifier.Model) (bool, tea.Cmd) {
+		return true, m.SpinWithLoadingMsg("Connection success creating cluster")
+	})
+	cmdbar.WithMsgHandler(model.notifierCmdBar, func(msg kadmin.ConnectivityCheckErrMsg, m *notifier.Model) (bool, tea.Cmd) {
+		model.form = model.createForm()
+		model.state = none
+		return true, m.ShowErrorMsg("Cluster not created", msg.Err)
+	})
+
 	return &model
 }
 
-func NewEditForm(registerer config.ClusterRegisterer, ktx *kontext.ProgramKtx, formValues *FormValues) *Model {
+func NewEditForm(
+	connChecker kadmin.ConnChecker,
+	registerer config.ClusterRegisterer,
+	ktx *kontext.ProgramKtx,
+	formValues *FormValues,
+) *Model {
 	model := Model{
-		formValues: formValues,
+		formValues:  formValues,
+		connChecker: connChecker,
 	}
 	if formValues.Name != "" {
 		// copied to prevent model.preEditedName to follow the formValues.Name pointer
@@ -330,6 +396,8 @@ func NewEditForm(registerer config.ClusterRegisterer, ktx *kontext.ProgramKtx, f
 	if model.formValues.HasSASLAuthMethodSelected() {
 		model.authSelectionState = saslSelected
 	}
+
+	model.notifierCmdBar = cmdbar.NewNotifierCmdBar()
 
 	return &model
 }

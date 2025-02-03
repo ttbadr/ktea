@@ -89,31 +89,11 @@ type ClusterRegisterer interface {
 //
 // It returns a ClusterRegisteredMsg with the registered cluster.
 func (c *Config) RegisterCluster(details RegistrationDetails) tea.Msg {
-	cluster := Cluster{
-		Name:             details.Name,
-		Color:            details.Color,
-		BootstrapServers: []string{details.Host},
-	}
+	cluster := ToCluster(details)
 
 	// When no clusters exist yet, the first one created becomes the active one by default.
 	if len(c.Clusters) == 0 {
 		cluster.Active = true
-	}
-
-	if details.AuthMethod == SASLAuthMethod {
-		cluster.SASLConfig = &SASLConfig{
-			Username:         details.Username,
-			Password:         details.Password,
-			SecurityProtocol: details.SecurityProtocol,
-		}
-	}
-
-	if details.SchemaRegistry != nil {
-		cluster.SchemaRegistry = &SchemaRegistryConfig{
-			Url:      details.SchemaRegistry.Url,
-			Username: details.SchemaRegistry.Username,
-			Password: details.SchemaRegistry.Password,
-		}
 	}
 
 	// did the newly registered cluster update an existing one
@@ -140,6 +120,31 @@ func (c *Config) RegisterCluster(details RegistrationDetails) tea.Msg {
 	c.flush()
 
 	return ClusterRegisteredMsg{&cluster}
+}
+
+func ToCluster(details RegistrationDetails) Cluster {
+	cluster := Cluster{
+		Name:             details.Name,
+		Color:            details.Color,
+		BootstrapServers: []string{details.Host},
+	}
+
+	if details.AuthMethod == SASLAuthMethod {
+		cluster.SASLConfig = &SASLConfig{
+			Username:         details.Username,
+			Password:         details.Password,
+			SecurityProtocol: details.SecurityProtocol,
+		}
+	}
+
+	if details.SchemaRegistry != nil {
+		cluster.SchemaRegistry = &SchemaRegistryConfig{
+			Url:      details.SchemaRegistry.Url,
+			Username: details.SchemaRegistry.Username,
+			Password: details.SchemaRegistry.Password,
+		}
+	}
+	return cluster
 }
 
 func (c *Config) ActiveCluster() *Cluster {
@@ -235,5 +240,6 @@ func New(configIO IO) *Config {
 }
 
 func ReLoadConfig() tea.Msg {
+	// TODO
 	return nil
 }

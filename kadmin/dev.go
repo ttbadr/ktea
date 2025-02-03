@@ -5,5 +5,5 @@ package kadmin
 import "time"
 
 func maybeIntroduceLatency() {
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 }

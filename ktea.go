@@ -140,7 +140,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 			return m, tea.Batch(cmds...)
 		} else {
-			t, c := clusters_tab.New(m.ktx)
+			t, c := clusters_tab.New(m.ktx, kadmin.SaramaConnectivityChecker)
 			m.tabCtrl = t
 			m.tabs.GoToTab(tabs.ClustersTab)
 			return m, c
@@ -202,7 +202,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case 3:
 			if m.clustersTabCtrl == nil {
 				var cmd tea.Cmd
-				m.clustersTabCtrl, cmd = clusters_tab.New(m.ktx)
+				m.clustersTabCtrl, cmd = clusters_tab.New(m.ktx, kadmin.SaramaConnectivityChecker)
 				cmds = append(cmds, cmd)
 			}
 			m.tabCtrl = m.clustersTabCtrl
@@ -235,19 +235,7 @@ func (m *Model) createTabs(cluster *config.Cluster) {
 // activateCluster creates the kadmin.Model and kadmin.SrAdmin
 // based on the given cluster
 func (m *Model) activateCluster(cluster *config.Cluster) error {
-	var saslConfig *kadmin.SASLConfig
-	if cluster.SASLConfig != nil {
-		saslConfig = &kadmin.SASLConfig{
-			Username: cluster.SASLConfig.Username,
-			Password: cluster.SASLConfig.Password,
-			Protocol: kadmin.SSL,
-		}
-	}
-
-	connDetails := kadmin.ConnectionDetails{
-		BootstrapServers: cluster.BootstrapServers,
-		SASLConfig:       saslConfig,
-	}
+	connDetails := kadmin.ToConnectionDetails(cluster)
 	if ka, err := m.kaInstantiator(connDetails); err != nil {
 		return err
 	} else {

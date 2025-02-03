@@ -11,15 +11,19 @@ import (
 	"testing"
 )
 
-type MockClusterRegisterer struct {
+type mockClusterRegisterer struct {
 }
 
-type CapturedRegistrationDetails struct {
+type capturedRegistrationDetails struct {
 	config.RegistrationDetails
 }
 
-func (m MockClusterRegisterer) RegisterCluster(d config.RegistrationDetails) tea.Msg {
-	return CapturedRegistrationDetails{d}
+func (m mockClusterRegisterer) RegisterCluster(d config.RegistrationDetails) tea.Msg {
+	return capturedRegistrationDetails{d}
+}
+
+func mockConnChecker(cluster *config.Cluster) tea.Msg {
+	return cluster
 }
 
 func TestCreateClusterPage(t *testing.T) {
@@ -33,7 +37,7 @@ func TestCreateClusterPage(t *testing.T) {
 
 	t.Run("Display info message when no clusters", func(t *testing.T) {
 		// given
-		createEnvPage := NewForm(MockClusterRegisterer{}, &ktx)
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &ktx)
 
 		// then
 		render := createEnvPage.View(&ktx, ui.TestRenderer)
@@ -41,7 +45,7 @@ func TestCreateClusterPage(t *testing.T) {
 	})
 
 	t.Run("Do not display info message when no clusters", func(t *testing.T) {
-		createEnvPage := NewForm(MockClusterRegisterer{}, &ktx)
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &ktx)
 
 		render := createEnvPage.View(&kontext.ProgramKtx{
 			WindowWidth:  100,
@@ -61,7 +65,7 @@ func TestCreateClusterPage(t *testing.T) {
 
 	t.Run("Name cannot be empty", func(t *testing.T) {
 		// given
-		createEnvPage := NewForm(MockClusterRegisterer{}, &ktx)
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &ktx)
 
 		// when
 		createEnvPage.Update(keys.Key(tea.KeyEnter))
@@ -73,7 +77,7 @@ func TestCreateClusterPage(t *testing.T) {
 
 	t.Run("Name must be unique", func(t *testing.T) {
 		// given
-		createEnvPage := NewForm(MockClusterRegisterer{}, &kontext.ProgramKtx{
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &kontext.ProgramKtx{
 			WindowWidth:  100,
 			WindowHeight: 100,
 			Config: &config.Config{
@@ -108,7 +112,7 @@ func TestCreateClusterPage(t *testing.T) {
 	t.Run("When updating", func(t *testing.T) {
 		t.Run("updates existing cluster fields", func(t *testing.T) {
 			// given
-			createEnvPage := NewEditForm(MockClusterRegisterer{}, &kontext.ProgramKtx{
+			createEnvPage := NewEditForm(mockConnChecker, mockClusterRegisterer{}, &kontext.ProgramKtx{
 				WindowWidth:  100,
 				WindowHeight: 100,
 				Config: &config.Config{
@@ -158,83 +162,20 @@ func TestCreateClusterPage(t *testing.T) {
 			msg := cmd()
 
 			// then
-			assert.IsType(t, CapturedRegistrationDetails{}, msg)
+			assert.IsType(t, &config.Cluster{}, msg)
 			// and
-			var updatedName *string
-			assert.Equal(t, CapturedRegistrationDetails{
-				RegistrationDetails: config.RegistrationDetails{
-					Name:       "prd",
-					NewName:    updatedName,
-					Color:      styles.ColorGreen,
-					Host:       "localhost:9091",
-					AuthMethod: config.NoneAuthMethod,
-				},
+			assert.Equal(t, &config.Cluster{
+				Name:             "prd",
+				Color:            styles.ColorGreen,
+				Active:           false,
+				BootstrapServers: []string{"localhost:9091"},
+				SchemaRegistry:   nil,
 			}, msg)
-
-			// then
-			render := createEnvPage.View(&ktx, ui.TestRenderer)
-			assert.NotContains(t, render, "cluster prd already exists, name most be unique")
-		})
-
-		t.Run("updates existing cluster its name", func(t *testing.T) {
-			// given
-			createEnvPage := NewEditForm(MockClusterRegisterer{}, &kontext.ProgramKtx{
-				WindowWidth:  100,
-				WindowHeight: 100,
-				Config: &config.Config{
-					Clusters: []config.Cluster{
-						{
-							Name:             "prd",
-							Color:            "#808080",
-							Active:           true,
-							BootstrapServers: []string{":19092"},
-							SASLConfig:       nil,
-						},
-						{
-							Name:             "tst",
-							Color:            "#F0F0F0",
-							Active:           false,
-							BootstrapServers: nil,
-							SASLConfig:       nil,
-						},
-					},
-				},
-			}, &FormValues{
-				Name:  "prd",
-				Color: "#808080",
-				Host:  ":9092",
-			})
-
-			// when
-			keys.UpdateKeys(createEnvPage, "2")
-			cmd := createEnvPage.Update(keys.Key(tea.KeyEnter))
-			createEnvPage.Update(cmd())
-			// and: select Color
-			cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
-			createEnvPage.Update(cmd())
-			// and: Host is entered
-			cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
-			createEnvPage.Update(cmd())
-			// and: auth method none is selected
-			cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
-			cmd = createEnvPage.Update(cmd())
-			// and: select disabled schema registry
-			cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
-			cmd = createEnvPage.Update(cmd())
-			cmd = createEnvPage.Update(cmd())
-			msg := cmd()
-
-			// then
-			assert.IsType(t, CapturedRegistrationDetails{}, msg)
-			// and
-			assert.Equal(t, msg.(CapturedRegistrationDetails).Name, "prd")
-			assert.Equal(t, *msg.(CapturedRegistrationDetails).NewName, "prd2")
-			assert.Equal(t, msg.(CapturedRegistrationDetails).Host, ":9092")
 		})
 
 		t.Run("name still has to be unique", func(t *testing.T) {
 			// given
-			createEnvPage := NewEditForm(MockClusterRegisterer{}, &kontext.ProgramKtx{
+			createEnvPage := NewEditForm(mockConnChecker, mockClusterRegisterer{}, &kontext.ProgramKtx{
 				WindowWidth:  100,
 				WindowHeight: 100,
 				Config: &config.Config{
@@ -276,55 +217,9 @@ func TestCreateClusterPage(t *testing.T) {
 		})
 	})
 
-	t.Run("When no clusters exists", func(t *testing.T) {
-
-		t.Run("Created cluster is active one by default", func(t *testing.T) {
-			// given
-			programKtx := &kontext.ProgramKtx{
-				WindowWidth:  100,
-				WindowHeight: 100,
-				Config: &config.Config{
-					Clusters: []config.Cluster{},
-				},
-			}
-			createEnvPage := NewForm(MockClusterRegisterer{}, programKtx)
-			// and: enter name
-			keys.UpdateKeys(createEnvPage, "PRD")
-			cmd := createEnvPage.Update(keys.Key(tea.KeyEnter))
-			createEnvPage.Update(cmd())
-			// and: select Color
-			cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
-			createEnvPage.Update(cmd())
-			// and: Host is entered
-			keys.UpdateKeys(createEnvPage, "localhost:9092")
-			cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
-			createEnvPage.Update(cmd())
-			// and: auth method none is selected
-			cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
-			cmd = createEnvPage.Update(cmd())
-			cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
-			// and: no schema-registry is selected
-			cmd = createEnvPage.Update(cmd())
-			cmd = createEnvPage.Update(cmd())
-			msg := cmd()
-
-			// then
-			assert.IsType(t, CapturedRegistrationDetails{}, msg)
-			// and
-			assert.Equal(t, CapturedRegistrationDetails{
-				RegistrationDetails: config.RegistrationDetails{
-					Name:       "PRD",
-					Color:      styles.ColorGreen,
-					Host:       "localhost:9092",
-					AuthMethod: config.NoneAuthMethod,
-				},
-			}, msg)
-		})
-	})
-
 	t.Run("Host cannot be empty", func(t *testing.T) {
 		// given
-		createEnvPage := NewForm(MockClusterRegisterer{}, &kontext.ProgramKtx{
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &kontext.ProgramKtx{
 			WindowWidth:  100,
 			WindowHeight: 100,
 			Config: &config.Config{
@@ -355,7 +250,7 @@ func TestCreateClusterPage(t *testing.T) {
 
 	t.Run("Selecting none auth method creates cluster", func(t *testing.T) {
 		// given
-		createEnvPage := NewForm(MockClusterRegisterer{}, &kontext.ProgramKtx{
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &kontext.ProgramKtx{
 			WindowWidth:  100,
 			WindowHeight: 100,
 			Config: &config.Config{
@@ -392,16 +287,14 @@ func TestCreateClusterPage(t *testing.T) {
 		msg := cmd()
 
 		// then
-		assert.IsType(t, CapturedRegistrationDetails{}, msg)
+		assert.IsType(t, &config.Cluster{}, msg)
 		// and
-		assert.Equal(t, CapturedRegistrationDetails{
-			RegistrationDetails: config.RegistrationDetails{
-				Name:       "TST",
-				NewName:    nil,
-				Color:      styles.ColorRed,
-				Host:       "localhost:9092",
-				AuthMethod: config.NoneAuthMethod,
-			},
+		assert.Equal(t, &config.Cluster{
+			Name:             "TST",
+			Color:            styles.ColorRed,
+			Active:           false,
+			BootstrapServers: []string{"localhost:9092"},
+			SchemaRegistry:   nil,
 		}, msg)
 	})
 
@@ -420,7 +313,7 @@ func TestCreateClusterPage(t *testing.T) {
 				},
 			},
 		}
-		createEnvPage := NewForm(MockClusterRegisterer{}, &programKtx)
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &programKtx)
 		// and: enter name
 		keys.UpdateKeys(createEnvPage, "TST")
 		cmd := createEnvPage.Update(keys.Key(tea.KeyEnter))
@@ -462,7 +355,7 @@ func TestCreateClusterPage(t *testing.T) {
 				},
 			},
 		}
-		createEnvPage := NewForm(MockClusterRegisterer{}, &programKtx)
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &programKtx)
 		// and: enter name
 		keys.UpdateKeys(createEnvPage, "TST")
 		cmd := createEnvPage.Update(keys.Key(tea.KeyEnter))
@@ -508,7 +401,7 @@ func TestCreateClusterPage(t *testing.T) {
 				},
 			},
 		}
-		createEnvPage := NewForm(MockClusterRegisterer{}, &programKtx)
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &programKtx)
 		// and: enter name
 		keys.UpdateKeys(createEnvPage, "TST")
 		cmd := createEnvPage.Update(keys.Key(tea.KeyEnter))
@@ -545,18 +438,18 @@ func TestCreateClusterPage(t *testing.T) {
 
 		// then
 		assert.Len(t, msgs, 1)
-		assert.IsType(t, CapturedRegistrationDetails{}, msgs[0])
+		assert.IsType(t, &config.Cluster{}, msgs[0])
 		// and
-		assert.Equal(t, CapturedRegistrationDetails{
-			RegistrationDetails: config.RegistrationDetails{
-				Name:             "TST",
-				NewName:          nil,
-				Color:            styles.ColorRed,
-				Host:             "localhost:9092",
-				AuthMethod:       config.SASLAuthMethod,
-				SecurityProtocol: config.SSLSecurityProtocol,
+		assert.Equal(t, &config.Cluster{
+			Name:             "TST",
+			Color:            styles.ColorRed,
+			Active:           false,
+			BootstrapServers: []string{"localhost:9092"},
+			SchemaRegistry:   nil,
+			SASLConfig: &config.SASLConfig{
 				Username:         "username",
 				Password:         "password",
+				SecurityProtocol: config.SSLSecurityProtocol,
 			},
 		}, msgs[0])
 	})
@@ -576,7 +469,7 @@ func TestCreateClusterPage(t *testing.T) {
 				},
 			},
 		}
-		createEnvPage := NewForm(MockClusterRegisterer{}, &programKtx)
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &programKtx)
 		// and: enter name
 		keys.UpdateKeys(createEnvPage, "TST")
 		cmd := createEnvPage.Update(keys.Key(tea.KeyEnter))
@@ -637,24 +530,24 @@ func TestCreateClusterPage(t *testing.T) {
 			keys.UpdateKeys(createEnvPage, "sr-pwd")
 			msgs := keys.Submit(createEnvPage)
 
+			// then
 			assert.Len(t, msgs, 1)
-			assert.IsType(t, CapturedRegistrationDetails{}, msgs[0])
+			assert.IsType(t, &config.Cluster{}, msgs[0])
 			// and
-			assert.Equal(t, CapturedRegistrationDetails{
-				RegistrationDetails: config.RegistrationDetails{
-					Name:             "TST",
-					NewName:          nil,
-					Color:            styles.ColorRed,
-					Host:             "localhost:9092",
-					AuthMethod:       config.SASLAuthMethod,
-					SecurityProtocol: config.SSLSecurityProtocol,
+			assert.Equal(t, &config.Cluster{
+				Name:             "TST",
+				Color:            styles.ColorRed,
+				Active:           false,
+				BootstrapServers: []string{"localhost:9092"},
+				SASLConfig: &config.SASLConfig{
 					Username:         "username",
 					Password:         "password",
-					SchemaRegistry: &config.SchemaRegistryDetails{
-						Url:      "sr-url",
-						Username: "sr-user",
-						Password: "sr-pwd",
-					},
+					SecurityProtocol: config.SSLSecurityProtocol,
+				},
+				SchemaRegistry: &config.SchemaRegistryConfig{
+					Url:      "sr-url",
+					Username: "sr-user",
+					Password: "sr-pwd",
 				},
 			}, msgs[0])
 		})

@@ -5,6 +5,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"ktea/config"
+	"ktea/kadmin"
 	"ktea/kontext"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
@@ -16,12 +17,13 @@ import (
 type state int
 
 type Model struct {
-	state      state
-	active     nav.Page
-	createPage nav.Page
-	config     *config.Config
-	statusbar  *statusbar.Model
-	ktx        *kontext.ProgramKtx
+	state       state
+	active      nav.Page
+	createPage  nav.Page
+	config      *config.Config
+	statusbar   *statusbar.Model
+	ktx         *kontext.ProgramKtx
+	connChecker kadmin.ConnChecker
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -48,7 +50,9 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		listPage, _ := clusters_page.New(m.ktx)
 		m.active = listPage
 		m.statusbar = statusbar.New(m.active)
-		return func() tea.Msg { return config.ReLoadConfig() }
+		return func() tea.Msg {
+			return config.ReLoadConfig()
+		}
 	case config.ClusterDeletedMsg:
 		if m.config.HasClusters() {
 			cmd := m.active.Update(msg)
@@ -59,14 +63,14 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				}
 			})
 		} else {
-			m.active = create_cluster_page.NewForm(m.ktx.Config, m.ktx)
+			m.active = create_cluster_page.NewForm(m.connChecker, m.ktx.Config, m.ktx)
 		}
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc":
 			m.active, _ = clusters_page.New(m.ktx)
 		case "ctrl+n":
-			m.active = create_cluster_page.NewForm(m.ktx.Config, m.ktx)
+			m.active = create_cluster_page.NewForm(m.connChecker, m.ktx.Config, m.ktx)
 		case "ctrl+e":
 			clusterName := m.active.(*clusters_page.Model).SelectedCluster()
 			selectedCluster := m.ktx.Config.FindClusterByName(*clusterName)
@@ -88,6 +92,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				formValues.SrPassword = selectedCluster.SchemaRegistry.Password
 			}
 			m.active = create_cluster_page.NewEditForm(
+				m.connChecker,
 				m.ktx.Config,
 				m.ktx,
 				formValues,
@@ -102,9 +107,13 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return m.active.Update(msg)
 }
 
-func New(ktx *kontext.ProgramKtx) (*Model, tea.Cmd) {
+func New(
+	ktx *kontext.ProgramKtx,
+	connChecker kadmin.ConnChecker,
+) (*Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m := Model{}
+	m.connChecker = connChecker
 	m.ktx = ktx
 	m.config = ktx.Config
 	if m.config.HasClusters() {
@@ -113,7 +122,7 @@ func New(ktx *kontext.ProgramKtx) (*Model, tea.Cmd) {
 		m.active = listPage
 		m.statusbar = statusbar.New(m.active)
 	} else {
-		m.active = create_cluster_page.NewForm(m.ktx.Config, m.ktx)
+		m.active = create_cluster_page.NewForm(m.connChecker, m.ktx.Config, m.ktx)
 	}
 	return &m, cmd
 }
