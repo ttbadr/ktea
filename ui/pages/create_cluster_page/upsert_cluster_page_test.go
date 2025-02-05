@@ -151,18 +151,20 @@ func TestCreateClusterPage(t *testing.T) {
 			}
 			keys.UpdateKeys(createEnvPage, "localhost:9091")
 			cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+			// next field
 			createEnvPage.Update(cmd())
 			// and: auth method none is selected
 			cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+			// next field
 			cmd = createEnvPage.Update(cmd())
-			// and: select disabled schema registry
-			cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
-			cmd = createEnvPage.Update(cmd())
-			cmd = createEnvPage.Update(cmd())
-			msg := cmd()
+			// next group
+			createEnvPage.Update(cmd())
+			// and: select disabled schema registry and in doing so submitting the form
+			msgs := keys.Submit(createEnvPage)
 
 			// then
-			assert.IsType(t, &config.Cluster{}, msg)
+			assert.Len(t, msgs, 1)
+			assert.IsType(t, &config.Cluster{}, msgs[0])
 			// and
 			assert.Equal(t, &config.Cluster{
 				Name:             "prd",
@@ -170,7 +172,7 @@ func TestCreateClusterPage(t *testing.T) {
 				Active:           false,
 				BootstrapServers: []string{"localhost:9091"},
 				SchemaRegistry:   nil,
-			}, msg)
+			}, msgs[0])
 		})
 
 		t.Run("name still has to be unique", func(t *testing.T) {
@@ -279,15 +281,16 @@ func TestCreateClusterPage(t *testing.T) {
 		createEnvPage.Update(cmd())
 		// and: auth method none is selected
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+		// next field
 		cmd = createEnvPage.Update(cmd())
-		// and: no schema-registry is selected
-		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
-		cmd = createEnvPage.Update(cmd())
-		cmd = createEnvPage.Update(cmd())
-		msg := cmd()
+		// next group
+		createEnvPage.Update(cmd())
+		// and: select disabled schema registry and in doing so submitting the form
+		msgs := keys.Submit(createEnvPage)
 
 		// then
-		assert.IsType(t, &config.Cluster{}, msg)
+		assert.Len(t, msgs, 1)
+		assert.IsType(t, &config.Cluster{}, msgs[0])
 		// and
 		assert.Equal(t, &config.Cluster{
 			Name:             "TST",
@@ -295,7 +298,7 @@ func TestCreateClusterPage(t *testing.T) {
 			Active:           false,
 			BootstrapServers: []string{"localhost:9092"},
 			SchemaRegistry:   nil,
-		}, msg)
+		}, msgs[0])
 	})
 
 	t.Run("Selecting SASL_SSL auth method displays username and password fields", func(t *testing.T) {
@@ -432,6 +435,8 @@ func TestCreateClusterPage(t *testing.T) {
 		keys.UpdateKeys(createEnvPage, "password")
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
 		// next field
+		cmd = createEnvPage.Update(cmd())
+		// next group
 		createEnvPage.Update(cmd())
 		// submit
 		msgs := keys.Submit(createEnvPage)
@@ -484,7 +489,7 @@ func TestCreateClusterPage(t *testing.T) {
 		keys.UpdateKeys(createEnvPage, "localhost:9092")
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
 		createEnvPage.Update(cmd())
-		// and: auth method none is selected
+		// and: auth method SASL is selected
 		cmd = createEnvPage.Update(keys.Key(tea.KeyDown))
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
 		// next field
@@ -500,6 +505,8 @@ func TestCreateClusterPage(t *testing.T) {
 		keys.UpdateKeys(createEnvPage, "password")
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
 		// next field
+		cmd = createEnvPage.Update(cmd())
+		// next group
 		createEnvPage.Update(cmd())
 		// select schema-registry enabled
 		createEnvPage.Update(keys.Key(tea.KeyDown))

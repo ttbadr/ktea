@@ -144,6 +144,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if m.formValues.HasSASLAuthMethodSelected() {
 			m.NextField(3)
 		}
+		m.form.NextGroup()
 		m.srSelectionState = srDisabledSelected
 	} else if m.formValues.SrEnabled &&
 		((m.srSelectionState == srNothingSelected) || m.srSelectionState == srDisabledSelected) {
@@ -153,6 +154,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if m.formValues.HasSASLAuthMethodSelected() {
 			m.NextField(3)
 		}
+		m.form.NextGroup()
 		m.srSelectionState = srEnabledSelected
 	}
 
@@ -279,8 +281,10 @@ func (m *Model) createForm() *huh.Form {
 			huh.NewOption("Disabled", false),
 			huh.NewOption("Enabled", true),
 		)
-	var fields []huh.Field
-	fields = append(fields, name, color, host, auth)
+
+	var clusterFields []huh.Field
+	clusterFields = append(clusterFields, name, color, host, auth)
+
 	if m.formValues.HasSASLAuthMethodSelected() {
 		securityProtocol := huh.NewSelect[config.SecurityProtocol]().
 			Value(&m.formValues.SecurityProtocol).
@@ -296,10 +300,11 @@ func (m *Model) createForm() *huh.Form {
 			Value(&m.formValues.Password).
 			EchoMode(huh.EchoModePassword).
 			Title("Password")
-		fields = append(fields, securityProtocol, username, pwd)
+		clusterFields = append(clusterFields, securityProtocol, username, pwd)
 	}
 
-	fields = append(fields, srEnabled)
+	var schemaRegistryFields []huh.Field
+	schemaRegistryFields = append(schemaRegistryFields, srEnabled)
 	if m.formValues.SrEnabled {
 		srUrl := huh.NewInput().
 			Value(&m.formValues.SrUrl).
@@ -311,10 +316,14 @@ func (m *Model) createForm() *huh.Form {
 			Value(&m.formValues.SrPassword).
 			EchoMode(huh.EchoModePassword).
 			Title("Schema Registry Password")
-		fields = append(fields, srUrl, srUsername, srPwd)
+		schemaRegistryFields = append(schemaRegistryFields, srUrl, srUsername, srPwd)
 	}
 
-	form := huh.NewForm(huh.NewGroup(fields...))
+	form := huh.NewForm(
+		huh.NewGroup(clusterFields...).Title("Cluster").Description("de").WithWidth(m.ktx.WindowWidth/2),
+		huh.NewGroup(schemaRegistryFields...),
+	)
+	form.WithLayout(huh.LayoutColumns(2))
 	form.QuitAfterSubmit = false
 	form.Init()
 	return form
@@ -331,10 +340,10 @@ func NewForm(
 		connChecker: connChecker,
 	}
 
+	model.ktx = ktx
 	model.form = model.createForm()
 	model.mode = newMode
 	model.clusterRegisterer = registerer
-	model.ktx = ktx
 
 	model.authSelectionState = nothingSelected
 	if formValues.SrEnabled {
@@ -381,9 +390,9 @@ func NewEditForm(
 		preEditedName := formValues.Name
 		model.preEditName = &preEditedName
 	}
+	model.ktx = ktx
 	model.form = model.createForm()
 	model.clusterRegisterer = registerer
-	model.ktx = ktx
 	model.authSelectionState = nothingSelected
 	if formValues.SrEnabled {
 		model.srSelectionState = srEnabledSelected
