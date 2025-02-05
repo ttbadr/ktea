@@ -73,9 +73,9 @@ func TestKtea(t *testing.T) {
 			view := model.View()
 
 			var expectedLayout = `
-╭────────────────╮╭─────────────────────────╮╭─────────────────────────╮╭──────────────────╮        
-│ Topics (Alt-1) ││ Consumer Groups (Alt-2) ││ Schema Registry (Alt-3) ││ Clusters (Alt-4) │        
-┴────────────────┴┘                         └┴─────────────────────────┴┴──────────────────┴────────
+╭─────────────────╮╭──────────────────────────╮╭──────────────────────────╮╭───────────────────╮    
+│ Topics (Meta-1) ││ Consumer Groups (Meta-2) ││ Schema Registry (Meta-3) ││ Clusters (Meta-4) │    
+┴─────────────────┴┘                          └┴──────────────────────────┴┴───────────────────┴────
 `
 			assert.Contains(t, view, expectedLayout)
 
@@ -89,9 +89,9 @@ func TestKtea(t *testing.T) {
 			view = model.View()
 
 			expectedLayout = `
-╭────────────────╮╭─────────────────────────╮╭─────────────────────────╮╭──────────────────╮        
-│ Topics (Alt-1) ││ Consumer Groups (Alt-2) ││ Schema Registry (Alt-3) ││ Clusters (Alt-4) │        
-┴────────────────┴┴─────────────────────────┴┘                         └┴──────────────────┴────────
+╭─────────────────╮╭──────────────────────────╮╭──────────────────────────╮╭───────────────────╮    
+│ Topics (Meta-1) ││ Consumer Groups (Meta-2) ││ Schema Registry (Meta-3) ││ Clusters (Meta-4) │    
+┴─────────────────┴┴──────────────────────────┴┘                          └┴───────────────────┴────
 `
 			assert.Contains(t, view, expectedLayout)
 
@@ -112,9 +112,9 @@ func TestKtea(t *testing.T) {
 			view = model.View()
 
 			expectedLayout = `
-╭────────────────╮╭─────────────────────────╮╭──────────────────╮                                   
-│ Topics (Alt-1) ││ Consumer Groups (Alt-2) ││ Clusters (Alt-3) │                                   
-┴────────────────┴┴─────────────────────────┴┘                  └───────────────────────────────────
+╭─────────────────╮╭──────────────────────────╮╭───────────────────╮                                
+│ Topics (Meta-1) ││ Consumer Groups (Meta-2) ││ Clusters (Meta-3) │                                
+┴─────────────────┴┴──────────────────────────┴┘                   └────────────────────────────────
 `
 			assert.Regexp(t, "X\\W+tst", view)
 			assert.NotRegexp(t, "X\\W+prd", view)

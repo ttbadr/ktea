@@ -37,7 +37,7 @@ func (m *Model) View(ctx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	}
 	tabsToRender := make([]string, len(m.elements))
 	for i, e := range m.elements {
-		tabName := fmt.Sprintf("%s (Alt-%d)", e, i+1)
+		tabName := fmt.Sprintf("%s (Meta-%d)", e, i+1)
 		if i == m.activeTab {
 			tabsToRender = append(tabsToRender, styles.Tab.ActiveTab.Render(tabName))
 		} else {
