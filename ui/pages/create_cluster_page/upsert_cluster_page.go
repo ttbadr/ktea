@@ -320,7 +320,9 @@ func (m *Model) createForm() *huh.Form {
 	}
 
 	form := huh.NewForm(
-		huh.NewGroup(clusterFields...).Title("Cluster").Description("de").WithWidth(m.ktx.WindowWidth/2),
+		huh.NewGroup(clusterFields...).
+			Title("Cluster").
+			WithWidth(m.ktx.WindowWidth/2),
 		huh.NewGroup(schemaRegistryFields...),
 	)
 	form.WithLayout(huh.LayoutColumns(2))

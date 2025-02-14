@@ -60,9 +60,9 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	case nav.LoadConsumptionFormPageMsg:
 		if msg.ReadDetails != nil {
-			m.active = consumption_form_page.NewWithDetails(msg.ReadDetails)
+			m.active = consumption_form_page.NewWithDetails(msg.ReadDetails, m.ktx)
 		} else {
-			m.active = consumption_form_page.New(msg.Topic)
+			m.active = consumption_form_page.New(msg.Topic, m.ktx)
 		}
 
 	case nav.LoadRecordDetailPageMsg:

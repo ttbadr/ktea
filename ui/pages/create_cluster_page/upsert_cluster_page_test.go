@@ -301,7 +301,7 @@ func TestCreateClusterPage(t *testing.T) {
 		}, msgs[0])
 	})
 
-	t.Run("Selecting SASL_SSL auth method displays username and password fields", func(t *testing.T) {
+	t.Run("Selecting SASL auth method displays username and password fields", func(t *testing.T) {
 		// given
 		programKtx := kontext.ProgramKtx{
 			WindowWidth:  100,
@@ -331,14 +331,12 @@ func TestCreateClusterPage(t *testing.T) {
 		keys.UpdateKeys(createEnvPage, "localhost:9092")
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
 		createEnvPage.Update(cmd())
-		// and: auth method none is selected
-		cmd = createEnvPage.Update(keys.Key(tea.KeyDown))
-		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
-		// next field
-		createEnvPage.Update(cmd())
+		// and: auth method SASL is selected
+		createEnvPage.Update(keys.Key(tea.KeyDown))
 
 		// then
 		render := createEnvPage.View(&programKtx, ui.TestRenderer)
+		assert.Contains(t, render, "SASL_SSL")
 		assert.Contains(t, render, "Username")
 		assert.Contains(t, render, "Password")
 	})

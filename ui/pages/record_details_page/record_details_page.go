@@ -130,11 +130,11 @@ func (m *Model) createPayloadViewPort(payloadWidth int, height int) {
 	if m.payloadVp == nil {
 		payloadVp := viewport.New(payloadWidth, height)
 		m.payloadVp = &payloadVp
+		m.payloadVp.SetContent(m.payload)
 	} else {
 		m.payloadVp.Height = height
 		m.payloadVp.Width = payloadWidth
 	}
-	m.payloadVp.SetContent(m.payload)
 }
 
 func (m *Model) determineStyles() (lipgloss.Style, lipgloss.Style) {

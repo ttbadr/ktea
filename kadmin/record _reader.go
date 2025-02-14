@@ -5,8 +5,28 @@ import (
 	"github.com/IBM/sarama"
 	tea "github.com/charmbracelet/bubbletea"
 	"ktea/serdes"
+	"strings"
 	"sync"
 	"time"
+)
+
+type FilterType string
+
+func (filterDetails *Filter) Filter(value string) bool {
+	switch filterDetails.KeyFilter {
+	case ContainsFilterType:
+		return strings.Contains(value, filterDetails.KeySearchTerm)
+	case StartsWithFilterType:
+		return strings.HasPrefix(value, filterDetails.KeySearchTerm)
+	default:
+		return true
+	}
+}
+
+const (
+	ContainsFilterType   FilterType = "contains"
+	StartsWithFilterType FilterType = "starts with"
+	NoFilterType         FilterType = "none"
 )
 
 type StartPoint int
@@ -23,6 +43,14 @@ type RecordReader interface {
 type ReadingStartedMsg struct {
 	ConsumerRecord chan ConsumerRecord
 	Err            chan error
+	CancelFunc     context.CancelFunc
+}
+
+type Filter struct {
+	KeyFilter       FilterType
+	KeySearchTerm   string
+	ValueFilter     FilterType
+	ValueSearchTerm string
 }
 
 type ReadDetails struct {
@@ -30,6 +58,7 @@ type ReadDetails struct {
 	Partitions []int
 	StartPoint StartPoint
 	Limit      int
+	Filter     *Filter
 }
 
 type Header struct {
@@ -64,6 +93,7 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) tea
 	startedMsg := ReadingStartedMsg{
 		ConsumerRecord: make(chan ConsumerRecord, len(rd.Partitions)),
 		Err:            make(chan error),
+		CancelFunc:     cancelFunc,
 	}
 
 	client, err := sarama.NewConsumerFromClient(ka.client)
@@ -132,9 +162,16 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) tea
 							})
 						}
 
+						key := string(msg.Key)
+						value := ka.deserialize(err, msg)
+
+						if !ka.matchesFilter(key, value, rd.Filter) {
+							continue
+						}
+
 						consumerRecord := ConsumerRecord{
-							Key:       string(msg.Key),
-							Value:     ka.deserialize(err, msg),
+							Key:       key,
+							Value:     value,
 							Partition: int64(msg.Partition),
 							Offset:    msg.Offset,
 							Headers:   headers,
@@ -180,8 +217,25 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) tea
 	if atLeastOnePartitionReadable {
 		return startedMsg
 	} else {
+		cancelFunc()
 		return EmptyTopicMsg{}
 	}
+}
+
+func (ka *SaramaKafkaAdmin) matchesFilter(key, value string, filterDetails *Filter) bool {
+	if filterDetails == nil {
+		return true
+	}
+
+	if filterDetails.KeyFilter != NoFilterType {
+		return filterDetails.Filter(key)
+	}
+
+	if filterDetails.ValueSearchTerm != "" && !strings.Contains(value, filterDetails.ValueSearchTerm) {
+		return false
+	}
+
+	return true
 }
 
 func (ka *SaramaKafkaAdmin) deserialize(

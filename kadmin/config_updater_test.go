@@ -63,7 +63,7 @@ func TestUpdateTopicConfig(t *testing.T) {
 
 		// then
 		assert.IsType(t, KAdminErrorMsg{}, msg)
-		assert.Equal(t, "Invalid value -172800000 for configuration delete.retention.ms: Value must be at least 0", msg.(KAdminErrorMsg).Error.Error())
+		assert.Equal(t, "kafka server: Configuration is invalid - Invalid value -172800000 for configuration delete.retention.ms: Value must be at least 0", msg.(KAdminErrorMsg).Error.Error())
 
 		// clean up
 		ka.DeleteTopic(topic)

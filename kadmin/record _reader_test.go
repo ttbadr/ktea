@@ -260,6 +260,146 @@ func TestReadRecords(t *testing.T) {
 			// clean up
 			ka.DeleteTopic(topic)
 		})
+	})
+
+	t.Run("Read filtered", func(t *testing.T) {
+		t.Run("with key filter", func(t *testing.T) {
+			t.Run("containing", func(t *testing.T) {
+				topic := topicName()
+				// given
+				msg := ka.CreateTopic(TopicCreationDetails{
+					Name:          topic,
+					NumPartitions: 1,
+				}).(TopicCreationStartedMsg)
+
+				switch msg.AwaitCompletion().(type) {
+				case TopicCreatedMsg:
+				case TopicCreationErrMsg:
+					t.Fatal("Unable to create topic", msg.Err)
+				}
+
+				// when
+				assert.EventuallyWithT(t, func(c *assert.CollectT) {
+					for i := 0; i < 55; i++ {
+						psm := ka.PublishRecord(&ProducerRecord{
+							Topic: topic,
+							Key:   strconv.Itoa(i),
+							Value: "{\"id\":\"3\"}",
+						})
+
+						select {
+						case err := <-psm.Err:
+							t.Fatal(c, "Unable to publish", err)
+						case p := <-psm.Published:
+							assert.True(c, p)
+						}
+					}
+				}, 10*time.Second, 10*time.Millisecond)
+
+				// then
+				rsm := ka.ReadRecords(context.Background(), ReadDetails{
+					Topic:      &Topic{topic, 1, 1, 1},
+					Partitions: []int{},
+					StartPoint: MostRecent,
+					Limit:      55,
+					Filter: &Filter{
+						KeySearchTerm: "1",
+						KeyFilter:     ContainsFilterType,
+					},
+				}).(ReadingStartedMsg)
+
+				var receivedRecords []int
+				for {
+					select {
+					case r, ok := <-rsm.ConsumerRecord:
+						if !ok {
+							goto assertRecords
+						}
+						key, _ := strconv.Atoi(r.Key)
+						receivedRecords = append(receivedRecords, key)
+						if len(receivedRecords) == 15 {
+							rsm.CancelFunc()
+						}
+					case <-time.After(5 * time.Second):
+						rsm.CancelFunc()
+					}
+				}
+
+			assertRecords:
+				assert.Equal(t, []int{1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 31, 41, 51}, receivedRecords)
+
+				// clean up
+				ka.DeleteTopic(topic)
+			})
+		})
+
+		t.Run("starts with", func(t *testing.T) {
+			topic := topicName()
+			// given
+			msg := ka.CreateTopic(TopicCreationDetails{
+				Name:          topic,
+				NumPartitions: 1,
+			}).(TopicCreationStartedMsg)
+
+			switch msg.AwaitCompletion().(type) {
+			case TopicCreatedMsg:
+			case TopicCreationErrMsg:
+				t.Fatal("Unable to create topic", msg.Err)
+			}
+
+			// when
+			assert.EventuallyWithT(t, func(c *assert.CollectT) {
+				for i := 0; i < 55; i++ {
+					psm := ka.PublishRecord(&ProducerRecord{
+						Topic: topic,
+						Key:   strconv.Itoa(i),
+						Value: "{\"id\":\"3\"}",
+					})
+
+					select {
+					case err := <-psm.Err:
+						t.Fatal(c, "Unable to publish", err)
+					case p := <-psm.Published:
+						assert.True(c, p)
+					}
+				}
+			}, 10*time.Second, 10*time.Millisecond)
+
+			// then
+			rsm := ka.ReadRecords(context.Background(), ReadDetails{
+				Topic:      &Topic{topic, 1, 1, 1},
+				Partitions: []int{},
+				StartPoint: MostRecent,
+				Limit:      55,
+				Filter: &Filter{
+					KeySearchTerm: "1",
+					KeyFilter:     StartsWithFilterType,
+				},
+			}).(ReadingStartedMsg)
+
+			var receivedRecords []int
+			for {
+				select {
+				case r, ok := <-rsm.ConsumerRecord:
+					if !ok {
+						goto assertRecords
+					}
+					key, _ := strconv.Atoi(r.Key)
+					receivedRecords = append(receivedRecords, key)
+					if len(receivedRecords) == 11 {
+						rsm.CancelFunc()
+					}
+				case <-time.After(5 * time.Second):
+					rsm.CancelFunc()
+				}
+			}
+
+		assertRecords:
+			assert.Equal(t, []int{1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19}, receivedRecords)
+
+			// clean up
+			ka.DeleteTopic(topic)
+		})
 
 	})
 }
