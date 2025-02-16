@@ -2,7 +2,7 @@
   <configuration default="false" name="go build ktea.go" type="GoApplicationRunConfiguration" factoryName="Go Application" nameIsGenerated="true">
     <module name="ktea" />
     <working_directory value="$PROJECT_DIR$" />
-    <go_parameters value="-tags prd" />
+    <go_parameters value="-tags dev" />
     <kind value="FILE" />
     <package value="ktea" />
     <directory value="$PROJECT_DIR$" />

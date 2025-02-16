@@ -10,9 +10,10 @@ type TopicCreator interface {
 }
 
 type TopicCreationDetails struct {
-	Name          string
-	NumPartitions int
-	Properties    map[string]string
+	Name              string
+	NumPartitions     int
+	Properties        map[string]string
+	ReplicationFactor int16
 }
 
 type TopicCreatedMsg struct {
@@ -49,13 +50,14 @@ func (ka *SaramaKafkaAdmin) CreateTopic(tcd TopicCreationDetails) tea.Msg {
 }
 
 func (ka *SaramaKafkaAdmin) doCreateTopic(tcd TopicCreationDetails, created chan bool, errChan chan error) {
+	maybeIntroduceLatency()
 	properties := make(map[string]*string)
 	for k, v := range tcd.Properties {
 		properties[k] = &v
 	}
 	err := ka.admin.CreateTopic(tcd.Name, &sarama.TopicDetail{
 		NumPartitions:     int32(tcd.NumPartitions),
-		ReplicationFactor: 1,
+		ReplicationFactor: tcd.ReplicationFactor,
 		ReplicaAssignment: nil,
 		ConfigEntries:     properties,
 	}, false)

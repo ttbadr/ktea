@@ -37,6 +37,25 @@ func CreateTopicSectionWithCursorAtPartitionsField() *Model {
 	return m
 }
 
+func CreateTopicSectionWithCursorAtReplicationFactor() *Model {
+	m := New(&MockTopicCreator{})
+	cmd := m.Update(tea.KeyMsg{
+		Type:  tea.KeyRunes,
+		Runes: []rune{'a'},
+		Alt:   false,
+		Paste: false,
+	})
+	cmd = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	// next field
+	m.Update(cmd())
+	// number of partitions
+	keys.UpdateKeys(m, "2")
+	cmd = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	// next field
+	m.Update(cmd())
+	return m
+}
+
 type MockTopicCreator struct {
 	CreateTopicFunc func(details kadmin.TopicCreationDetails) tea.Msg
 }
@@ -91,12 +110,17 @@ func TestCreateTopic(t *testing.T) {
 		m.Update(cmd())
 		// partition count
 		keys.UpdateKeys(m, "2")
-		m.Update(cmd())
 		cmd = m.Update(keys.Key(tea.KeyEnter))
-		// cleanup policy
 		m.Update(cmd())
+		// replication factor
+		keys.UpdateKeys(m, "1")
+		cmd = m.Update(keys.Key(tea.KeyEnter))
+		m.Update(cmd())
+		// cleanup policy
 		cmd = m.Update(keys.Key(tea.KeyEnter))
 		// next field
+		cmd = m.Update(cmd())
+		// topic config
 		keys.UpdateKeys(m, "foo=bar")
 		cmd = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 		// next field
@@ -107,11 +131,15 @@ func TestCreateTopic(t *testing.T) {
 		render := m.View(ui.NewTestKontext(), ui.TestRenderer)
 
 		assert.Contains(t, render, "Custom Topic configurations:")
+		assert.Contains(t, render, "2")
+		assert.Contains(t, render, "1")
 
 		m.Update(tea.KeyMsg{Type: tea.KeyCtrlR})
 		render = m.View(ui.NewTestKontext(), ui.TestRenderer)
 
 		assert.NotContains(t, render, "Custom Topic configurations:")
+		assert.NotContains(t, render, "2")
+		assert.NotContains(t, render, "1")
 	})
 
 	t.Run("creation failed", func(t *testing.T) {
@@ -128,7 +156,7 @@ func TestCreateTopic(t *testing.T) {
 
 		render := m.View(ui.NewTestKontext(), ui.TestRenderer)
 
-		assert.Contains(t, render, "Topic creation failure: Topic with this name already exists - Topic 'topic-0' already exists.")
+		assert.Contains(t, render, "Failed to create Topic: Topic with this name already exists - Topic 'topic-0' already exists.")
 
 	})
 
@@ -149,16 +177,24 @@ func TestCreateTopic(t *testing.T) {
 		m.Update(cmd())
 		// partition count
 		keys.UpdateKeys(m, "2")
-		m.Update(cmd())
 		cmd = m.Update(keys.Key(tea.KeyEnter))
+		m.Update(cmd())
+		// replication factor
+		keys.UpdateKeys(m, "3")
+		cmd = m.Update(keys.Key(tea.KeyEnter))
+		m.Update(cmd())
 		// cleanup policy
 		m.Update(keys.Key(tea.KeyDown))
 		m.Update(keys.Key(tea.KeyDown))
 		cmd = m.Update(keys.Key(tea.KeyEnter))
 		m.Update(cmd())
+		// config
 		keys.UpdateKeys(m, "delete.retention.ms=1029394")
 		cmd = m.Update(keys.Key(tea.KeyEnter))
-		keys.Submit(m)
+		// next field
+		cmd = m.Update(cmd())
+		// next group
+		m.Update(cmd())
 
 		// actual submit
 		msgs := keys.Submit(m)
@@ -180,6 +216,7 @@ func TestCreateTopic(t *testing.T) {
 					"cleanup.policy":      "delete-compact",
 					"delete.retention.ms": "1029394",
 				},
+				int16(3),
 			},
 		}, capturedDetails)
 	})
@@ -268,6 +305,69 @@ func TestCreateTopic_Validation(t *testing.T) {
 		})
 	})
 
+	t.Run("Validate Replication Factor", func(t *testing.T) {
+		t.Run("When field is empty", func(t *testing.T) {
+			m := CreateTopicSectionWithCursorAtReplicationFactor()
+
+			m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+			render := m.View(&kontext.ProgramKtx{}, ui.TestRenderer)
+
+			assert.Contains(t, render, "* replication factory cannot be empty")
+		})
+
+		t.Run("When field is zero", func(t *testing.T) {
+			m := CreateTopicSectionWithCursorAtReplicationFactor()
+
+			m.Update(tea.KeyMsg{
+				Type:  tea.KeyRunes,
+				Runes: []rune{'0'},
+				Alt:   false,
+				Paste: false,
+			})
+			m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+			render := m.View(&kontext.ProgramKtx{}, ui.TestRenderer)
+
+			assert.Contains(t, render, "value must be greater than zero")
+		})
+
+		t.Run("When field is negative", func(t *testing.T) {
+			m := CreateTopicSectionWithCursorAtReplicationFactor()
+
+			cmd := m.Update(tea.KeyMsg{
+				Type:  tea.KeyRunes,
+				Runes: []rune{'-'},
+				Alt:   false,
+				Paste: false,
+			})
+			batchUpdate(m, cmd)
+			cmd = m.Update(tea.KeyMsg{
+				Type:  tea.KeyRunes,
+				Runes: []rune{'1'},
+				Alt:   false,
+				Paste: false,
+			})
+			m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+			render := m.View(&kontext.ProgramKtx{}, ui.TestRenderer)
+
+			assert.Contains(t, render, "value must be greater than zero")
+		})
+
+		t.Run("When field is not a number", func(t *testing.T) {
+			m := CreateTopicSectionWithCursorAtPartitionsField()
+
+			m.Update(keys.Key('a'))
+			m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+			render := m.View(&kontext.ProgramKtx{}, ui.TestRenderer)
+
+			assert.Contains(t, render, "'a' is not a valid numeric partition count value")
+		})
+
+	})
+
 	t.Run("Validate configuration", func(t *testing.T) {
 
 		t.Run("When field does not conform config=value format", func(t *testing.T) {
@@ -279,11 +379,15 @@ func TestCreateTopic_Validation(t *testing.T) {
 			m.Update(cmd())
 			// partition count
 			keys.UpdateKeys(m, "2")
-			m.Update(cmd())
 			cmd = m.Update(keys.Key(tea.KeyEnter))
+			m.Update(cmd())
+			// replication factor
+			keys.UpdateKeys(m, "2")
+			cmd = m.Update(keys.Key(tea.KeyEnter))
+			m.Update(cmd())
 			// cleanup policy
-			m.Update(cmd())
 			cmd = m.Update(keys.Key(tea.KeyEnter))
+			m.Update(cmd())
 			// next field
 			keys.UpdateKeys(m, "foo:bar")
 			cmd = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -304,6 +408,10 @@ func TestCreateTopic_Validation(t *testing.T) {
 			keys.UpdateKeys(m, "2")
 			m.Update(cmd())
 			cmd = m.Update(keys.Key(tea.KeyEnter))
+			// replication factor
+			keys.UpdateKeys(m, "2")
+			cmd = m.Update(keys.Key(tea.KeyEnter))
+			m.Update(cmd())
 			// cleanup policy
 			m.Update(cmd())
 			cmd = m.Update(keys.Key(tea.KeyEnter))

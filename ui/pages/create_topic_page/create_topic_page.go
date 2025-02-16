@@ -11,6 +11,7 @@ import (
 	"ktea/kontext"
 	"ktea/styles"
 	"ktea/ui"
+	"ktea/ui/components/cmdbar"
 	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
 	"ktea/ui/pages/nav"
@@ -30,7 +31,7 @@ const (
 type Model struct {
 	shortcuts              []statusbar.Shortcut
 	form                   *huh.Form
-	notifier               *notifier.Model
+	notifier               *cmdbar.NotifierCmdBar
 	topicCreator           kadmin.TopicCreator
 	formValues             topicFormValues
 	formState              formState
@@ -43,11 +44,12 @@ type config struct {
 }
 
 type topicFormValues struct {
-	name          string
-	numPartitions string
-	config        string
-	configs       []config
-	cleanupPolicy string
+	name              string
+	numPartitions     string
+	config            string
+	configs           []config
+	cleanupPolicy     string
+	replicationFactor string
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -67,15 +69,20 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
+	var cmds []tea.Cmd
+
+	_, _, cmd := m.notifier.Update(msg)
+	cmds = append(cmds, cmd)
+
 	switch msg := msg.(type) {
 	case kadmin.TopicCreationStartedMsg:
-		return msg.AwaitCompletion
+		cmds = append(cmds, msg.AwaitCompletion)
+		return tea.Batch(cmds...)
 	case kadmin.TopicCreationErrMsg:
 		m.initForm(initial)
-		return m.notifier.ShowErrorMsg("Topic creation failure", msg.Err)
+		return tea.Batch(cmds...)
 	case bsp.TickMsg:
-		cmd := m.notifier.Update(msg)
-		return cmd
+		return tea.Batch(cmds...)
 	case tea.KeyMsg:
 		if msg.String() == "esc" && m.formState != loading {
 			return ui.PublishMsg(nav.LoadTopicsPageMsg{Refresh: m.createdAtLeastOneTopic})
@@ -84,6 +91,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			m.formValues.cleanupPolicy = ""
 			m.formValues.config = ""
 			m.formValues.numPartitions = ""
+			m.formValues.replicationFactor = ""
 			m.formValues.configs = []config{}
 			m.initForm(initial)
 			return propagateMsgToForm(m, msg)
@@ -91,7 +99,6 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			return propagateMsgToForm(m, msg)
 		}
 	case kadmin.TopicCreatedMsg:
-		m.notifier.ShowSuccessMsg("Topic created!")
 		m.formValues.name = ""
 		m.formValues.cleanupPolicy = ""
 		m.formValues.config = ""
@@ -103,6 +110,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	default:
 		return propagateMsgToForm(m, msg)
 	}
+
 }
 
 func propagateMsgToForm(m *Model, msg tea.Msg) tea.Cmd {
@@ -117,7 +125,7 @@ func propagateMsgToForm(m *Model, msg tea.Msg) tea.Cmd {
 		if m.formValues.config == "" {
 			m.formState = loading
 			return tea.Batch(
-				m.notifier.SpinWithRocketMsg("Creating topic"),
+				//m.notifier.SpinWithRocketMsg("Creating topic"),
 				func() tea.Msg {
 					numPartitions, _ := strconv.Atoi(m.formValues.numPartitions)
 					configs := map[string]string{
@@ -126,11 +134,13 @@ func propagateMsgToForm(m *Model, msg tea.Msg) tea.Cmd {
 					for _, c := range m.formValues.configs {
 						configs[c.key] = c.value
 					}
+					replicationFactor, _ := strconv.Atoi(m.formValues.replicationFactor)
 					return m.topicCreator.CreateTopic(
 						kadmin.TopicCreationDetails{
-							Name:          m.formValues.name,
-							NumPartitions: numPartitions,
-							Properties:    configs,
+							Name:              m.formValues.name,
+							NumPartitions:     numPartitions,
+							Properties:        configs,
+							ReplicationFactor: int16(replicationFactor),
 						})
 				})
 		} else {
@@ -138,7 +148,7 @@ func propagateMsgToForm(m *Model, msg tea.Msg) tea.Cmd {
 			split := strings.Split(m.formValues.config, "=")
 			m.formValues.configs = append(m.formValues.configs, config{split[0], split[1]})
 			m.formValues.config = ""
-			m.initForm(0)
+			m.initForm(configEntered)
 			return cmd
 		}
 	}
@@ -164,7 +174,7 @@ func (m *Model) initForm(fs formState) {
 			return nil
 		})
 
-	validateInput := huh.NewInput().
+	numPartField := huh.NewInput().
 		Title("Number of Partitions").
 		Value(&m.formValues.numPartitions).
 		Validate(func(str string) error {
@@ -178,6 +188,22 @@ func (m *Model) initForm(fs formState) {
 			}
 			return nil
 		})
+
+	replicationFactorField := huh.NewInput().
+		Title("Replication Factor").
+		Validate(func(r string) error {
+			if r == "" {
+				return errors.New("replication factory cannot be empty")
+			}
+			if n, e := strconv.Atoi(r); e != nil {
+				return errors.New(fmt.Sprintf("'%s' is not a valid numeric replication factor value", r))
+			} else if n <= 0 {
+				return errors.New("value must be greater than zero")
+			}
+			return nil
+		}).
+		Value(&m.formValues.replicationFactor)
+
 	cleanupPolicySelect := huh.NewSelect[string]().
 		Title("Cleanup Policy").
 		Value(&m.formValues.cleanupPolicy).
@@ -235,9 +261,16 @@ func (m *Model) initForm(fs formState) {
 		}).
 		Value(&m.formValues.config)
 
-	form := huh.NewForm(huh.NewGroup(topicNameInput, validateInput, cleanupPolicySelect, configInput))
+	form := huh.NewForm(huh.NewGroup(
+		topicNameInput,
+		numPartField,
+		replicationFactorField,
+		cleanupPolicySelect,
+		configInput,
+	))
 	form.QuitAfterSubmit = false
 	if m.formState == configEntered {
+		form.NextField()
 		form.NextField()
 		form.NextField()
 		form.NextField()
@@ -258,6 +291,20 @@ func New(tc kadmin.TopicCreator) *Model {
 		{"Go Back", "esc"},
 	}
 	t.initForm(initial)
-	t.notifier = notifier.New()
+	notifierCmdBar := cmdbar.NewNotifierCmdBar()
+	cmdbar.WithMsgHandler(notifierCmdBar, func(msg kadmin.TopicCreationStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
+		cmd := m.SpinWithLoadingMsg("Creating Topic")
+		return true, cmd
+	})
+	cmdbar.WithMsgHandler(notifierCmdBar, func(msg kadmin.TopicCreationErrMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.ShowErrorMsg("Failed to create Topic", msg.Err)
+		return true, nil
+	})
+	cmdbar.WithMsgHandler(notifierCmdBar, func(msg kadmin.TopicCreatedMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.ShowSuccessMsg("Topic created!")
+		return true, m.AutoHideCmd()
+	})
+	t.notifier = notifierCmdBar
+
 	return &t
 }

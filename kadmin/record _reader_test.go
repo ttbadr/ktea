@@ -15,8 +15,9 @@ func TestReadRecords(t *testing.T) {
 			topic := topicName()
 			// given
 			msg := ka.CreateTopic(TopicCreationDetails{
-				Name:          topic,
-				NumPartitions: 1,
+				Name:              topic,
+				NumPartitions:     1,
+				ReplicationFactor: 1,
 			}).(TopicCreationStartedMsg)
 
 			switch msg.AwaitCompletion().(type) {
@@ -77,8 +78,9 @@ func TestReadRecords(t *testing.T) {
 			topic := topicName()
 			// given
 			msg := ka.CreateTopic(TopicCreationDetails{
-				Name:          topic,
-				NumPartitions: 4,
+				Name:              topic,
+				NumPartitions:     4,
+				ReplicationFactor: 1,
 			}).(TopicCreationStartedMsg)
 
 			switch msg.AwaitCompletion().(type) {
@@ -143,8 +145,9 @@ func TestReadRecords(t *testing.T) {
 			topic := topicName()
 			// given
 			msg := ka.CreateTopic(TopicCreationDetails{
-				Name:          topic,
-				NumPartitions: 1,
+				Name:              topic,
+				NumPartitions:     1,
+				ReplicationFactor: 1,
 			}).(TopicCreationStartedMsg)
 
 			switch msg.AwaitCompletion().(type) {
@@ -204,8 +207,9 @@ func TestReadRecords(t *testing.T) {
 			topic := topicName()
 			// given
 			msg := ka.CreateTopic(TopicCreationDetails{
-				Name:          topic,
-				NumPartitions: 1,
+				Name:              topic,
+				NumPartitions:     1,
+				ReplicationFactor: 1,
 			}).(TopicCreationStartedMsg)
 
 			switch msg.AwaitCompletion().(type) {
@@ -268,8 +272,9 @@ func TestReadRecords(t *testing.T) {
 				topic := topicName()
 				// given
 				msg := ka.CreateTopic(TopicCreationDetails{
-					Name:          topic,
-					NumPartitions: 1,
+					Name:              topic,
+					NumPartitions:     1,
+					ReplicationFactor: 1,
 				}).(TopicCreationStartedMsg)
 
 				switch msg.AwaitCompletion().(type) {
@@ -337,8 +342,9 @@ func TestReadRecords(t *testing.T) {
 			topic := topicName()
 			// given
 			msg := ka.CreateTopic(TopicCreationDetails{
-				Name:          topic,
-				NumPartitions: 1,
+				Name:              topic,
+				NumPartitions:     1,
+				ReplicationFactor: 1,
 			}).(TopicCreationStartedMsg)
 
 			switch msg.AwaitCompletion().(type) {

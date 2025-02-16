@@ -11,7 +11,12 @@ func TestCreateTopic(t *testing.T) {
 		// when
 		properties := map[string]string{}
 		properties["compression.type"] = "lz4"
-		topicCreatedMsg := ka.CreateTopic(TopicCreationDetails{topic, 2, properties}).(TopicCreationStartedMsg)
+		topicCreatedMsg := ka.CreateTopic(TopicCreationDetails{
+			topic,
+			2,
+			properties,
+			1,
+		}).(TopicCreationStartedMsg)
 
 		select {
 		case <-topicCreatedMsg.Created:
@@ -51,7 +56,12 @@ func TestCreateTopic(t *testing.T) {
 
 		t.Run("Creation fails", func(t *testing.T) {
 			// when
-			topicCreatedMsg := ka.CreateTopic(TopicCreationDetails{topic, 2, map[string]string{}}).(TopicCreationStartedMsg)
+			topicCreatedMsg := ka.CreateTopic(TopicCreationDetails{
+				topic,
+				2,
+				map[string]string{},
+				3,
+			}).(TopicCreationStartedMsg)
 
 			msg = topicCreatedMsg.AwaitCompletion()
 			switch msg := msg.(type) {

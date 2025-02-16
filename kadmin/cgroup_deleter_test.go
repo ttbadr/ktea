@@ -12,9 +12,10 @@ func TestCGroupDeleter(t *testing.T) {
 		// create a topic
 		topic := topicName()
 		msg := ka.CreateTopic(TopicCreationDetails{
-			Name:          topic,
-			NumPartitions: 1,
-			Properties:    nil,
+			Name:              topic,
+			NumPartitions:     1,
+			Properties:        nil,
+			ReplicationFactor: 1,
 		}).(TopicCreationStartedMsg)
 
 		switch msg := msg.AwaitCompletion().(type) {

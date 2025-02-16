@@ -13,9 +13,10 @@ func TestConsumerGroupOffsets(t *testing.T) {
 		topic := topicName()
 		// given
 		msg := ka.CreateTopic(TopicCreationDetails{
-			Name:          topic,
-			NumPartitions: 1,
-			Properties:    nil,
+			Name:              topic,
+			NumPartitions:     1,
+			Properties:        nil,
+			ReplicationFactor: 1,
 		}).(TopicCreationStartedMsg)
 
 		switch msg.AwaitCompletion().(type) {

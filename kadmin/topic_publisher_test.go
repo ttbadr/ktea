@@ -119,8 +119,9 @@ func TestPublish(t *testing.T) {
 		topic := topicName()
 		// given
 		msg := ka.CreateTopic(TopicCreationDetails{
-			Name:          topic,
-			NumPartitions: 3,
+			Name:              topic,
+			NumPartitions:     3,
+			ReplicationFactor: 1,
 		}).(TopicCreationStartedMsg)
 
 		switch msg.AwaitCompletion().(type) {
