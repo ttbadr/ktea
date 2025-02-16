@@ -54,7 +54,7 @@ func (m *CmdBarModel) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) strin
 	} else if m.state == EDITING {
 		views = append(views, renderer.RenderWithStyle(m.editInput.View(), styles.CmdBar.Width(ktx.WindowWidth-2)))
 	} else if m.state == UPDATING || m.state == UPDATE_FAILED || m.state == UPDATE_SUCCEEDED || m.state == LOADING {
-		views = append(views, m.notifier.View(ktx, renderer))
+		views = append(views, renderer.RenderWithStyle(m.notifier.View(ktx, renderer), styles.CmdBar.Width(ktx.WindowWidth-2)))
 	}
 
 	return ui.JoinVertical(lipgloss.Top, views...)
