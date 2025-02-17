@@ -39,13 +39,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	views = append(views, m.cmdBar.View(ktx, renderer))
 
 	if m.noRecordsAvailable {
-		views = append(views, lipgloss.NewStyle().
-			Width(ktx.WindowWidth-2).
-			Height(ktx.AvailableHeight).
-			AlignVertical(lipgloss.Center).
-			AlignHorizontal(lipgloss.Center).
-			Bold(true).
-			Foreground(lipgloss.Color(styles.ColorPink)).
+		views = append(views, styles.CenterText(ktx.WindowWidth, ktx.AvailableHeight).
 			Render("👀 Empty topic"))
 	} else if len(m.rows) > 0 {
 		m.table.SetColumns([]table.Column{

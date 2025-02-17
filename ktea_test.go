@@ -12,7 +12,7 @@ import (
 func TestKtea(t *testing.T) {
 	t.Run("No clusters configured", func(t *testing.T) {
 		t.Run("Shows create cluster page", func(t *testing.T) {
-			model := NewModel(kadmin.NewMockKadmin(), config.NewInMemoryConfigIO(&config.Config{}))
+			model := NewModel(kadmin.NewMockKadminInstantiator(), config.NewInMemoryConfigIO(&config.Config{}))
 			model.Update(config.LoadedMsg{
 				Config: &config.Config{},
 			})
@@ -51,7 +51,7 @@ func TestKtea(t *testing.T) {
 					},
 				},
 			)
-			model := NewModel(kadmin.NewMockKadmin(), io)
+			model := NewModel(kadmin.NewMockKadminInstantiator(), io)
 			model.Update(config.LoadedMsg{Config: config.New(io)})
 			//model.Update(config.LoadedMsg{
 			//	Config: &config.Config{

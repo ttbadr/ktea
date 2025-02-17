@@ -52,8 +52,12 @@ func (m MockKadmin) ListConfigs(topic string) tea.Msg {
 func (m MockKadmin) SetSra(sra sradmin.SrAdmin) {
 }
 
-func NewMockKadmin() Instantiator {
+func NewMockKadminInstantiator() Instantiator {
 	return func(cd ConnectionDetails) (Kadmin, error) {
 		return &MockKadmin{}, nil
 	}
+}
+
+func NewMockKadmin() Kadmin {
+	return &MockKadmin{}
 }

@@ -66,6 +66,16 @@ type StatusBarStyle struct {
 	cluster     lipgloss.Style
 }
 
+func CenterText(width int, height int) lipgloss.Style {
+	return lipgloss.NewStyle().
+		Width(width - 2).
+		Height(height).
+		AlignVertical(lipgloss.Center).
+		AlignHorizontal(lipgloss.Center).
+		Bold(true).
+		Foreground(lipgloss.Color(ColorPink))
+}
+
 func CmdBarWithWidth(width int) lipgloss.Style {
 	return CmdBar.Width(width)
 }

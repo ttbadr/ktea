@@ -35,6 +35,12 @@ type Model struct {
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 
+	if len(m.topicByPartOffset) == 0 {
+		return styles.
+			CenterText(ktx.WindowWidth, ktx.AvailableHeight).
+			Render("👀 No Committed Offsets Found")
+	}
+
 	halfWidth := int(float64(ktx.WindowWidth / 2))
 
 	cmdBarView := m.cmdBar.View(ktx, renderer)
@@ -120,8 +126,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 }
 
 func (m *Model) recreateOffsetRows() {
-	// if topics aren't listed yet
-	if m.topicsRows == nil {
+	// if topics aren't listed yet or there are no topics
+	if m.topicsRows == nil || len(m.topicsRows) == 0 {
 		return
 	}
 	selectedTopic := m.selectedRow()
