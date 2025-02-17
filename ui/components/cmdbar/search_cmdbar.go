@@ -38,7 +38,7 @@ func (s *SearchCmdBar) Shortcuts() []statusbar.Shortcut {
 
 func (s *SearchCmdBar) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	if s.state != hidden {
-		style := styles.CmdBarWithWidth(ktx.WindowWidth - borderedPadding)
+		style := styles.CmdBarWithWidth(ktx.WindowWidth - BorderedPadding)
 		if s.state == searching {
 			style = style.BorderForeground(lipgloss.Color(styles.ColorFocusBorder))
 		} else {

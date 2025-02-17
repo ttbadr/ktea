@@ -9,6 +9,18 @@ import (
 
 func TestCgroupPartsOffsetsPage(t *testing.T) {
 
+	t.Run("Show empty page and loading indicator when listing started", func(t *testing.T) {
+		model, _ := New(kadmin.NewMockKadmin(), "test-group")
+
+		model.Update(kadmin.OffsetListingStartedMsg{})
+		view := model.View(ui.NewTestKontext(), ui.TestRenderer)
+
+		assert.Equal(t,
+			`╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  ⣾ ⏳ Loading Offsets                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯`, view)
+	})
+
 	t.Run("List consumer groups", func(t *testing.T) {
 		model, _ := New(kadmin.NewMockKadmin(), "test-group")
 

@@ -8,6 +8,7 @@ import (
 	"ktea/kontext"
 	"ktea/styles"
 	"ktea/ui"
+	"ktea/ui/components/cmdbar"
 	"ktea/ui/components/statusbar"
 	"ktea/ui/pages/nav"
 	"slices"
@@ -35,17 +36,24 @@ type Model struct {
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 
-	if len(m.topicByPartOffset) == 0 {
+	if m.topicByPartOffset != nil && len(m.topicByPartOffset) == 0 {
 		return styles.
 			CenterText(ktx.WindowWidth, ktx.AvailableHeight).
 			Render("👀 No Committed Offsets Found")
 	}
 
+	cmdBarView := styles.CmdBarWithWidth(ktx.WindowWidth - cmdbar.BorderedPadding).Render(m.cmdBar.View(ktx, renderer))
+
+	if m.topicByPartOffset == nil {
+		return ui.JoinVertical(lg.Left,
+			cmdBarView,
+			lg.JoinHorizontal(
+				lg.Top,
+				"",
+			))
+	}
+
 	halfWidth := int(float64(ktx.WindowWidth / 2))
-
-	cmdBarView := m.cmdBar.View(ktx, renderer)
-
-	// TODO figure out where the 1 comes from
 	m.topicsTable.SetHeight(ktx.AvailableHeight - 1)
 	m.topicsTable.SetWidth(halfWidth - 2)
 	m.topicsTable.SetColumns([]table.Column{

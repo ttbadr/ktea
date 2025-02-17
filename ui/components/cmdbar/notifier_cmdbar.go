@@ -38,8 +38,8 @@ func (n *NotifierCmdBar) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) st
 		return view
 	}
 	// subtract padding, because of the rounded border of the cmdbar
-	ktx.AvailableHeight -= borderedPadding
-	return styles.CmdBarWithWidth(ktx.WindowWidth - borderedPadding).Render(view)
+	ktx.AvailableHeight -= BorderedPadding
+	return styles.CmdBarWithWidth(ktx.WindowWidth - BorderedPadding).Render(view)
 }
 
 func (n *NotifierCmdBar) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
