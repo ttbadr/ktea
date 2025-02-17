@@ -103,6 +103,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.formValues.cleanupPolicy = ""
 		m.formValues.config = ""
 		m.formValues.numPartitions = ""
+		m.formValues.replicationFactor = ""
 		m.formValues.configs = []config{}
 		m.createdAtLeastOneTopic = true
 		m.initForm(initial)
