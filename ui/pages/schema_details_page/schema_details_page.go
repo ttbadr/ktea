@@ -126,7 +126,7 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 			Keybinding: "F2",
 		},
 		{
-			Name:       "Copy Version",
+			Name:       "Prev Version",
 			Keybinding: "h/←",
 		},
 		{

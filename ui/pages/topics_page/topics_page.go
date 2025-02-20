@@ -28,7 +28,6 @@ type Model struct {
 	shortcuts     []statusbar.Shortcut
 	cmdBar        *cmdbar.TableCmdsBar[string]
 	rows          []table.Row
-	moveCursor    func()
 	lister        kadmin.TopicLister
 	ctx           context.Context
 	tableFocussed bool
@@ -48,10 +47,6 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 		{"In Sync Replicas", int(float64(ktx.WindowWidth-9) * 0.1)},
 	})
 	m.table.SetRows(m.rows)
-
-	if m.moveCursor != nil {
-		m.moveCursor()
-	}
 
 	var tableView string
 	if m.tableFocussed {
