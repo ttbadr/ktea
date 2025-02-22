@@ -223,7 +223,7 @@ func TestCreateTopic(t *testing.T) {
 }
 
 func TestCreateTopic_Validation(t *testing.T) {
-	t.Run("Validate Topic Name", func(t *testing.T) {
+	t.Run("Validate ListedTopic Name", func(t *testing.T) {
 		t.Run("When field is empty", func(t *testing.T) {
 			m := New(&MockTopicCreator{})
 

@@ -45,10 +45,11 @@ func TestReadRecords(t *testing.T) {
 
 			// then
 			rsm := ka.ReadRecords(context.Background(), ReadDetails{
-				Topic:      &Topic{topic, 1, 1, 1},
-				Partitions: []int{},
-				StartPoint: Beginning,
-				Limit:      50,
+				TopicName:       topic,
+				PartitionToRead: []int{0},
+				StartPoint:      Beginning,
+				Limit:           50,
+				Filter:          nil,
 			}).(ReadingStartedMsg)
 
 			var receivedRecords []int
@@ -111,10 +112,10 @@ func TestReadRecords(t *testing.T) {
 
 			// then
 			rsm := ka.ReadRecords(context.Background(), ReadDetails{
-				Topic:      &Topic{topic, 4, 1, 1},
-				Partitions: []int{},
-				StartPoint: Beginning,
-				Limit:      40,
+				TopicName:       topic,
+				PartitionToRead: []int{0, 1, 2, 3},
+				StartPoint:      Beginning,
+				Limit:           40,
 			}).(ReadingStartedMsg)
 
 			var receivedRecords []int
@@ -176,10 +177,10 @@ func TestReadRecords(t *testing.T) {
 
 			// then
 			rsm := ka.ReadRecords(context.Background(), ReadDetails{
-				Topic:      &Topic{topic, 1, 1, 1},
-				Partitions: []int{},
-				StartPoint: MostRecent,
-				Limit:      50,
+				TopicName:       topic,
+				PartitionToRead: []int{0},
+				StartPoint:      MostRecent,
+				Limit:           50,
 			}).(ReadingStartedMsg)
 
 			var receivedRecords []int
@@ -238,10 +239,10 @@ func TestReadRecords(t *testing.T) {
 
 			// then
 			rsm := ka.ReadRecords(context.Background(), ReadDetails{
-				Topic:      &Topic{topic, 1, 1, 1},
-				Partitions: []int{},
-				StartPoint: MostRecent,
-				Limit:      500,
+				TopicName:       topic,
+				PartitionToRead: []int{0},
+				StartPoint:      MostRecent,
+				Limit:           500,
 			}).(ReadingStartedMsg)
 
 			var receivedRecords []int
@@ -303,10 +304,10 @@ func TestReadRecords(t *testing.T) {
 
 				// then
 				rsm := ka.ReadRecords(context.Background(), ReadDetails{
-					Topic:      &Topic{topic, 1, 1, 1},
-					Partitions: []int{},
-					StartPoint: MostRecent,
-					Limit:      55,
+					TopicName:       topic,
+					PartitionToRead: []int{0},
+					StartPoint:      MostRecent,
+					Limit:           55,
 					Filter: &Filter{
 						KeySearchTerm: "1",
 						KeyFilter:     ContainsFilterType,
@@ -373,10 +374,10 @@ func TestReadRecords(t *testing.T) {
 
 			// then
 			rsm := ka.ReadRecords(context.Background(), ReadDetails{
-				Topic:      &Topic{topic, 1, 1, 1},
-				Partitions: []int{},
-				StartPoint: MostRecent,
-				Limit:      55,
+				TopicName:       topic,
+				PartitionToRead: []int{0},
+				StartPoint:      MostRecent,
+				Limit:           55,
 				Filter: &Filter{
 					KeySearchTerm: "1",
 					KeyFilter:     StartsWithFilterType,
@@ -427,15 +428,10 @@ func TestDetermineStartingOffset(t *testing.T) {
 		{
 			name: "beginning one partition enough records available",
 			readDetails: ReadDetails{
-				Topic: &Topic{
-					Name:       "test-topic",
-					Partitions: 1,
-					Replicas:   1,
-					Isr:        1,
-				},
-				Partitions: []int{0},
-				StartPoint: Beginning,
-				Limit:      50,
+				TopicName:       "test-topic",
+				PartitionToRead: []int{0},
+				StartPoint:      Beginning,
+				Limit:           50,
 			},
 			offsets: offsets{
 				oldest:         1,
@@ -450,15 +446,10 @@ func TestDetermineStartingOffset(t *testing.T) {
 		{
 			name: "beginning multiple partition enough records available",
 			readDetails: ReadDetails{
-				Topic: &Topic{
-					Name:       "test-topic",
-					Partitions: 5,
-					Replicas:   1,
-					Isr:        1,
-				},
-				Partitions: []int{0, 1, 2, 3, 4},
-				StartPoint: Beginning,
-				Limit:      50,
+				TopicName:       "test-topic",
+				PartitionToRead: []int{0, 1, 2, 3, 4},
+				StartPoint:      Beginning,
+				Limit:           50,
 			},
 			offsets: offsets{
 				oldest:         1,
@@ -473,15 +464,10 @@ func TestDetermineStartingOffset(t *testing.T) {
 		{
 			name: "beginning one partition not enough records available",
 			readDetails: ReadDetails{
-				Topic: &Topic{
-					Name:       "test-topic",
-					Partitions: 1,
-					Replicas:   1,
-					Isr:        1,
-				},
-				Partitions: []int{0},
-				StartPoint: Beginning,
-				Limit:      50,
+				TopicName:       "test-topic",
+				PartitionToRead: []int{0},
+				StartPoint:      Beginning,
+				Limit:           50,
 			},
 			offsets: offsets{
 				oldest:         55,
@@ -495,15 +481,10 @@ func TestDetermineStartingOffset(t *testing.T) {
 		{
 			name: "beginning multiple partition not enough records available",
 			readDetails: ReadDetails{
-				Topic: &Topic{
-					Name:       "test-topic",
-					Partitions: 4,
-					Replicas:   1,
-					Isr:        1,
-				},
-				Partitions: []int{0, 2, 3, 4},
-				StartPoint: Beginning,
-				Limit:      50,
+				TopicName:       "test-topic",
+				PartitionToRead: []int{0, 2, 3, 4},
+				StartPoint:      Beginning,
+				Limit:           50,
 			},
 			offsets: offsets{
 				oldest:         10,
@@ -518,15 +499,10 @@ func TestDetermineStartingOffset(t *testing.T) {
 		{
 			name: "most recent one partition enough records available",
 			readDetails: ReadDetails{
-				Topic: &Topic{
-					Name:       "test-topic",
-					Partitions: 1,
-					Replicas:   1,
-					Isr:        1,
-				},
-				Partitions: []int{0},
-				StartPoint: MostRecent,
-				Limit:      50,
+				TopicName:       "test-topic",
+				PartitionToRead: []int{0},
+				StartPoint:      MostRecent,
+				Limit:           50,
 			},
 			offsets: offsets{
 				oldest:         1,
@@ -541,15 +517,10 @@ func TestDetermineStartingOffset(t *testing.T) {
 		{
 			name: "most recent one partition not enough records available",
 			readDetails: ReadDetails{
-				Topic: &Topic{
-					Name:       "test-topic",
-					Partitions: 1,
-					Replicas:   1,
-					Isr:        1,
-				},
-				Partitions: []int{0},
-				StartPoint: MostRecent,
-				Limit:      50,
+				TopicName:       "test-topic",
+				PartitionToRead: []int{0},
+				StartPoint:      MostRecent,
+				Limit:           50,
 			},
 			offsets: offsets{
 				oldest:         278,

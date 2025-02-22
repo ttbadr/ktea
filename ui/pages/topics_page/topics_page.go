@@ -20,10 +20,8 @@ import (
 	"strings"
 )
 
-type state int
-
 type Model struct {
-	topics        []kadmin.Topic
+	topics        []kadmin.ListedTopic
 	table         table.Model
 	shortcuts     []statusbar.Shortcut
 	cmdBar        *cmdbar.TableCmdsBar[string]
@@ -44,7 +42,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 		{"Name", int(float64(ktx.WindowWidth-9) * 0.7)},
 		{"Partitions", int(float64(ktx.WindowWidth-9) * 0.1)},
 		{"Replicas", int(float64(ktx.WindowWidth-9) * 0.1)},
-		{"In Sync Replicas", int(float64(ktx.WindowWidth-9) * 0.1)},
+		{"~ Record Count", int(float64(ktx.WindowWidth-9) * 0.1)},
 	})
 	m.table.SetRows(m.rows)
 
@@ -99,7 +97,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case kadmin.TopicDeletedMsg:
 		m.topics = slices.DeleteFunc(
 			m.topics,
-			func(t kadmin.Topic) bool { return msg.TopicName == t.Name },
+			func(t kadmin.ListedTopic) bool { return msg.TopicName == t.Name },
 		)
 	}
 
@@ -132,9 +130,9 @@ func (m *Model) filterTopicsBySearchTerm() []table.Row {
 					rows,
 					table.Row{
 						topic.Name,
-						strconv.Itoa(topic.Partitions),
+						strconv.Itoa(topic.PartitionCount),
 						strconv.Itoa(topic.Replicas),
-						"N/A",
+						strconv.Itoa(int(topic.RecordCount)),
 					},
 				)
 			}
@@ -143,9 +141,9 @@ func (m *Model) filterTopicsBySearchTerm() []table.Row {
 				rows,
 				table.Row{
 					topic.Name,
-					strconv.Itoa(topic.Partitions),
+					strconv.Itoa(topic.PartitionCount),
 					strconv.Itoa(topic.Replicas),
-					"N/A",
+					strconv.Itoa(int(topic.RecordCount)),
 				},
 			)
 		}
@@ -156,7 +154,7 @@ func (m *Model) filterTopicsBySearchTerm() []table.Row {
 	return rows
 }
 
-func (m *Model) SelectedTopic() *kadmin.Topic {
+func (m *Model) SelectedTopic() *kadmin.ListedTopic {
 	selectedTopic := m.SelectedTopicName()
 	for _, t := range m.topics {
 		if t.Name == selectedTopic {

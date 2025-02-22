@@ -27,12 +27,7 @@ func TestRecordDetailsPage(t *testing.T) {
 				},
 			},
 		},
-			&kadmin.Topic{
-				Name:       "",
-				Partitions: 0,
-				Replicas:   0,
-				Isr:        0,
-			},
+			"",
 			clipper.NewMock(),
 		)
 		// init ui
@@ -64,12 +59,8 @@ func TestRecordDetailsPage(t *testing.T) {
 			Partition: 0,
 			Offset:    0,
 			Headers:   nil,
-		}, &kadmin.Topic{
-			Name:       "",
-			Partitions: 0,
-			Replicas:   0,
-			Isr:        0,
 		},
+			"",
 			clipper.NewMock(),
 		)
 
@@ -96,12 +87,8 @@ func TestRecordDetailsPage(t *testing.T) {
 					Value: "v1",
 				},
 			},
-		}, &kadmin.Topic{
-			Name:       "",
-			Partitions: 0,
-			Replicas:   0,
-			Isr:        0,
 		},
+			"",
 			clipMock,
 		)
 
@@ -144,12 +131,8 @@ func TestRecordDetailsPage(t *testing.T) {
 					Value: "v3\nv3",
 				},
 			},
-		}, &kadmin.Topic{
-			Name:       "",
-			Partitions: 0,
-			Replicas:   0,
-			Isr:        0,
 		},
+			"",
 			clipMock,
 		)
 
@@ -194,12 +177,8 @@ func TestRecordDetailsPage(t *testing.T) {
 					Value: "v3\nv3",
 				},
 			},
-		}, &kadmin.Topic{
-			Name:       "",
-			Partitions: 0,
-			Replicas:   0,
-			Isr:        0,
 		},
+			"",
 			clipMock,
 		)
 
@@ -235,12 +214,8 @@ func TestRecordDetailsPage(t *testing.T) {
 					Value: "v1",
 				},
 			},
-		}, &kadmin.Topic{
-			Name:       "",
-			Partitions: 0,
-			Replicas:   0,
-			Isr:        0,
 		},
+			"",
 			clipMock,
 		)
 

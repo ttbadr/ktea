@@ -26,6 +26,7 @@ type Model struct {
 	readDetails        kadmin.ReadDetails
 	consuming          bool
 	noRecordsAvailable bool
+	topic              *kadmin.ListedTopic
 }
 
 type ConsumerRecordReceived struct {
@@ -65,7 +66,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.KeyMsg:
 		if msg.String() == "esc" {
 			m.cancelConsumption()
-			return ui.PublishMsg(nav.LoadConsumptionFormPageMsg{ReadDetails: &m.readDetails})
+			return ui.PublishMsg(nav.LoadConsumptionFormPageMsg{ReadDetails: &m.readDetails, Topic: m.topic})
 		} else if msg.String() == "f2" {
 			m.cancelConsumption()
 			m.consuming = false
@@ -75,8 +76,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				selectedRow := m.records[len(m.records)-m.table.Cursor()-1]
 				m.consuming = false
 				return ui.PublishMsg(nav.LoadRecordDetailPageMsg{
-					Record: &selectedRow,
-					Topic:  m.readDetails.Topic,
+					Record:    &selectedRow,
+					TopicName: m.readDetails.TopicName,
 				})
 			}
 		} else {
@@ -154,10 +155,14 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 }
 
 func (m *Model) Title() string {
-	return "Topics / " + m.readDetails.Topic.Name + " / Records"
+	return "Topics / " + m.readDetails.TopicName + " / Records"
 }
 
-func New(reader kadmin.RecordReader, readDetails kadmin.ReadDetails) (nav.Page, tea.Cmd) {
+func New(
+	reader kadmin.RecordReader,
+	readDetails kadmin.ReadDetails,
+	topic *kadmin.ListedTopic,
+) (nav.Page, tea.Cmd) {
 	m := &Model{}
 
 	t := table.New(
@@ -168,6 +173,7 @@ func New(reader kadmin.RecordReader, readDetails kadmin.ReadDetails) (nav.Page, 
 	m.reader = reader
 	m.cmdBar = NewConsumptionCmdbar()
 	m.readDetails = readDetails
+	m.topic = topic
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	m.cancelConsumption = cancelFunc

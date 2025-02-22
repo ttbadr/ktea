@@ -35,7 +35,7 @@ type Model struct {
 	record         *kadmin.ConsumerRecord
 	payloadVp      *viewport.Model
 	headerValueVp  *viewport.Model
-	topic          *kadmin.Topic
+	topicName      string
 	headerKeyTable *table.Model
 	headerRows     []table.Row
 	focus          focus
@@ -234,12 +234,12 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 }
 
 func (m *Model) Title() string {
-	return "Topics / " + m.topic.Name + " / Records / " + strconv.FormatInt(m.record.Offset, 10)
+	return "Topics / " + m.topicName + " / Records / " + strconv.FormatInt(m.record.Offset, 10)
 }
 
 func New(
 	record *kadmin.ConsumerRecord,
-	topic *kadmin.Topic,
+	topicName string,
 	clipWriter clipper.Writer,
 ) *Model {
 	headersTable := ktable.NewDefaultTable()
@@ -277,7 +277,7 @@ func New(
 
 	return &Model{
 		record:         record,
-		topic:          topic,
+		topicName:      topicName,
 		headerKeyTable: &headersTable,
 		focus:          payloadFocus,
 		headerRows:     headerRows,

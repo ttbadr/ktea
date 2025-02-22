@@ -29,15 +29,15 @@ func TestListTopics(t *testing.T) {
 
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			listTopicsMsg := ka.ListTopics().(TopicListingStartedMsg)
-			var topics []Topic
+			var topics []ListedTopic
 			select {
 			case topics = <-listTopicsMsg.Topics:
 			case err := <-listTopicsMsg.Err:
 				t.Error(t, "Failed to list topics", err)
 				return
 			}
-			assert.Contains(t, topics, Topic{topic1, 2, 1, 0})
-			assert.Contains(t, topics, Topic{topic2, 1, 1, 0})
+			assert.Contains(t, topics, ListedTopic{topic1, 2, 1, 0})
+			assert.Contains(t, topics, ListedTopic{topic2, 1, 1, 0})
 		}, 2*time.Second, 10*time.Millisecond)
 
 		// clean up

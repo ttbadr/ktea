@@ -22,13 +22,13 @@ const (
 
 type Model struct {
 	form                      *huh.Form
-	topic                     *kadmin.Topic
 	formValues                *formValues
 	windowResized             bool
 	keyFilterSelectionState   selectionState
 	valueFilterSelectionState selectionState
 	ktx                       *kontext.ProgramKtx
 	availableHeight           int
+	topic                     *kadmin.ListedTopic
 }
 
 type formValues struct {
@@ -44,13 +44,13 @@ type formValues struct {
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	if m.form == nil {
 		m.availableHeight = ktx.AvailableHeight
-		m.form = m.newForm(m.topic.Partitions, m.ktx)
+		m.form = m.newForm(m.topic.PartitionCount, m.ktx)
 	}
 
 	if m.windowResized {
 		m.windowResized = false
 		m.availableHeight = ktx.AvailableHeight
-		m.form = m.newForm(m.topic.Partitions, ktx)
+		m.form = m.newForm(m.topic.PartitionCount, ktx)
 	}
 
 	return renderer.RenderWithStyle(m.form.View(), styles.Form)
@@ -69,13 +69,13 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	if m.formValues.keyFilter != kadmin.NoFilterType && m.keyFilterSelectionState == notSelected {
 		// if key filter type is selected and previously not selected
 		m.keyFilterSelectionState = selected
-		m.form = m.newForm(m.topic.Partitions, m.ktx)
+		m.form = m.newForm(m.topic.PartitionCount, m.ktx)
 		m.NextField(3)
 		m.form.NextGroup()
 	} else if m.formValues.keyFilter == kadmin.NoFilterType && m.keyFilterSelectionState == selected {
 		// if no key filter type is selected and previously selected
 		m.keyFilterSelectionState = notSelected
-		m.form = m.newForm(m.topic.Partitions, m.ktx)
+		m.form = m.newForm(m.topic.PartitionCount, m.ktx)
 		m.NextField(3)
 		m.form.NextGroup()
 	}
@@ -83,14 +83,14 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	if m.formValues.valueFilter != kadmin.NoFilterType && m.valueFilterSelectionState == notSelected {
 		// if value filter type is selected and previously not selected
 		m.valueFilterSelectionState = selected
-		m.form = m.newForm(m.topic.Partitions, m.ktx)
+		m.form = m.newForm(m.topic.PartitionCount, m.ktx)
 		m.NextField(3)
 		m.form.NextGroup()
 		m.NextField(1)
 	} else if m.formValues.valueFilter == kadmin.NoFilterType && m.valueFilterSelectionState == selected {
 		// if no key filter type is selected and previously selected
 		m.valueFilterSelectionState = notSelected
-		m.form = m.newForm(m.topic.Partitions, m.ktx)
+		m.form = m.newForm(m.topic.PartitionCount, m.ktx)
 		m.NextField(3)
 		m.form.NextGroup()
 		m.NextField(1)
@@ -119,17 +119,37 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		filter.ValueFilter = m.formValues.valueFilter
 	}
 	if m.form.State == huh.StateCompleted {
-		return ui.PublishMsg(nav.LoadConsumptionPageMsg{
-			ReadDetails: kadmin.ReadDetails{
-				Topic:      m.topic,
-				Partitions: m.formValues.partitions,
-				StartPoint: m.formValues.startPoint,
-				Limit:      m.formValues.limit,
-				Filter:     &filter,
-			},
-		})
+		return m.submit(filter)
 	}
 	return cmd
+}
+
+func (m *Model) submit(filter kadmin.Filter) tea.Cmd {
+	var partToConsume []int
+	if m.noPartitionsSelected() {
+		// consume from all partitions
+		partToConsume = make([]int, m.topic.PartitionCount)
+		for i := range m.topic.PartitionCount {
+			partToConsume[i] = i
+		}
+	} else {
+		partToConsume = m.formValues.partitions
+	}
+
+	return ui.PublishMsg(nav.LoadConsumptionPageMsg{
+		Topic: m.topic,
+		ReadDetails: kadmin.ReadDetails{
+			TopicName:       m.topic.Name,
+			PartitionToRead: partToConsume,
+			StartPoint:      m.formValues.startPoint,
+			Limit:           m.formValues.limit,
+			Filter:          &filter,
+		},
+	})
+}
+
+func (m *Model) noPartitionsSelected() bool {
+	return len(m.formValues.partitions) == 0
 }
 
 func (m *Model) Shortcuts() []statusbar.Shortcut {
@@ -253,14 +273,18 @@ func (m *Model) NextField(count int) {
 	}
 }
 
-func NewWithDetails(details *kadmin.ReadDetails, ktx *kontext.ProgramKtx) *Model {
+func NewWithDetails(
+	details *kadmin.ReadDetails,
+	topic *kadmin.ListedTopic,
+	ktx *kontext.ProgramKtx,
+) *Model {
 	return &Model{
-		topic: details.Topic,
 		ktx:   ktx,
+		topic: topic,
 		formValues: &formValues{
 			startPoint:      details.StartPoint,
 			limit:           details.Limit,
-			partitions:      details.Partitions,
+			partitions:      details.PartitionToRead,
 			keyFilter:       details.Filter.KeyFilter,
 			keyFilterTerm:   details.Filter.KeySearchTerm,
 			valueFilter:     details.Filter.ValueFilter,
@@ -268,6 +292,10 @@ func NewWithDetails(details *kadmin.ReadDetails, ktx *kontext.ProgramKtx) *Model
 		}}
 }
 
-func New(topic *kadmin.Topic, ktx *kontext.ProgramKtx) *Model {
-	return &Model{topic: topic, formValues: &formValues{}, ktx: ktx}
+func New(topic *kadmin.ListedTopic, ktx *kontext.ProgramKtx) *Model {
+	return &Model{
+		topic:      topic,
+		formValues: &formValues{},
+		ktx:        ktx,
+	}
 }

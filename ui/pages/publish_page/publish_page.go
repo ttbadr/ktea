@@ -29,13 +29,13 @@ type Model struct {
 	state      state
 	topicForm  *huh.Form
 	publisher  kadmin.Publisher
-	topic      *kadmin.Topic
+	topic      *kadmin.ListedTopic
 	notifier   *notifier.Model
 	formValues *formValues
 }
 
 type LoadPageMsg struct {
-	Topic kadmin.Topic
+	Topic kadmin.ListedTopic
 }
 
 type formValues struct {
@@ -176,8 +176,8 @@ func (m *Model) newForm(ktx *kontext.ProgramKtx) *huh.Form {
 				return errors.New(fmt.Sprintf("'%s' is not a valid numeric partition value", str))
 			} else if n < 0 {
 				return errors.New("value must be at least zero")
-			} else if n > m.topic.Partitions-1 {
-				return errors.New(fmt.Sprintf("partition index %s is invalid, valid range is 0-%d", str, m.topic.Partitions-1))
+			} else if n > m.topic.PartitionCount-1 {
+				return errors.New(fmt.Sprintf("partition index %s is invalid, valid range is 0-%d", str, m.topic.PartitionCount-1))
 			}
 			return nil
 		})
@@ -209,7 +209,7 @@ func (m *Model) newForm(ktx *kontext.ProgramKtx) *huh.Form {
 	return form
 }
 
-func New(p kadmin.Publisher, topic *kadmin.Topic) *Model {
+func New(p kadmin.Publisher, topic *kadmin.ListedTopic) *Model {
 	return &Model{
 		topic:      topic,
 		publisher:  p,

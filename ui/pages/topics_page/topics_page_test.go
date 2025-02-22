@@ -42,12 +42,11 @@ func TestTopicsPage(t *testing.T) {
 		page, _ := New(&MockTopicDeleter{}, &MockTopicLister{})
 
 		_ = page.Update(kadmin.TopicListedMsg{
-			Topics: []kadmin.Topic{
+			Topics: []kadmin.ListedTopic{
 				{
-					Name:       "topic1",
-					Partitions: 1,
-					Replicas:   1,
-					Isr:        1,
+					Name:           "topic1",
+					PartitionCount: 1,
+					Replicas:       1,
 				},
 			},
 		})

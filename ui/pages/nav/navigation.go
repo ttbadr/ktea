@@ -21,24 +21,26 @@ type LoadCreateTopicPageMsg struct{}
 type LoadTopicConfigPageMsg struct{}
 
 type LoadPublishPageMsg struct {
-	Topic *kadmin.Topic
+	Topic *kadmin.ListedTopic
 }
 
 type LoadConsumptionPageMsg struct {
 	ReadDetails kadmin.ReadDetails
+	Topic       *kadmin.ListedTopic
 }
 
 type LoadCachedConsumptionPageMsg struct {
 }
 
 type LoadConsumptionFormPageMsg struct {
-	Topic       *kadmin.Topic
+	Topic *kadmin.ListedTopic
+	// ReadDetails is used to pre-fill the form with the provided details.
 	ReadDetails *kadmin.ReadDetails
 }
 
 type LoadRecordDetailPageMsg struct {
-	Record *kadmin.ConsumerRecord
-	Topic  *kadmin.Topic
+	Record    *kadmin.ConsumerRecord
+	TopicName string
 }
 
 type LoadCGroupsPageMsg struct {

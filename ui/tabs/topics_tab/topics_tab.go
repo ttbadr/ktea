@@ -60,13 +60,13 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	case nav.LoadConsumptionFormPageMsg:
 		if msg.ReadDetails != nil {
-			m.active = consumption_form_page.NewWithDetails(msg.ReadDetails, m.ktx)
+			m.active = consumption_form_page.NewWithDetails(msg.ReadDetails, msg.Topic, m.ktx)
 		} else {
 			m.active = consumption_form_page.New(msg.Topic, m.ktx)
 		}
 
 	case nav.LoadRecordDetailPageMsg:
-		m.active = record_details_page.New(msg.Record, msg.Topic, clipper.New())
+		m.active = record_details_page.New(msg.Record, msg.TopicName, clipper.New())
 		m.recordDetailsPage = m.active
 
 	case nav.LoadTopicConfigPageMsg:
@@ -85,7 +85,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	case nav.LoadConsumptionPageMsg:
 		var cmd tea.Cmd
-		m.active, cmd = consumption_page.New(m.ka, msg.ReadDetails)
+		m.active, cmd = consumption_page.New(m.ka, msg.ReadDetails, msg.Topic)
 		m.consumptionPage = m.active
 		cmds = append(cmds, cmd)
 

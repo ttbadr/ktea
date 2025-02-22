@@ -16,11 +16,10 @@ import (
 func TestConsumeForm_Navigation(t *testing.T) {
 
 	t.Run("esc goes back to topic list page", func(t *testing.T) {
-		m := New(&kadmin.Topic{
-			Name:       "topic1",
-			Replicas:   1,
-			Isr:        1,
-			Partitions: 10,
+		m := New(&kadmin.ListedTopic{
+			Name:           "topic1",
+			Replicas:       1,
+			PartitionCount: 10,
 		}, ui.NewTestKontext())
 		// make sure form has been initialized
 		m.View(ui.NewTestKontext(), ui.TestRenderer)
@@ -31,11 +30,10 @@ func TestConsumeForm_Navigation(t *testing.T) {
 	})
 
 	t.Run("renders all available partitions when there is height enough", func(t *testing.T) {
-		m := New(&kadmin.Topic{
-			Name:       "topic1",
-			Replicas:   1,
-			Isr:        1,
-			Partitions: 10,
+		m := New(&kadmin.ListedTopic{
+			Name:           "topic1",
+			Replicas:       1,
+			PartitionCount: 10,
 		}, ui.NewTestKontext())
 
 		// make sure form has been initialized
@@ -57,11 +55,10 @@ func TestConsumeForm_Navigation(t *testing.T) {
 			WindowHeight:    20,
 			AvailableHeight: 20,
 		}
-		m := New(&kadmin.Topic{
-			Name:       "topic1",
-			Replicas:   1,
-			Isr:        1,
-			Partitions: 100,
+		m := New(&kadmin.ListedTopic{
+			Name:           "topic1",
+			Replicas:       1,
+			PartitionCount: 100,
 		}, ktx)
 		// make sure form has been initialized
 		m.View(ktx, ui.TestRenderer)
@@ -78,14 +75,9 @@ func TestConsumeForm_Navigation(t *testing.T) {
 
 	t.Run("load form based on previous ReadDetails", func(t *testing.T) {
 		m := NewWithDetails(&kadmin.ReadDetails{
-			Topic: &kadmin.Topic{
-				Name:       "topic1",
-				Partitions: 10,
-				Replicas:   3,
-				Isr:        3,
-			},
-			Partitions: []int{3, 6},
-			StartPoint: kadmin.MostRecent,
+			TopicName:       "topic1",
+			PartitionToRead: []int{3, 6},
+			StartPoint:      kadmin.MostRecent,
 			Filter: &kadmin.Filter{
 				KeyFilter:       kadmin.StartsWithFilterType,
 				KeySearchTerm:   "starts-with-key-term",
@@ -93,6 +85,11 @@ func TestConsumeForm_Navigation(t *testing.T) {
 				ValueSearchTerm: "contains-value-term",
 			},
 			Limit: 500,
+		}, &kadmin.ListedTopic{
+			Name:           "topic1",
+			PartitionCount: 10,
+			Replicas:       3,
+			RecordCount:    100,
 		}, ui.NewTestKontext())
 
 		// make sure form has been initialized
@@ -110,11 +107,10 @@ func TestConsumeForm_Navigation(t *testing.T) {
 	})
 
 	t.Run("submitting form loads consumption page with consumption information", func(t *testing.T) {
-		m := New(&kadmin.Topic{
-			Name:       "topic1",
-			Partitions: 10,
-			Replicas:   1,
-			Isr:        1,
+		m := New(&kadmin.ListedTopic{
+			Name:           "topic1",
+			PartitionCount: 10,
+			Replicas:       1,
 		}, ui.NewTestKontext())
 		// make sure form has been initialized
 		m.View(ui.NewTestKontext(), ui.TestRenderer)
@@ -151,29 +147,29 @@ func TestConsumeForm_Navigation(t *testing.T) {
 
 		assert.Equal(t, nav.LoadConsumptionPageMsg{
 			ReadDetails: kadmin.ReadDetails{
-				Topic: &kadmin.Topic{
-					Name:       "topic1",
-					Partitions: 10,
-					Replicas:   1,
-					Isr:        1,
-				},
+				TopicName: "topic1",
 				Filter: &kadmin.Filter{
 					KeySearchTerm:   "",
 					ValueSearchTerm: "",
 				},
-				Limit:      500,
-				Partitions: []int{3, 5},
-				StartPoint: kadmin.MostRecent,
+				Limit:           500,
+				PartitionToRead: []int{3, 5},
+				StartPoint:      kadmin.MostRecent,
+			},
+			Topic: &kadmin.ListedTopic{
+				Name:           "topic1",
+				PartitionCount: 10,
+				Replicas:       1,
+				RecordCount:    0,
 			},
 		}, msgs[0])
 	})
 
 	t.Run("selecting partitions is optional", func(t *testing.T) {
-		m := New(&kadmin.Topic{
-			Name:       "topic1",
-			Partitions: 10,
-			Replicas:   1,
-			Isr:        1,
+		m := New(&kadmin.ListedTopic{
+			Name:           "topic1",
+			PartitionCount: 10,
+			Replicas:       1,
 		}, ui.NewTestKontext())
 		// make sure form has been initialized
 		m.View(ui.NewTestKontext(), ui.TestRenderer)
@@ -203,29 +199,29 @@ func TestConsumeForm_Navigation(t *testing.T) {
 
 		assert.Equal(t, nav.LoadConsumptionPageMsg{
 			ReadDetails: kadmin.ReadDetails{
-				Topic: &kadmin.Topic{
-					Name:       "topic1",
-					Partitions: 10,
-					Replicas:   1,
-					Isr:        1,
-				},
+				TopicName: "topic1",
 				Filter: &kadmin.Filter{
 					KeySearchTerm:   "",
 					ValueSearchTerm: "",
 				},
-				Limit:      500,
-				Partitions: []int{},
-				StartPoint: kadmin.MostRecent,
+				Limit:           500,
+				PartitionToRead: []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+				StartPoint:      kadmin.MostRecent,
+			},
+			Topic: &kadmin.ListedTopic{
+				Name:           "topic1",
+				PartitionCount: 10,
+				Replicas:       1,
+				RecordCount:    0,
 			},
 		}, msgs[0])
 	})
 
 	t.Run("selecting key filter type starts-with displays key filter value field", func(t *testing.T) {
-		m := New(&kadmin.Topic{
-			Name:       "topic1",
-			Partitions: 10,
-			Replicas:   1,
-			Isr:        1,
+		m := New(&kadmin.ListedTopic{
+			Name:           "topic1",
+			PartitionCount: 10,
+			Replicas:       1,
 		}, ui.NewTestKontext())
 		// make sure form has been initialized
 		m.View(ui.NewTestKontext(), ui.TestRenderer)
@@ -292,30 +288,30 @@ func TestConsumeForm_Navigation(t *testing.T) {
 
 			assert.Equal(t, nav.LoadConsumptionPageMsg{
 				ReadDetails: kadmin.ReadDetails{
-					Topic: &kadmin.Topic{
-						Name:       "topic1",
-						Partitions: 10,
-						Replicas:   1,
-						Isr:        1,
-					},
+					TopicName: "topic1",
 					Filter: &kadmin.Filter{
 						KeySearchTerm:   "",
 						ValueSearchTerm: "",
 					},
-					Limit:      500,
-					Partitions: []int{},
-					StartPoint: kadmin.MostRecent,
+					Limit:           500,
+					PartitionToRead: []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+					StartPoint:      kadmin.MostRecent,
+				},
+				Topic: &kadmin.ListedTopic{
+					Name:           "topic1",
+					PartitionCount: 10,
+					Replicas:       1,
+					RecordCount:    0,
 				},
 			}, msgs[0])
 		})
 	})
 
 	t.Run("filter on key value", func(t *testing.T) {
-		m := New(&kadmin.Topic{
-			Name:       "topic1",
-			Partitions: 10,
-			Replicas:   1,
-			Isr:        1,
+		m := New(&kadmin.ListedTopic{
+			Name:           "topic1",
+			PartitionCount: 10,
+			Replicas:       1,
 		}, ui.NewTestKontext())
 		// make sure form has been initialized
 		m.View(ui.NewTestKontext(), ui.TestRenderer)
@@ -352,30 +348,30 @@ func TestConsumeForm_Navigation(t *testing.T) {
 
 		assert.EqualValues(t, nav.LoadConsumptionPageMsg{
 			ReadDetails: kadmin.ReadDetails{
-				Topic: &kadmin.Topic{
-					Name:       "topic1",
-					Partitions: 10,
-					Replicas:   1,
-					Isr:        1,
-				},
+				TopicName: "topic1",
 				Filter: &kadmin.Filter{
 					KeyFilter:       kadmin.StartsWithFilterType,
 					KeySearchTerm:   "search-term",
 					ValueSearchTerm: "",
 				},
-				Limit:      500,
-				Partitions: []int{},
-				StartPoint: kadmin.MostRecent,
+				Limit:           500,
+				PartitionToRead: []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+				StartPoint:      kadmin.MostRecent,
+			},
+			Topic: &kadmin.ListedTopic{
+				Name:           "topic1",
+				PartitionCount: 10,
+				Replicas:       1,
+				RecordCount:    0,
 			},
 		}, msgs[0])
 	})
 
 	t.Run("selecting value filter type starts-with displays filter value field", func(t *testing.T) {
-		m := New(&kadmin.Topic{
-			Name:       "topic1",
-			Partitions: 10,
-			Replicas:   1,
-			Isr:        1,
+		m := New(&kadmin.ListedTopic{
+			Name:           "topic1",
+			PartitionCount: 10,
+			Replicas:       1,
 		}, ui.NewTestKontext())
 		// make sure form has been initialized
 		m.View(ui.NewTestKontext(), ui.TestRenderer)
@@ -461,21 +457,23 @@ func TestConsumeForm_Navigation(t *testing.T) {
 
 			assert.Equal(t, nav.LoadConsumptionPageMsg{
 				ReadDetails: kadmin.ReadDetails{
-					Topic: &kadmin.Topic{
-						Name:       "topic1",
-						Partitions: 10,
-						Replicas:   1,
-						Isr:        1,
-					},
+					TopicName: "topic1",
 					Filter: &kadmin.Filter{
 						KeySearchTerm:   "",
 						ValueSearchTerm: "",
 					},
-					Limit:      500,
-					Partitions: []int{},
-					StartPoint: kadmin.MostRecent,
+					Limit:           500,
+					PartitionToRead: []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+					StartPoint:      kadmin.MostRecent,
 				},
-			}, msgs[0])
+				Topic: &kadmin.ListedTopic{
+					Name:           "topic1",
+					PartitionCount: 10,
+					Replicas:       1,
+					RecordCount:    0,
+				},
+			},
+				msgs[0])
 		})
 	})
 }

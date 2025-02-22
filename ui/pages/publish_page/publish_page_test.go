@@ -50,11 +50,10 @@ func TestParseHeaders(t *testing.T) {
 
 func TestPublish(t *testing.T) {
 	t.Run("esc goes back to topic list page", func(t *testing.T) {
-		m := New(&MockPublisher{}, &kadmin.Topic{
-			Name:       "topic1",
-			Partitions: 1,
-			Replicas:   1,
-			Isr:        1,
+		m := New(&MockPublisher{}, &kadmin.ListedTopic{
+			Name:           "topic1",
+			PartitionCount: 1,
+			Replicas:       1,
 		})
 
 		cmd := m.Update(keys.Key(tea.KeyEsc))
@@ -69,11 +68,10 @@ func TestPublish(t *testing.T) {
 				producerRecord = p
 				return kadmin.PublicationStartedMsg{}
 			},
-		}, &kadmin.Topic{
-			Name:       "topic1",
-			Partitions: 10,
-			Replicas:   1,
-			Isr:        1,
+		}, &kadmin.ListedTopic{
+			Name:           "topic1",
+			PartitionCount: 10,
+			Replicas:       1,
 		})
 
 		m.View(&kontext.ProgramKtx{
@@ -123,11 +121,10 @@ func TestPublish(t *testing.T) {
 			PublishRecordFunc: func(p *kadmin.ProducerRecord) kadmin.PublicationStartedMsg {
 				return kadmin.PublicationStartedMsg{}
 			},
-		}, &kadmin.Topic{
-			Name:       "topic1",
-			Partitions: 10,
-			Replicas:   1,
-			Isr:        1,
+		}, &kadmin.ListedTopic{
+			Name:           "topic1",
+			PartitionCount: 10,
+			Replicas:       1,
 		})
 
 		m.View(&kontext.ProgramKtx{
@@ -174,11 +171,10 @@ func TestPublish(t *testing.T) {
 				producerRecord = p
 				return kadmin.PublicationStartedMsg{}
 			},
-		}, &kadmin.Topic{
-			Name:       "topic1",
-			Partitions: 10,
-			Replicas:   1,
-			Isr:        1,
+		}, &kadmin.ListedTopic{
+			Name:           "topic1",
+			PartitionCount: 10,
+			Replicas:       1,
 		})
 
 		m.View(&kontext.ProgramKtx{
@@ -217,11 +213,10 @@ func TestPublish(t *testing.T) {
 			PublishRecordFunc: func(p *kadmin.ProducerRecord) kadmin.PublicationStartedMsg {
 				return kadmin.PublicationStartedMsg{}
 			},
-		}, &kadmin.Topic{
-			Name:       "topic1",
-			Partitions: 10,
-			Replicas:   1,
-			Isr:        1,
+		}, &kadmin.ListedTopic{
+			Name:           "topic1",
+			PartitionCount: 10,
+			Replicas:       1,
 		})
 
 		cmds := m.Update(kadmin.PublicationSucceeded{})
@@ -247,11 +242,10 @@ func TestPublish(t *testing.T) {
 			PublishRecordFunc: func(p *kadmin.ProducerRecord) kadmin.PublicationStartedMsg {
 				return kadmin.PublicationStartedMsg{}
 			},
-		}, &kadmin.Topic{
-			Name:       "topic1",
-			Partitions: 10,
-			Replicas:   1,
-			Isr:        1,
+		}, &kadmin.ListedTopic{
+			Name:           "topic1",
+			PartitionCount: 10,
+			Replicas:       1,
 		})
 
 		m.View(&kontext.ProgramKtx{
@@ -292,11 +286,10 @@ func TestPublish(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 
 		t.Run("When partition is not a number", func(t *testing.T) {
-			m := New(&MockPublisher{}, &kadmin.Topic{
-				Name:       "topic1",
-				Partitions: 1,
-				Replicas:   1,
-				Isr:        1,
+			m := New(&MockPublisher{}, &kadmin.ListedTopic{
+				Name:           "topic1",
+				PartitionCount: 1,
+				Replicas:       1,
 			})
 
 			m.View(&kontext.ProgramKtx{
@@ -319,11 +312,10 @@ func TestPublish(t *testing.T) {
 		})
 
 		t.Run("When partition is negative", func(t *testing.T) {
-			m := New(&MockPublisher{}, &kadmin.Topic{
-				Name:       "topic1",
-				Partitions: 1,
-				Replicas:   1,
-				Isr:        1,
+			m := New(&MockPublisher{}, &kadmin.ListedTopic{
+				Name:           "topic1",
+				PartitionCount: 1,
+				Replicas:       1,
 			})
 
 			m.View(&kontext.ProgramKtx{
@@ -346,11 +338,10 @@ func TestPublish(t *testing.T) {
 		})
 
 		t.Run("When partition is zero, should be allowed", func(t *testing.T) {
-			m := New(&MockPublisher{}, &kadmin.Topic{
-				Name:       "topic1",
-				Partitions: 1,
-				Replicas:   1,
-				Isr:        1,
+			m := New(&MockPublisher{}, &kadmin.ListedTopic{
+				Name:           "topic1",
+				PartitionCount: 1,
+				Replicas:       1,
 			})
 
 			m.View(&kontext.ProgramKtx{
@@ -375,11 +366,10 @@ func TestPublish(t *testing.T) {
 		})
 
 		t.Run("When partition exceeds number of partitions", func(t *testing.T) {
-			m := New(&MockPublisher{}, &kadmin.Topic{
-				Name:       "topic1",
-				Partitions: 5,
-				Replicas:   1,
-				Isr:        1,
+			m := New(&MockPublisher{}, &kadmin.ListedTopic{
+				Name:           "topic1",
+				PartitionCount: 5,
+				Replicas:       1,
 			})
 
 			m.View(&kontext.ProgramKtx{

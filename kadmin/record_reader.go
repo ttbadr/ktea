@@ -56,11 +56,11 @@ type Filter struct {
 }
 
 type ReadDetails struct {
-	Topic      *Topic
-	Partitions []int
-	StartPoint StartPoint
-	Limit      int
-	Filter     *Filter
+	TopicName       string
+	PartitionToRead []int
+	StartPoint      StartPoint
+	Limit           int
+	Filter          *Filter
 }
 
 type Header struct {
@@ -93,7 +93,7 @@ type EmptyTopicMsg struct {
 func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) tea.Msg {
 	ctx, cancelFunc := context.WithCancel(ctx)
 	startedMsg := ReadingStartedMsg{
-		ConsumerRecord: make(chan ConsumerRecord, len(rd.Partitions)),
+		ConsumerRecord: make(chan ConsumerRecord, len(rd.PartitionToRead)),
 		Err:            make(chan error),
 		CancelFunc:     cancelFunc,
 	}
@@ -106,27 +106,25 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) tea
 	}
 
 	var (
-		msgCount   atomic.Int64
-		closeOnce  sync.Once
-		wg         sync.WaitGroup
-		offsets    map[int]offsets
-		ok         bool
-		partitions []int
+		msgCount  atomic.Int64
+		closeOnce sync.Once
+		wg        sync.WaitGroup
+		offsets   map[int]offsets
 	)
 
-	partitions = ka.determineReadPartitions(rd)
-
-	offsets, ok = ka.fetchOffsets(partitions, rd, startedMsg)
-	if !ok {
+	offsets, err = ka.fetchOffsets(rd.PartitionToRead, rd.TopicName)
+	if err != nil {
+		startedMsg.Err <- err
+		close(startedMsg.ConsumerRecord)
 		close(startedMsg.Err)
 		cancelFunc()
 		return startedMsg
 	}
 
-	wg.Add(len(partitions))
+	wg.Add(len(rd.PartitionToRead))
 
 	var atLeastOnePartitionReadable bool
-	for _, partition := range partitions {
+	for _, partition := range rd.PartitionToRead {
 		if offsets[partition].firstAvailable != offsets[partition].oldest {
 			atLeastOnePartitionReadable = true
 			go func(partition int) {
@@ -134,7 +132,7 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) tea
 
 				readingOffsets := ka.determineReadingOffsets(rd, offsets[partition])
 				consumer, err := client.ConsumePartition(
-					rd.Topic.Name,
+					rd.TopicName,
 					int32(partition),
 					readingOffsets.start,
 				)
@@ -249,19 +247,6 @@ func (ka *SaramaKafkaAdmin) deserialize(
 	return payload
 }
 
-func (ka *SaramaKafkaAdmin) determineReadPartitions(rd ReadDetails) []int {
-	var partitions []int
-	if len(rd.Partitions) == 0 {
-		partitions = make([]int, rd.Topic.Partitions)
-		for i := range partitions {
-			partitions[i] = i
-		}
-	} else {
-		partitions = rd.Partitions
-	}
-	return partitions
-}
-
 type readingOffsets struct {
 	start int64
 	end   int64
@@ -273,7 +258,7 @@ func (ka *SaramaKafkaAdmin) determineReadingOffsets(
 ) readingOffsets {
 	var startOffset int64
 	var endOffset int64
-	numberOfRecordsPerPart := int64(float64(int64(rd.Limit)) / float64(rd.Topic.Partitions))
+	numberOfRecordsPerPart := int64(float64(int64(rd.Limit)) / float64(len(rd.PartitionToRead)))
 	if rd.StartPoint == Beginning {
 		startOffset, endOffset = ka.determineOffsetsFromBeginning(
 			startOffset,
@@ -326,9 +311,8 @@ func (ka *SaramaKafkaAdmin) determineOffsetsFromBeginning(
 
 func (ka *SaramaKafkaAdmin) fetchOffsets(
 	partitions []int,
-	rd ReadDetails,
-	rsm ReadingStartedMsg,
-) (map[int]offsets, bool) {
+	topicName string,
+) (map[int]offsets, error) {
 	offsetsByPartition := make(map[int]offsets)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -340,7 +324,7 @@ func (ka *SaramaKafkaAdmin) fetchOffsets(
 			defer wg.Done()
 
 			firstAvailableOffset, err := ka.client.GetOffset(
-				rd.Topic.Name,
+				topicName,
 				int32(partition),
 				sarama.OffsetNewest,
 			)
@@ -350,7 +334,7 @@ func (ka *SaramaKafkaAdmin) fetchOffsets(
 			}
 
 			oldestOffset, err := ka.client.GetOffset(
-				rd.Topic.Name,
+				topicName,
 				int32(partition),
 				sarama.OffsetOldest,
 			)
@@ -372,11 +356,8 @@ func (ka *SaramaKafkaAdmin) fetchOffsets(
 
 	select {
 	case err := <-errorsChan:
-		rsm.Err <- err
-		close(rsm.ConsumerRecord)
-		close(rsm.Err)
-		return nil, false
+		return nil, err
 	default:
-		return offsetsByPartition, true
+		return offsetsByPartition, nil
 	}
 }
