@@ -4,6 +4,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	lg "github.com/charmbracelet/lipgloss"
+	"github.com/dustin/go-humanize"
 	"ktea/kadmin"
 	"ktea/kontext"
 	"ktea/styles"
@@ -89,7 +90,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 
 type partOffset struct {
 	partition string
-	offset    string
+	offset    int64
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
@@ -146,7 +147,7 @@ func (m *Model) recreateOffsetRows() {
 	for _, partOffset := range m.topicByPartOffset[selectedTopic] {
 		m.offsetRows = append(m.offsetRows, table.Row{
 			partOffset.partition,
-			partOffset.offset,
+			humanize.Comma(partOffset.offset),
 		})
 	}
 	sort.SliceStable(m.offsetRows, func(i, j int) bool {
@@ -163,7 +164,7 @@ func (m *Model) handleOffsetListed(msg kadmin.OffsetListedMsg) {
 		}
 		partOffset := partOffset{
 			partition: strconv.FormatInt(int64(offset.Partition), 10),
-			offset:    strconv.FormatInt(offset.Offset, 10),
+			offset:    offset.Offset,
 		}
 		m.topicByPartOffset[offset.Topic] = append(m.topicByPartOffset[offset.Topic], partOffset)
 	}

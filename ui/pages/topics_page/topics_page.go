@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/dustin/go-humanize"
 	"ktea/kadmin"
 	"ktea/kontext"
 	"ktea/styles"
@@ -132,7 +133,7 @@ func (m *Model) filterTopicsBySearchTerm() []table.Row {
 						topic.Name,
 						strconv.Itoa(topic.PartitionCount),
 						strconv.Itoa(topic.Replicas),
-						strconv.Itoa(int(topic.RecordCount)),
+						humanize.Comma(topic.RecordCount),
 					},
 				)
 			}
@@ -143,7 +144,7 @@ func (m *Model) filterTopicsBySearchTerm() []table.Row {
 					topic.Name,
 					strconv.Itoa(topic.PartitionCount),
 					strconv.Itoa(topic.Replicas),
-					strconv.Itoa(int(topic.RecordCount)),
+					humanize.Comma(topic.RecordCount),
 				},
 			)
 		}
