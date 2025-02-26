@@ -189,8 +189,9 @@ func (m *Model) Refresh() tea.Cmd {
 func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, tea.Cmd) {
 	var m = Model{}
 	m.shortcuts = []statusbar.Shortcut{
-		{"Search", "/"},
 		{"Consume", "enter"},
+		{"Quick Consume", "C-enter"},
+		{"Search", "/"},
 		{"Publish", "C-p"},
 		{"Create", "C-n"},
 		{"Delete", "F2"},

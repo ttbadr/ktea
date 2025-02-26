@@ -104,6 +104,36 @@ func TestConsumeForm_Navigation(t *testing.T) {
 		assert.Contains(t, render, "> ")
 		assert.Contains(t, render, "starts-with-key-term")
 		assert.Contains(t, render, "contains-value-term")
+
+		t.Run("no partitions selected (read from all)", func(t *testing.T) {
+			m := NewWithDetails(&kadmin.ReadDetails{
+				TopicName:       "topic1",
+				PartitionToRead: []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+				StartPoint:      kadmin.MostRecent,
+				Filter: &kadmin.Filter{
+					KeyFilter:       kadmin.StartsWithFilterType,
+					KeySearchTerm:   "starts-with-key-term",
+					ValueFilter:     kadmin.ContainsFilterType,
+					ValueSearchTerm: "contains-value-term",
+				},
+				Limit: 500,
+			}, &kadmin.ListedTopic{
+				Name:           "topic1",
+				PartitionCount: 10,
+				Replicas:       3,
+				RecordCount:    100,
+			}, ui.NewTestKontext())
+
+			// make sure form has been initialized
+			m.View(ui.NewTestKontext(), ui.TestRenderer)
+
+			render := m.View(ui.TestKontext, ui.TestRenderer)
+
+			for i := 0; i < 10; i++ {
+				assert.NotContains(t, render, fmt.Sprintf("✓ %d", i))
+			}
+		})
+
 	})
 
 	t.Run("submitting form loads consumption page with consumption information", func(t *testing.T) {

@@ -278,13 +278,17 @@ func NewWithDetails(
 	topic *kadmin.ListedTopic,
 	ktx *kontext.ProgramKtx,
 ) *Model {
+	var partitionsToRead []int
+	if topic.PartitionCount != len(details.PartitionToRead) {
+		partitionsToRead = details.PartitionToRead
+	}
 	return &Model{
 		ktx:   ktx,
 		topic: topic,
 		formValues: &formValues{
 			startPoint:      details.StartPoint,
 			limit:           details.Limit,
-			partitions:      details.PartitionToRead,
+			partitions:      partitionsToRead,
 			keyFilter:       details.Filter.KeyFilter,
 			keyFilterTerm:   details.Filter.KeySearchTerm,
 			valueFilter:     details.Filter.ValueFilter,
