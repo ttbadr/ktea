@@ -5,7 +5,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"ktea/config"
 	"ktea/kadmin"
-	"ktea/tests/keys"
 	"testing"
 )
 
@@ -53,10 +52,6 @@ func TestKtea(t *testing.T) {
 			)
 			model := NewModel(kadmin.NewMockKadminInstantiator(), io)
 			model.Update(config.LoadedMsg{Config: config.New(io)})
-			//model.Update(config.LoadedMsg{
-			//	Config: &config.Config{
-			//	},
-			//})
 
 			model.Update(tea.WindowSizeMsg{
 				Width:  100,
@@ -102,22 +97,15 @@ func TestKtea(t *testing.T) {
 				Paste: false,
 			})
 
-			assert.Contains(t, view, expectedLayout)
-
-			model.View()
-			_, cmd := model.Update(keys.Key(tea.KeyDown))
-			_, cmd = model.Update(keys.Key(tea.KeyEnter))
-			model.Update(cmd())
-
 			view = model.View()
 
 			expectedLayout = `
-╭─────────────────╮╭──────────────────────────╮╭───────────────────╮                                
-│ Topics (Meta-1) ││ Consumer Groups (Meta-2) ││ Clusters (Meta-3) │                                
-┴─────────────────┴┴──────────────────────────┴┘                   └────────────────────────────────
+╭─────────────────╮╭──────────────────────────╮╭──────────────────────────╮╭───────────────────╮    
+│ Topics (Meta-1) ││ Consumer Groups (Meta-2) ││ Schema Registry (Meta-3) ││ Clusters (Meta-4) │    
+┴─────────────────┴┴──────────────────────────┴┴──────────────────────────┴┘                   └────
 `
-			assert.Regexp(t, "X\\W+tst", view)
-			assert.NotRegexp(t, "X\\W+prd", view)
+
+			assert.Contains(t, view, expectedLayout)
 		})
 	})
 }

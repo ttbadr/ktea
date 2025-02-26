@@ -3,7 +3,6 @@ package clusters_tab
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/log"
 	"ktea/config"
 	"ktea/kadmin"
 	"ktea/kontext"
@@ -41,13 +40,12 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
-	log.Debug(msg)
 	if m.active == nil {
 		return nil
 	}
 	switch msg := msg.(type) {
 	case config.ClusterRegisteredMsg:
-		listPage, _ := clusters_page.New(m.ktx)
+		listPage, _ := clusters_page.New(m.ktx, m.connChecker)
 		m.active = listPage
 		m.statusbar = statusbar.New(m.active)
 		return func() tea.Msg {
@@ -68,7 +66,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc":
-			m.active, _ = clusters_page.New(m.ktx)
+			m.active, _ = clusters_page.New(m.ktx, m.connChecker)
 		case "ctrl+n":
 			m.active = create_cluster_page.NewForm(m.connChecker, m.ktx.Config, m.ktx)
 		case "ctrl+e":
@@ -117,7 +115,7 @@ func New(
 	m.ktx = ktx
 	m.config = ktx.Config
 	if m.config.HasClusters() {
-		var listPage, c = clusters_page.New(ktx)
+		var listPage, c = clusters_page.New(ktx, m.connChecker)
 		cmd = c
 		m.active = listPage
 		m.statusbar = statusbar.New(m.active)

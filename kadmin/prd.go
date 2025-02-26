@@ -2,5 +2,5 @@
 
 package kadmin
 
-func maybeIntroduceLatency() {
+func MaybeIntroduceLatency() {
 }

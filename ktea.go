@@ -39,6 +39,7 @@ type Model struct {
 	schemaRegistryTabCtrl *sr_tab.Model
 	clustersTabCtrl       *clusters_tab.Model
 	configIO              config.IO
+	switchingCluster      bool
 }
 
 // RetryClusterConnectionMsg is an internal Msg
@@ -99,6 +100,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case sradmin.SubjectListingStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
+
+	case kadmin.ConnCheckStartedMsg:
+		m.switchingCluster = true
+	case kadmin.ConnCheckErrMsg, kadmin.ConnCheckSucceededMsg:
+		m.switchingCluster = false
 
 	case config.ClusterRegisteredMsg:
 		// if the active cluster has been updated it needs to be reloaded
@@ -166,46 +172,45 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.onWindowSizeUpdated(msg)
 	}
 
-	// if no clusters configured,
-	// do not allow to move away from create cluster form
-	if m.ktx.Config != nil && m.ktx.Config.HasClusters() {
+	if !m.switchingCluster {
 		m.tabs.Update(msg)
-	}
-	if m.tabs.ActiveTab() != m.activeTab {
-		m.activeTab = m.tabs.ActiveTab()
-		switch m.activeTab {
-		case 0:
-			if m.topicsTabCtrl == nil {
-				var cmd tea.Cmd
-				m.topicsTabCtrl, cmd = topics_tab.New(m.ktx, m.ka)
-				cmds = append(cmds, cmd)
-			}
-			m.tabCtrl = m.topicsTabCtrl
-		case 1:
-			if m.cgroupsTabCtrl == nil {
-				var cmd tea.Cmd
-				m.cgroupsTabCtrl, cmd = cgroups_tab.New(m.ka, m.ka, m.ka)
-				cmds = append(cmds, cmd)
-			}
-			m.tabCtrl = m.cgroupsTabCtrl
-		case 2:
-			if m.ktx.Config.ActiveCluster().HasSchemaRegistry() {
-				if m.schemaRegistryTabCtrl == nil {
+
+		if m.tabs.ActiveTab() != m.activeTab {
+			m.activeTab = m.tabs.ActiveTab()
+			switch m.activeTab {
+			case 0:
+				if m.topicsTabCtrl == nil {
 					var cmd tea.Cmd
-					m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.sra, m.ktx)
+					m.topicsTabCtrl, cmd = topics_tab.New(m.ktx, m.ka)
 					cmds = append(cmds, cmd)
 				}
-				m.tabCtrl = m.schemaRegistryTabCtrl
-				break
+				m.tabCtrl = m.topicsTabCtrl
+			case 1:
+				if m.cgroupsTabCtrl == nil {
+					var cmd tea.Cmd
+					m.cgroupsTabCtrl, cmd = cgroups_tab.New(m.ka, m.ka, m.ka)
+					cmds = append(cmds, cmd)
+				}
+				m.tabCtrl = m.cgroupsTabCtrl
+			case 2:
+				if m.ktx.Config.ActiveCluster().HasSchemaRegistry() {
+					if m.schemaRegistryTabCtrl == nil {
+						var cmd tea.Cmd
+						m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.sra, m.ktx)
+						cmds = append(cmds, cmd)
+					}
+					m.tabCtrl = m.schemaRegistryTabCtrl
+					break
+				}
+				fallthrough
+			case 3:
+				if m.clustersTabCtrl == nil {
+					var cmd tea.Cmd
+					m.clustersTabCtrl, cmd = clusters_tab.New(m.ktx, kadmin.SaramaConnectivityChecker)
+					cmds = append(cmds, cmd)
+				}
+				m.tabCtrl = m.clustersTabCtrl
 			}
-			fallthrough
-		case 3:
-			if m.clustersTabCtrl == nil {
-				var cmd tea.Cmd
-				m.clustersTabCtrl, cmd = clusters_tab.New(m.ktx, kadmin.SaramaConnectivityChecker)
-				cmds = append(cmds, cmd)
-			}
-			m.tabCtrl = m.clustersTabCtrl
 		}
 	}
 

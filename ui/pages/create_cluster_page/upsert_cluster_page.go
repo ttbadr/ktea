@@ -100,9 +100,9 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
-	case kadmin.ConnectivityCheckStartedMsg:
+	case kadmin.ConnCheckStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
-	case kadmin.ConnectionCheckSucceeded:
+	case kadmin.ConnCheckSucceededMsg:
 		cmds = append(cmds, func() tea.Msg {
 			details := m.getRegistrationDetails()
 			return m.clusterRegisterer.RegisterCluster(details)
@@ -361,14 +361,14 @@ func NewForm(
 	}
 	model.srSelectionState = srNothingSelected
 
-	model.notifierCmdBar = cmdbar.NewNotifierCmdBar()
-	cmdbar.WithMsgHandler(model.notifierCmdBar, func(msg kadmin.ConnectivityCheckStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
+	model.notifierCmdBar = cmdbar.NewNotifierCmdBar("upsert-cluster-page")
+	cmdbar.WithMsgHandler(model.notifierCmdBar, func(msg kadmin.ConnCheckStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		return true, m.SpinWithLoadingMsg("Testing cluster connectivity")
 	})
-	cmdbar.WithMsgHandler(model.notifierCmdBar, func(msg kadmin.ConnectionCheckSucceeded, m *notifier.Model) (bool, tea.Cmd) {
+	cmdbar.WithMsgHandler(model.notifierCmdBar, func(msg kadmin.ConnCheckSucceededMsg, m *notifier.Model) (bool, tea.Cmd) {
 		return true, m.SpinWithLoadingMsg("Connection success creating cluster")
 	})
-	cmdbar.WithMsgHandler(model.notifierCmdBar, func(msg kadmin.ConnectivityCheckErrMsg, m *notifier.Model) (bool, tea.Cmd) {
+	cmdbar.WithMsgHandler(model.notifierCmdBar, func(msg kadmin.ConnCheckErrMsg, m *notifier.Model) (bool, tea.Cmd) {
 		model.form = model.createForm()
 		model.state = none
 		return true, m.ShowErrorMsg("Cluster not created", msg.Err)
@@ -408,7 +408,7 @@ func NewEditForm(
 		model.authSelectionState = saslSelected
 	}
 
-	model.notifierCmdBar = cmdbar.NewNotifierCmdBar()
+	model.notifierCmdBar = cmdbar.NewNotifierCmdBar("upsert-cluster-page")
 
 	return &model
 }

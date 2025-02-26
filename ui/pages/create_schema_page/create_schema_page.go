@@ -157,7 +157,7 @@ func New(schemaCreator sradmin.SchemaCreator, ktx *kontext.ProgramKtx) (*Model, 
 	model.ktx = ktx
 	model.schemaCreator = schemaCreator
 	model.state = entering
-	notifierCmdBar := cmdbar.NewNotifierCmdBar()
+	notifierCmdBar := cmdbar.NewNotifierCmdBar("create-schema-page")
 	cmdbar.WithMsgHandler(notifierCmdBar, func(msg sradmin.SchemaCreationStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		cmd := m.SpinWithLoadingMsg("Creating Schema")
 		return true, cmd

@@ -4,6 +4,6 @@ package kadmin
 
 import "time"
 
-func maybeIntroduceLatency() {
+func MaybeIntroduceLatency() {
 	time.Sleep(2 * time.Second)
 }

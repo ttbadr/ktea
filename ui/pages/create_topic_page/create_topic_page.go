@@ -292,7 +292,7 @@ func New(tc kadmin.TopicCreator) *Model {
 		{"Go Back", "esc"},
 	}
 	t.initForm(initial)
-	notifierCmdBar := cmdbar.NewNotifierCmdBar()
+	notifierCmdBar := cmdbar.NewNotifierCmdBar("create-topic-page")
 	cmdbar.WithMsgHandler(notifierCmdBar, func(msg kadmin.TopicCreationStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		cmd := m.SpinWithLoadingMsg("Creating Topic")
 		return true, cmd
@@ -303,7 +303,7 @@ func New(tc kadmin.TopicCreator) *Model {
 	})
 	cmdbar.WithMsgHandler(notifierCmdBar, func(msg kadmin.TopicCreatedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowSuccessMsg("Topic created!")
-		return true, m.AutoHideCmd()
+		return true, m.AutoHideCmd("create-topic-page")
 	})
 	t.notifier = notifierCmdBar
 

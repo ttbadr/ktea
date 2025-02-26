@@ -28,7 +28,9 @@ type Model struct {
 	state      state
 }
 
-type HideNotificationMsg struct{}
+type HideNotificationMsg struct {
+	Tag string
+}
 
 type NotificationHiddenMsg struct{}
 
@@ -62,8 +64,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.spinner = s
 		return cmd
 	case HideNotificationMsg:
+		m.Idle()
 		return func() tea.Msg {
-			m.Idle()
 			return NotificationHiddenMsg{}
 		}
 	}
@@ -104,10 +106,10 @@ func (m *Model) Idle() {
 	m.msg = ""
 }
 
-func (m *Model) AutoHideCmd() tea.Cmd {
+func (m *Model) AutoHideCmd(tag string) tea.Cmd {
 	return func() tea.Msg {
 		time.Sleep(5 * time.Second)
-		return HideNotificationMsg{}
+		return HideNotificationMsg{Tag: tag}
 	}
 }
 

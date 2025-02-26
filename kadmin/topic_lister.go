@@ -36,7 +36,7 @@ type ListedTopic struct {
 	Name           string
 	PartitionCount int
 	Replicas       int
-	RecordCount int64
+	RecordCount    int64
 }
 
 func (ka *SaramaKafkaAdmin) ListTopics() tea.Msg {
@@ -52,7 +52,7 @@ func (ka *SaramaKafkaAdmin) ListTopics() tea.Msg {
 }
 
 func (ka *SaramaKafkaAdmin) doListTopics(errChan chan error, topicsChan chan []ListedTopic) {
-	maybeIntroduceLatency()
+	MaybeIntroduceLatency()
 	listResult, err := ka.admin.ListTopics()
 	if err != nil {
 		errChan <- err

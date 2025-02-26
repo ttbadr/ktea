@@ -41,7 +41,7 @@ func NewCmdBar() *CmdBar {
 		m.Idle()
 		return false, nil
 	}
-	notifierCmdBar := cmdbar.NewNotifierCmdBar()
+	notifierCmdBar := cmdbar.NewNotifierCmdBar("schema-details-cmd-bar")
 	cmdbar.WithMsgHandler(notifierCmdBar, schemaListingStartedNotifier)
 	cmdbar.WithMsgHandler(notifierCmdBar, schemaListedNotifier)
 	return &CmdBar{notifierWidget: notifierCmdBar, active: notifierCmdBar}

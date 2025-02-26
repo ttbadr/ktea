@@ -20,6 +20,7 @@ type NotifierCmdBar struct {
 	active            bool
 	Notifier          *notifier.Model
 	msgByNotification map[reflect.Type]Notification[any]
+	tag               string
 }
 
 func (n *NotifierCmdBar) IsFocussed() bool {
@@ -48,8 +49,11 @@ func (n *NotifierCmdBar) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
 		cmd := n.Notifier.Update(msg)
 		return n.active, nil, cmd
 	case notifier.HideNotificationMsg:
-		cmd := n.Notifier.Update(msg)
-		return false, nil, cmd
+		if n.tag == msg.Tag {
+			cmd := n.Notifier.Update(msg)
+			return false, nil, cmd
+		}
+		return n.active, msg, nil
 	}
 
 	msgType := reflect.TypeOf(msg)
@@ -77,6 +81,10 @@ func WrapNotification[T any](n Notification[T]) Notification[any] {
 	}
 }
 
-func NewNotifierCmdBar() *NotifierCmdBar {
-	return &NotifierCmdBar{msgByNotification: make(map[reflect.Type]Notification[any]), Notifier: notifier.New()}
+func NewNotifierCmdBar(tag string) *NotifierCmdBar {
+	return &NotifierCmdBar{
+		tag:               tag,
+		msgByNotification: make(map[reflect.Type]Notification[any]),
+		Notifier:          notifier.New(),
+	}
 }

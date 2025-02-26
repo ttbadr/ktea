@@ -63,7 +63,7 @@ func NewConsumptionCmdbar() *ConsumptionCmdBar {
 		m.Idle()
 		return false, nil
 	}
-	notifierCmdBar := cmdbar.NewNotifierCmdBar()
+	notifierCmdBar := cmdbar.NewNotifierCmdBar("consumption-bar")
 	cmdbar.WithMsgHandler(notifierCmdBar, readingStartedNotifier)
 	cmdbar.WithMsgHandler(notifierCmdBar, consumptionEndedNotifier)
 	cmdbar.WithMsgHandler(notifierCmdBar, c)

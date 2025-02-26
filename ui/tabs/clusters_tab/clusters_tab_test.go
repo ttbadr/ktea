@@ -1,9 +1,11 @@
 package clusters_tab
 
 import (
+	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"ktea/config"
+	"ktea/kadmin"
 	"ktea/kontext"
 	"ktea/styles"
 	"ktea/tests/keys"
@@ -12,8 +14,12 @@ import (
 	"testing"
 )
 
+type MockConnectionCheckStartedMsg struct {
+	cluster *config.Cluster
+}
+
 func mockConnChecker(cluster *config.Cluster) tea.Msg {
-	return cluster
+	return MockConnectionCheckStartedMsg{cluster: cluster}
 }
 
 func TestClustersTab(t *testing.T) {
@@ -111,7 +117,7 @@ func TestClustersTab(t *testing.T) {
 			assert.NotRegexp(t, "X\\W+uat", render)
 		})
 
-		t.Run("enter activates the selected cluster", func(t *testing.T) {
+		t.Run("enter starts a connectivity check for the selected cluster", func(t *testing.T) {
 			// given
 			programKtx := &kontext.ProgramKtx{
 				Config: &config.Config{
@@ -154,12 +160,54 @@ func TestClustersTab(t *testing.T) {
 			msgs := executeBatchCmd(cmds)
 			assert.NotNil(t, msgs)
 
-			// then
-			render := clustersTab.View(programKtx, ui.TestRenderer)
-			assert.Regexp(t, "X\\W+tst", render)
-			assert.Regexp(t, "│\\W+prd", render)
-			assert.Regexp(t, "│\\W+uat", render)
-			assert.NotRegexp(t, "X\\W+prd", render)
+			// then the connectivity check has been started
+			assert.IsType(t, MockConnectionCheckStartedMsg{}, msgs[0])
+
+			t.Run("and shows a spinner", func(t *testing.T) {
+				clustersTab.Update(kadmin.ConnCheckStartedMsg{
+					Cluster: &config.Cluster{
+						Name: "tst",
+					},
+				})
+
+				rendered := clustersTab.View(programKtx, ui.TestRenderer)
+
+				assert.Contains(t, rendered, "Checking connectivity to tst")
+			})
+
+			t.Run("and shows failure msg upon connectivity error", func(t *testing.T) {
+				clustersTab.Update(kadmin.ConnCheckErrMsg{
+					Err: fmt.Errorf("kafka: client has run out of available brokers to talk to: EOF"),
+				})
+
+				rendered := clustersTab.View(programKtx, ui.TestRenderer)
+
+				assert.Contains(t, rendered, "Connection check failed: kafka: client has run out of available brokers to talk to: EOF")
+			})
+
+			t.Run("and shows success msg upon connection ", func(t *testing.T) {
+				clustersTab.Update(kadmin.ConnCheckSucceededMsg{})
+
+				rendered := clustersTab.View(programKtx, ui.TestRenderer)
+
+				assert.Contains(t, rendered, "Connection check succeeded, switching cluster")
+			})
+
+			t.Run("and activated is indicated", func(t *testing.T) {
+				programKtx.Config.SwitchCluster("tst")
+				clustersTab.Update(clusters_page.ClusterSwitchedMsg{
+					Cluster: &config.Cluster{
+						Name: "tst",
+					},
+				})
+
+				rendered := clustersTab.View(programKtx, ui.TestRenderer)
+
+				assert.Regexp(t, "X\\W+tst", rendered)
+				assert.Regexp(t, "│\\W+prd", rendered)
+				assert.Regexp(t, "│\\W+uat", rendered)
+				assert.NotRegexp(t, "X\\W+prd", rendered)
+			})
 
 			t.Run("Activated cluster is selected", func(t *testing.T) {
 				assert.Equal(t, "tst",

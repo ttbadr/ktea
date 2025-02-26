@@ -50,7 +50,7 @@ func (ka *SaramaKafkaAdmin) CreateTopic(tcd TopicCreationDetails) tea.Msg {
 }
 
 func (ka *SaramaKafkaAdmin) doCreateTopic(tcd TopicCreationDetails, created chan bool, errChan chan error) {
-	maybeIntroduceLatency()
+	MaybeIntroduceLatency()
 	properties := make(map[string]*string)
 	for k, v := range tcd.Properties {
 		properties[k] = &v

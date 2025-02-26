@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"ktea/config"
+	"ktea/kadmin"
 	"ktea/kontext"
 	"ktea/styles"
 	"ktea/ui"
@@ -26,6 +27,7 @@ type Model struct {
 	ktx           *kontext.ProgramKtx
 	cmdBar        *cmdbar.TableCmdsBar[string]
 	tableFocussed bool
+	connChecker   kadmin.ConnChecker
 }
 
 func (m *Model) Title() string {
@@ -72,24 +74,34 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	var cmds []tea.Cmd
 
-	msg, cmd := m.cmdBar.Update(msg, m.SelectedCluster())
-	m.tableFocussed = !m.cmdBar.IsFocussed()
-	cmds = append(cmds, cmd)
-
 	switch msg := msg.(type) {
 	case ClusterSwitchedMsg:
 		// immediately recreate the rows updating the active cluster
 		m.rows = m.createRows()
+	case kadmin.ConnCheckStartedMsg:
+		cmds = append(cmds, msg.AwaitCompletion)
+	case kadmin.ConnCheckSucceededMsg:
+		cmds = append(cmds, func() tea.Msg {
+			kadmin.MaybeIntroduceLatency()
+			activeCluster := m.ktx.Config.SwitchCluster(*m.SelectedCluster())
+			m.rows = m.createRows()
+			return ClusterSwitchedMsg{activeCluster}
+		})
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "enter":
-			cmds = append(cmds, func() tea.Msg {
-				activeCluster := m.ktx.Config.SwitchCluster(*m.SelectedCluster())
-				m.rows = m.createRows()
-				return ClusterSwitchedMsg{activeCluster}
-			})
+			if !m.cmdBar.IsFocussed() {
+				cmds = append(cmds, func() tea.Msg {
+					cluster := m.ktx.Config.FindClusterByName(*m.SelectedCluster())
+					return m.connChecker(cluster)
+				})
+			}
 		}
 	}
+
+	msg, cmd := m.cmdBar.Update(msg, m.SelectedCluster())
+	m.tableFocussed = !m.cmdBar.IsFocussed()
+	cmds = append(cmds, cmd)
 
 	// make sure table navigation is off when the cmdbar is focussed
 	if !m.cmdBar.IsFocussed() {
@@ -136,9 +148,10 @@ func (m *Model) createRows() []table.Row {
 type ActiveClusterDeleteErrMsg struct {
 }
 
-func New(ktx *kontext.ProgramKtx) (nav.Page, tea.Cmd) {
+func New(ktx *kontext.ProgramKtx, connChecker kadmin.ConnChecker) (nav.Page, tea.Cmd) {
 
 	model := Model{}
+	model.connChecker = connChecker
 
 	deleteFunc := func(subject string) tea.Cmd {
 		return func() tea.Msg {
@@ -166,18 +179,39 @@ func New(ktx *kontext.ProgramKtx) (nav.Page, tea.Cmd) {
 
 	searchCmdBar := cmdbar.NewSearchCmdBar("Search clusters by name")
 	deleteCmdBar := cmdbar.NewDeleteCmdBar(deleteMsgFunc, deleteFunc, validateFunc)
-	notifierCmdBar := cmdbar.NewNotifierCmdBar()
+	notifierCmdBar := cmdbar.NewNotifierCmdBar("clusters-page")
 
 	clusterDeletedHandler := func(msg config.ClusterDeletedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowSuccessMsg("Cluster has been deleted")
-		return true, m.AutoHideCmd()
+		return true, m.AutoHideCmd("clusters-page")
 	}
 	activeClusterDeleteErrMsgHandler := func(msg ActiveClusterDeleteErrMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowErrorMsg("Unable to delete", fmt.Errorf("active cluster"))
-		return true, m.AutoHideCmd()
+		return true, m.AutoHideCmd("clusters-page")
 	}
+	connCheckStartedHandler := func(msg kadmin.ConnCheckStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
+		cmd := m.SpinWithLoadingMsg("Checking connectivity to " + msg.Cluster.Name)
+		return true, cmd
+	}
+	connCheckErrHandler := func(msg kadmin.ConnCheckErrMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.ShowErrorMsg("Connection check failed", msg.Err)
+		return true, nil
+	}
+	connCheckSucceededHandler := func(msg kadmin.ConnCheckSucceededMsg, m *notifier.Model) (bool, tea.Cmd) {
+		cmd := m.SpinWithRocketMsg("Connection check succeeded, switching cluster")
+		return true, cmd
+	}
+	clusterSwitchedHandler := func(msg ClusterSwitchedMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.ShowSuccessMsg("Cluster switched to " + msg.Cluster.Name)
+		return true, m.AutoHideCmd("clusters-page")
+	}
+
 	cmdbar.WithMsgHandler(notifierCmdBar, clusterDeletedHandler)
 	cmdbar.WithMsgHandler(notifierCmdBar, activeClusterDeleteErrMsgHandler)
+	cmdbar.WithMsgHandler(notifierCmdBar, connCheckStartedHandler)
+	cmdbar.WithMsgHandler(notifierCmdBar, connCheckErrHandler)
+	cmdbar.WithMsgHandler(notifierCmdBar, connCheckSucceededHandler)
+	cmdbar.WithMsgHandler(notifierCmdBar, clusterSwitchedHandler)
 
 	model.ktx = ktx
 	t := ktable.NewDefaultTable()

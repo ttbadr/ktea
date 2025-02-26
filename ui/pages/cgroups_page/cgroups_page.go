@@ -162,7 +162,7 @@ func New(lister kadmin.CGroupLister, deleter kadmin.CGroupDeleter) (*Model, tea.
 			return deleter.DeleteCGroup(group)
 		}
 	}
-	notifierCmdBar := cmdbar.NewNotifierCmdBar()
+	notifierCmdBar := cmdbar.NewNotifierCmdBar("cgroups-page")
 	cmdbar.WithMsgHandler(
 		notifierCmdBar,
 		func(

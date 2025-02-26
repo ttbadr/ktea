@@ -54,7 +54,7 @@ func (ka *SaramaKafkaAdmin) doPublishRecord(
 	errChan chan error,
 	published chan bool,
 ) {
-	maybeIntroduceLatency()
+	MaybeIntroduceLatency()
 	var partition int32
 	if p.Partition == nil {
 		ka.config.Producer.Partitioner = sarama.NewHashPartitioner

@@ -256,7 +256,7 @@ func New(lister sradmin.SubjectLister, deleter sradmin.SubjectDeleter) (*Model, 
 		}
 	}
 
-	notifierCmdBar := cmdbar.NewNotifierCmdBar()
+	notifierCmdBar := cmdbar.NewNotifierCmdBar("subjects-page")
 
 	subjectListingStartedNotifier := func(msg sradmin.SubjectListingStartedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		cmd := m.SpinWithLoadingMsg("Loading subjects")
@@ -276,11 +276,11 @@ func New(lister sradmin.SubjectLister, deleter sradmin.SubjectDeleter) (*Model, 
 	}
 	subjectDeletedNotifier := func(msg sradmin.SubjectDeletedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowSuccessMsg("Subject deleted")
-		return true, m.AutoHideCmd()
+		return true, m.AutoHideCmd("subjects-page")
 	}
 	subjectDeletionErrorNotifier := func(msg sradmin.SubjectDeletionErrorMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowErrorMsg("Failed to delete subject", msg.Err)
-		return true, m.AutoHideCmd()
+		return true, m.AutoHideCmd("subjects-page")
 	}
 	cmdbar.WithMsgHandler(notifierCmdBar, subjectListingStartedNotifier)
 	cmdbar.WithMsgHandler(notifierCmdBar, subjectsListedNotifier)

@@ -222,7 +222,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 		}
 	}
 
-	notifierCmdBar := cmdbar.NewNotifierCmdBar()
+	notifierCmdBar := cmdbar.NewNotifierCmdBar("topics-page")
 
 	cmdbar.WithMsgHandler(
 		notifierCmdBar,
@@ -242,7 +242,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 			m *notifier.Model,
 		) (bool, tea.Cmd) {
 			m.Idle()
-			return true, m.AutoHideCmd()
+			return true, m.AutoHideCmd("topics-page")
 		},
 	)
 
@@ -264,7 +264,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 			m *notifier.Model,
 		) (bool, tea.Cmd) {
 			m.ShowSuccessMsg("Topic Deleted")
-			return true, m.AutoHideCmd()
+			return true, m.AutoHideCmd("")
 		},
 	)
 
@@ -286,7 +286,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 			m *notifier.Model,
 		) (bool, tea.Cmd) {
 			m.ShowErrorMsg("Error Deleting Topic", msg.Err)
-			return true, m.AutoHideCmd()
+			return true, m.AutoHideCmd("")
 		},
 	)
 

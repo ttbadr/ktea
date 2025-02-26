@@ -46,7 +46,7 @@ func (ka *SaramaKafkaAdmin) doDeleteTopic(
 	deletedChan chan bool,
 	errChan chan error,
 ) {
-	maybeIntroduceLatency()
+	MaybeIntroduceLatency()
 	err := ka.admin.DeleteTopic(topic)
 	if err != nil {
 		errChan <- err

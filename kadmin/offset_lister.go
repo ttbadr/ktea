@@ -47,7 +47,7 @@ func (ka *SaramaKafkaAdmin) ListOffsets(group string) tea.Msg {
 }
 
 func (ka *SaramaKafkaAdmin) doListOffsets(group string, offsetsChan chan []TopicPartitionOffset, errChan chan error) {
-	maybeIntroduceLatency()
+	MaybeIntroduceLatency()
 	listResult, err := ka.admin.ListConsumerGroupOffsets(group, nil)
 	if err != nil {
 		errChan <- err

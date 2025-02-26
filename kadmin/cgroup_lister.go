@@ -43,7 +43,7 @@ func (ka *SaramaKafkaAdmin) ListCGroups() tea.Msg {
 }
 
 func (ka *SaramaKafkaAdmin) doListConsumerGroups(groupsChan chan []*ConsumerGroup, errorChan chan error) {
-	maybeIntroduceLatency()
+	MaybeIntroduceLatency()
 	if listGroupResponse, err := ka.admin.ListConsumerGroups(); err != nil {
 		errorChan <- err
 	} else {

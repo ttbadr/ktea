@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/log"
 	"ktea/config"
 	"ktea/sradmin"
+	"time"
 )
 
 type SaramaKafkaAdmin struct {
@@ -17,23 +18,24 @@ type SaramaKafkaAdmin struct {
 	sra      sradmin.SrAdmin
 }
 
-type ConnectivityCheckStartedMsg struct {
+type ConnCheckStartedMsg struct {
+	Cluster   *config.Cluster
 	Connected chan bool
 	Err       chan error
 }
 
-func (c *ConnectivityCheckStartedMsg) AwaitCompletion() tea.Msg {
+func (c *ConnCheckStartedMsg) AwaitCompletion() tea.Msg {
 	select {
 	case <-c.Connected:
-		return ConnectionCheckSucceeded{}
+		return ConnCheckSucceededMsg{}
 	case err := <-c.Err:
-		return ConnectivityCheckErrMsg{Err: err}
+		return ConnCheckErrMsg{Err: err}
 	}
 }
 
-type ConnectionCheckSucceeded struct{}
+type ConnCheckSucceededMsg struct{}
 
-type ConnectivityCheckErrMsg struct {
+type ConnCheckErrMsg struct {
 	Err error
 }
 
@@ -106,18 +108,22 @@ func SaramaConnectivityChecker(cluster *config.Cluster) tea.Msg {
 		cfg.Net.SASL.Mechanism = sarama.SASLTypePlaintext
 		cfg.Net.SASL.User = cd.SASLConfig.Username
 		cfg.Net.SASL.Password = cd.SASLConfig.Password
+		cfg.Net.DialTimeout = 5 * time.Second
+		cfg.Net.ReadTimeout = 5 * time.Second
+		cfg.Net.WriteTimeout = 5 * time.Second
 	}
 
 	go doCheckConnectivity(cd, cfg, errChan, connectedChan)
 
-	return ConnectivityCheckStartedMsg{
+	return ConnCheckStartedMsg{
+		Cluster:   cluster,
 		Connected: connectedChan,
 		Err:       errChan,
 	}
 }
 
 func doCheckConnectivity(cd ConnectionDetails, config *sarama.Config, errChan chan error, connectedChan chan bool) {
-	maybeIntroduceLatency()
+	MaybeIntroduceLatency()
 	c, err := sarama.NewClient(cd.BootstrapServers, config)
 	if err != nil {
 		errChan <- err
