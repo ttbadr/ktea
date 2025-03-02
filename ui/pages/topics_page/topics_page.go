@@ -268,7 +268,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 			m *notifier.Model,
 		) (bool, tea.Cmd) {
 			m.ShowSuccessMsg("Topic Deleted")
-			return true, m.AutoHideCmd("")
+			return true, m.AutoHideCmd("topics-page")
 		},
 	)
 
@@ -290,7 +290,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 			m *notifier.Model,
 		) (bool, tea.Cmd) {
 			m.ShowErrorMsg("Error Deleting Topic", msg.Err)
-			return true, m.AutoHideCmd("")
+			return true, m.AutoHideCmd("topics-page")
 		},
 	)
 

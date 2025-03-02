@@ -264,11 +264,11 @@ func New(
 	notifierCmdBar := cmdbar.NewNotifierCmdBar("record-details-page")
 	cmdbar.WithMsgHandler(notifierCmdBar, func(msg PayloadCopiedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowSuccessMsg("Payload copied")
-		return true, m.AutoHideCmd("")
+		return true, m.AutoHideCmd("record-details-page")
 	})
 	cmdbar.WithMsgHandler(notifierCmdBar, func(msg HeaderValueCopiedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowSuccessMsg("Header Value copied")
-		return true, m.AutoHideCmd("")
+		return true, m.AutoHideCmd("record-details-page")
 	})
 	cmdbar.WithMsgHandler(notifierCmdBar, func(msg CopyErrorMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowErrorMsg("Copy failed", msg.Err)
