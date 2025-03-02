@@ -45,24 +45,15 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 
 	cmdBarView := styles.CmdBarWithWidth(ktx.WindowWidth - cmdbar.BorderedPadding).Render(m.cmdBar.View(ktx, renderer))
 
-	if m.topicByPartOffset == nil {
-		return ui.JoinVertical(lg.Left,
-			cmdBarView,
-			lg.JoinHorizontal(
-				lg.Top,
-				"",
-			))
-	}
-
 	halfWidth := int(float64(ktx.WindowWidth / 2))
-	m.topicsTable.SetHeight(ktx.AvailableHeight - 1)
+	m.topicsTable.SetHeight(ktx.AvailableHeight - 4)
 	m.topicsTable.SetWidth(halfWidth - 2)
 	m.topicsTable.SetColumns([]table.Column{
 		{"Topic Name", int(float64(halfWidth - 4))},
 	})
 	m.topicsTable.SetRows(m.topicsRows)
 
-	m.offsetsTable.SetHeight(ktx.AvailableHeight - 1)
+	m.offsetsTable.SetHeight(ktx.AvailableHeight - 4)
 	m.offsetsTable.SetColumns([]table.Column{
 		{"Partition", int(float64(halfWidth-6) * 0.5)},
 		{"Offset", int(float64(halfWidth-5) * 0.5)},

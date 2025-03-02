@@ -66,6 +66,9 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.KeyMsg:
 		if msg.String() == "esc" {
 			m.cancelConsumption()
+			if m.readDetails.StartPoint == kadmin.Live {
+				return ui.PublishMsg(nav.LoadTopicsPageMsg{})
+			}
 			return ui.PublishMsg(nav.LoadConsumptionFormPageMsg{ReadDetails: &m.readDetails, Topic: m.topic})
 		} else if msg.String() == "f2" {
 			m.cancelConsumption()

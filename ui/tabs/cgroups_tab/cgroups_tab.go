@@ -22,7 +22,7 @@ type Model struct {
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
-	return lipgloss.JoinVertical(
+	return ui.JoinVertical(
 		lipgloss.Top,
 		m.statusbar.View(ktx, renderer),
 		m.active.View(ktx, renderer),

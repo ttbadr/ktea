@@ -89,6 +89,19 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.consumptionPage = m.active
 		cmds = append(cmds, cmd)
 
+	case nav.LoadLiveConsumePageMsg:
+		var cmd tea.Cmd
+		readDetails := kadmin.ReadDetails{
+			TopicName:       msg.Topic.Name,
+			PartitionToRead: msg.Topic.Partitions(),
+			StartPoint:      kadmin.Live,
+			Limit:           500,
+			Filter:          nil,
+		}
+		m.active, cmd = consumption_page.New(m.ka, readDetails, msg.Topic)
+		m.consumptionPage = m.active
+		cmds = append(cmds, cmd)
+
 	}
 
 	if cmd := m.active.Update(msg); cmd != nil {

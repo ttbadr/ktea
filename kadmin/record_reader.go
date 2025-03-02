@@ -36,6 +36,7 @@ type StartPoint int
 const (
 	Beginning  StartPoint = 0
 	MostRecent StartPoint = 1
+	Live       StartPoint = 2
 )
 
 type RecordReader interface {
@@ -125,7 +126,8 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) tea
 
 	var atLeastOnePartitionReadable bool
 	for _, partition := range rd.PartitionToRead {
-		if offsets[partition].firstAvailable != offsets[partition].oldest {
+		// if there is no data in the partition, we don't need to read it unless live consumption is requested
+		if offsets[partition].firstAvailable != offsets[partition].oldest || rd.StartPoint == Live {
 			atLeastOnePartitionReadable = true
 			go func(partition int) {
 				defer wg.Done()
@@ -194,7 +196,7 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) tea
 							return
 						}
 
-						if msg.Offset == readingOffsets.end {
+						if msg.Offset == readingOffsets.end && rd.StartPoint != Live {
 							return
 						}
 					}
@@ -256,6 +258,14 @@ func (ka *SaramaKafkaAdmin) determineReadingOffsets(
 	rd ReadDetails,
 	offsets offsets,
 ) readingOffsets {
+
+	if rd.StartPoint == Live {
+		return readingOffsets{
+			start: offsets.firstAvailable,
+			end:   -1,
+		}
+	}
+
 	var startOffset int64
 	var endOffset int64
 	numberOfRecordsPerPart := int64(float64(int64(rd.Limit)) / float64(len(rd.PartitionToRead)))

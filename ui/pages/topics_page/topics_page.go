@@ -74,6 +74,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		case "f5":
 			m.topics = nil
 			return m.lister.ListTopics
+		case "ctrl+l":
+			return ui.PublishMsg(nav.LoadLiveConsumePageMsg{Topic: m.SelectedTopic()})
 		case "enter":
 			// only accept enter when the table is focussed
 			if !m.cmdBar.IsFocussed() {
@@ -191,7 +193,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 	var m = Model{}
 	m.shortcuts = []statusbar.Shortcut{
 		{"Consume", "enter"},
-		{"Quick Consume", "C-enter"},
+		{"Live Consume", "C-l"},
 		{"Search", "/"},
 		{"Publish", "C-p"},
 		{"Create", "C-n"},

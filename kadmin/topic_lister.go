@@ -39,6 +39,14 @@ type ListedTopic struct {
 	RecordCount    int64
 }
 
+func (t *ListedTopic) Partitions() []int {
+	partToConsume := make([]int, t.PartitionCount)
+	for i := range t.PartitionCount {
+		partToConsume[i] = i
+	}
+	return partToConsume
+}
+
 func (ka *SaramaKafkaAdmin) ListTopics() tea.Msg {
 	errChan := make(chan error)
 	topicsChan := make(chan []ListedTopic)

@@ -128,10 +128,7 @@ func (m *Model) submit(filter kadmin.Filter) tea.Cmd {
 	var partToConsume []int
 	if m.noPartitionsSelected() {
 		// consume from all partitions
-		partToConsume = make([]int, m.topic.PartitionCount)
-		for i := range m.topic.PartitionCount {
-			partToConsume[i] = i
-		}
+		partToConsume = m.topic.Partitions()
 	} else {
 		partToConsume = m.formValues.partitions
 	}

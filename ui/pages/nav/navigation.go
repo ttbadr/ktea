@@ -29,6 +29,10 @@ type LoadConsumptionPageMsg struct {
 	Topic       *kadmin.ListedTopic
 }
 
+type LoadLiveConsumePageMsg struct {
+	Topic *kadmin.ListedTopic
+}
+
 type LoadCachedConsumptionPageMsg struct {
 }
 
