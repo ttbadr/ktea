@@ -107,10 +107,10 @@ func TestPublish(t *testing.T) {
 	assertRecords:
 		assert.Equal(t, "{\"id\":\"123\"}", receivedRecords[0].Value)
 		assert.Contains(t, receivedRecords[0].Headers, Header{
-			"id", "123",
+			"id", NewHeaderValue("123"),
 		})
 		assert.Contains(t, receivedRecords[0].Headers, Header{
-			"user", "456",
+			"user", NewHeaderValue("456"),
 		})
 
 		// clean up

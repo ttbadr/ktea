@@ -23,7 +23,7 @@ func TestRecordDetailsPage(t *testing.T) {
 			Headers: []kadmin.Header{
 				{
 					Key:   "h1",
-					Value: "v2",
+					Value: kadmin.NewHeaderValue("v2"),
 				},
 			},
 		},
@@ -84,7 +84,7 @@ func TestRecordDetailsPage(t *testing.T) {
 			Headers: []kadmin.Header{
 				{
 					Key:   "h1",
-					Value: "v1",
+					Value: kadmin.NewHeaderValue("v1"),
 				},
 			},
 		},
@@ -120,15 +120,15 @@ func TestRecordDetailsPage(t *testing.T) {
 			Headers: []kadmin.Header{
 				{
 					Key:   "h1",
-					Value: "v1",
+					Value: kadmin.NewHeaderValue("v1"),
 				},
 				{
 					Key:   "h2",
-					Value: "v2",
+					Value: kadmin.NewHeaderValue("v2"),
 				},
 				{
 					Key:   "h3",
-					Value: "v3\nv3",
+					Value: kadmin.NewHeaderValue("v3\nv3"),
 				},
 			},
 		},
@@ -166,15 +166,15 @@ func TestRecordDetailsPage(t *testing.T) {
 			Headers: []kadmin.Header{
 				{
 					Key:   "h1",
-					Value: "v1",
+					Value: kadmin.NewHeaderValue("v1"),
 				},
 				{
 					Key:   "h2",
-					Value: "v2",
+					Value: kadmin.NewHeaderValue("v2"),
 				},
 				{
 					Key:   "h3",
-					Value: "v3\nv3",
+					Value: kadmin.NewHeaderValue("v3\nv3"),
 				},
 			},
 		},
@@ -211,7 +211,7 @@ func TestRecordDetailsPage(t *testing.T) {
 			Headers: []kadmin.Header{
 				{
 					Key:   "h1",
-					Value: "v1",
+					Value: kadmin.NewHeaderValue("v1"),
 				},
 			},
 		},

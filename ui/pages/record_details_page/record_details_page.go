@@ -118,10 +118,10 @@ func (m *Model) selectedHeaderValue() string {
 	selectedRow := m.headerKeyTable.SelectedRow()
 	if selectedRow == nil {
 		if len(m.record.Headers) > 0 {
-			return m.record.Headers[0].Value
+			return m.record.Headers[0].Value.String()
 		}
 	} else {
-		return m.record.Headers[m.headerKeyTable.Cursor()].Value
+		return m.record.Headers[m.headerKeyTable.Cursor()].Value.String()
 	}
 	return ""
 }

@@ -1,12 +1,16 @@
 package kadmin
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"ktea/serdes"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 
 	"github.com/IBM/sarama"
 	tea "github.com/charmbracelet/bubbletea"
@@ -64,9 +68,55 @@ type ReadDetails struct {
 	Filter          *Filter
 }
 
+type HeaderValue struct {
+	data []byte
+}
+
+func NewHeaderValue(data string) HeaderValue {
+	return HeaderValue{[]byte(data)}
+}
+
+func (v HeaderValue) String() string {
+	if utf8.Valid(v.data) {
+		return string(v.data)
+	}
+
+	if len(v.data) >= 4 {
+		var int32Val int32
+		err := binary.Read(bytes.NewReader(v.data), binary.BigEndian, &int32Val)
+		if err == nil {
+			return string(int32Val)
+		}
+	}
+	if len(v.data) >= 8 {
+		var int64Val int64
+		err := binary.Read(bytes.NewReader(v.data), binary.BigEndian, &int64Val)
+		if err == nil {
+			return strconv.FormatInt(int64Val, 10)
+		}
+	}
+
+	if len(v.data) >= 4 {
+		var float32Val float32
+		err := binary.Read(bytes.NewReader(v.data), binary.BigEndian, &float32Val)
+		if err == nil {
+			return strconv.FormatFloat(float64(float32Val), 'f', -1, 32)
+		}
+	}
+	if len(v.data) >= 8 {
+		var float64Val float64
+		err := binary.Read(bytes.NewReader(v.data), binary.BigEndian, &float64Val)
+		if err == nil {
+			return strconv.FormatFloat(float64Val, 'f', -1, 64)
+		}
+	}
+
+	return string(v.data)
+}
+
 type Header struct {
 	Key   string
-	Value string
+	Value HeaderValue
 }
 
 type ConsumerRecord struct {
@@ -159,7 +209,7 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) tea
 						for _, h := range msg.Headers {
 							headers = append(headers, Header{
 								string(h.Key),
-								string(h.Value),
+								HeaderValue{h.Value},
 							})
 						}
 
@@ -218,6 +268,48 @@ func (ka *SaramaKafkaAdmin) ReadRecords(ctx context.Context, rd ReadDetails) tea
 		cancelFunc()
 		return EmptyTopicMsg{}
 	}
+}
+
+func determineType(data []byte) string {
+	// Check for UTF-8 string
+	if utf8.Valid(data) {
+		return "string"
+	}
+
+	// Check for integer (try int32 and int64)
+	if len(data) >= 4 {
+		var int32Val int32
+		err := binary.Read(bytes.NewReader(data), binary.BigEndian, &int32Val)
+		if err == nil {
+			return "integer (int32)"
+		}
+	}
+	if len(data) >= 8 {
+		var int64Val int64
+		err := binary.Read(bytes.NewReader(data), binary.BigEndian, &int64Val)
+		if err == nil {
+			return "integer (int64)"
+		}
+	}
+
+	//Check for float (try float32 and float64)
+	if len(data) >= 4 {
+		var float32Val float32
+		err := binary.Read(bytes.NewReader(data), binary.BigEndian, &float32Val)
+		if err == nil {
+			return "float (float32)"
+		}
+	}
+	if len(data) >= 8 {
+		var float64Val float64
+		err := binary.Read(bytes.NewReader(data), binary.BigEndian, &float64Val)
+		if err == nil {
+			return "float (float64)"
+		}
+	}
+
+	// If none of the above, it's unknown
+	return "unknown"
 }
 
 func (ka *SaramaKafkaAdmin) matchesFilter(key, value string, filterDetails *Filter) bool {
