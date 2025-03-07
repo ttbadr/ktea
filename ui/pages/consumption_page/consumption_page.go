@@ -45,8 +45,9 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	} else if len(m.rows) > 0 {
 		m.table.SetColumns([]table.Column{
 			{Title: "Key", Width: int(float64(ktx.WindowWidth-7) * 0.5)},
-			{Title: "Partition", Width: int(float64(ktx.WindowWidth-7) * 0.25)},
-			{Title: "Offset", Width: int(float64(ktx.WindowWidth-7) * 0.25)},
+			{Title: "Timestamp", Width: int(float64(ktx.WindowWidth-7) * 0.30)},
+			{Title: "Partition", Width: int(float64(ktx.WindowWidth-7) * 0.10)},
+			{Title: "Offset", Width: int(float64(ktx.WindowWidth-7) * 0.10)},
 		})
 		m.table.SetHeight(ktx.AvailableHeight - 2)
 		m.table.SetRows(m.rows)
@@ -110,6 +111,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			[]table.Row{
 				{
 					key,
+					msg.Record.Timestamp.Format("2006-01-02 15:04:05"),
 					strconv.FormatInt(msg.Record.Partition, 10),
 					strconv.FormatInt(msg.Record.Offset, 10),
 				},
