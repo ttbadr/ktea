@@ -135,7 +135,7 @@ func (s *SearchCmdBar) isActive() bool {
 }
 
 func newSearchInput(placeholder string) *huh.Input {
-	searchInput := huh.NewInput().Placeholder(placeholder)
+	searchInput := huh.NewInput()
 	searchInput.Init()
 	return searchInput
 }

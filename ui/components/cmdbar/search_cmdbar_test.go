@@ -9,7 +9,7 @@ import (
 
 func TestSearchCmdBar(t *testing.T) {
 	t.Run("Is hidden by default", func(t *testing.T) {
-		model := NewSearchCmdBar("placeholder")
+		model := NewSearchCmdBar(">")
 
 		render := model.View(ui.NewTestKontext(), ui.TestRenderer)
 
@@ -20,7 +20,7 @@ func TestSearchCmdBar(t *testing.T) {
 
 			render = model.View(ui.NewTestKontext(), ui.TestRenderer)
 
-			assert.Contains(t, render, "placeholder")
+			assert.Contains(t, render, ">")
 		})
 	})
 }

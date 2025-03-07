@@ -8,12 +8,12 @@ require (
 	github.com/IBM/sarama v1.45.0
 	github.com/alecthomas/chroma/v2 v2.15.0
 	github.com/atotto/clipboard v0.1.4
-	github.com/charmbracelet/bubbles v0.20.0
-	github.com/charmbracelet/bubbletea v1.2.5-0.20241205214244-9306010a31ee
-	github.com/charmbracelet/huh v0.6.0
+	github.com/charmbracelet/bubbles v0.20.1-0.20250305115717-cdc743f1f488
+	github.com/charmbracelet/bubbletea v1.3.4
 	github.com/charmbracelet/lipgloss v1.0.0
 	github.com/charmbracelet/log v0.4.0
-	github.com/charmbracelet/x/ansi v0.4.5
+	github.com/charmbracelet/x/ansi v0.8.0
+	github.com/dustin/go-humanize v1.0.1
 	github.com/linkedin/goavro/v2 v2.13.1
 	github.com/muesli/reflow v0.3.0
 	github.com/riferrei/srclient v0.7.1
@@ -31,6 +31,7 @@ require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/catppuccin/go v0.2.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+	github.com/charmbracelet/huh v0.6.0 // indirect
 	github.com/charmbracelet/x/exp/strings v0.0.0-20240722160745-212f7b056ed0 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/containerd/containerd v1.7.18 // indirect
@@ -43,7 +44,6 @@ require (
 	github.com/docker/docker v27.1.1+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/eapache/go-resiliency v1.7.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
@@ -107,8 +107,8 @@ require (
 	golang.org/x/crypto v0.32.0 // indirect
 	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/net v0.34.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
 )

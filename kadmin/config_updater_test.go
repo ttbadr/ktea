@@ -26,8 +26,6 @@ func TestUpdateTopicConfig(t *testing.T) {
 		)
 
 		// then
-
-		// then
 		msg := ka.ListConfigs(topic).(TopicConfigListingStartedMsg)
 		var configs map[string]string
 		select {

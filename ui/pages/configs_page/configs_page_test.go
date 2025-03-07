@@ -159,26 +159,26 @@ func TestConfigsPage_Searching(t *testing.T) {
 	t.Run("/ triggers search", func(t *testing.T) {
 		section := newSection()
 		render := section.View(ktx, ui.TestRenderer)
-		assert.NotContains(t, render, "┃ > Search for Config\n")
+		assert.NotContains(t, render, "┃ >\n")
 
 		section.Update(keys.Key('/'))
 		render = section.View(ktx, ui.TestRenderer)
 
-		assert.Contains(t, render, "┃ > Search for Config")
+		assert.Contains(t, render, "┃ >")
 	})
 
 	t.Run("esc cancels search", func(t *testing.T) {
 		section := newSection()
 		render := section.View(ktx, ui.TestRenderer)
-		assert.NotContains(t, render, "┃ > Search for Config")
+		assert.NotContains(t, render, "┃ >")
 
 		section.Update(keys.Key('/'))
 		render = section.View(ktx, ui.TestRenderer)
-		assert.Contains(t, render, "┃ > Search for Config")
+		assert.Contains(t, render, "┃ > ")
 
 		section.Update(keys.Key(tea.KeyEsc))
 		render = section.View(ktx, ui.TestRenderer)
-		assert.NotContains(t, render, "┃ > Search for Config\n")
+		assert.NotContains(t, render, "┃ > \n")
 	})
 
 	t.Run("esc resets form", func(t *testing.T) {
@@ -192,11 +192,11 @@ func TestConfigsPage_Searching(t *testing.T) {
 
 		section.Update(keys.Key(tea.KeyEsc))
 		render = section.View(ktx, ui.TestRenderer)
-		assert.NotContains(t, render, "┃ > Search for Config\n")
+		assert.NotContains(t, render, "┃ > \n")
 
 		section.Update(keys.Key('/'))
 		render = section.View(ktx, ui.TestRenderer)
-		assert.Contains(t, render, "┃ > Search for Config")
+		assert.Contains(t, render, "┃ > ")
 
 	})
 

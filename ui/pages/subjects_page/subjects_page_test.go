@@ -312,7 +312,7 @@ func TestSubjectsPage(t *testing.T) {
 				render = subjectsPage.View(ui.NewTestKontext(), ui.TestRenderer)
 
 				assert.NotContains(t, render, "Failed to delete subject: unable to delete subject")
-				assert.Contains(t, render, "> Search subjects by name")
+				assert.Contains(t, render, "> ")
 			})
 		})
 
