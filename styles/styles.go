@@ -1,9 +1,11 @@
 package styles
 
 import (
+	"ktea/kontext"
+	"strings"
+
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
-	"ktea/kontext"
 )
 
 var Env EnvStyle
@@ -64,6 +66,107 @@ type StatusBarStyle struct {
 	Key         lipgloss.Style
 	Spacer      lipgloss.Style
 	cluster     lipgloss.Style
+}
+
+type BorderPosition int
+
+const (
+	TopLeftBorder BorderPosition = iota
+	TopMiddleBorder
+	TopRightBorder
+	BottomLeftBorder
+	BottomMiddleBorder
+	BottomRightBorder
+)
+
+// Borderize creates a border around content with optional embedded text in different positions
+func Borderize(content string, active bool, embeddedText map[BorderPosition]string) string {
+	if embeddedText == nil {
+		embeddedText = make(map[BorderPosition]string)
+	}
+
+	borderColor := ColorFocusBorder
+	if !active {
+		borderColor = ColorBlurBorder
+	}
+
+	style := lipgloss.NewStyle().Foreground(lipgloss.Color(borderColor))
+
+	// Split content into lines to get the maximum width
+	lines := strings.Split(content, "\n")
+	maxWidth := 0
+	for _, line := range lines {
+		if w := lipgloss.Width(line); w > maxWidth {
+			maxWidth = w
+		}
+	}
+
+	encloseText := func(text string) string {
+		if text != "" {
+			return style.Render(" " + text + " ")
+		}
+		return text
+	}
+
+	buildBorderLine := func(leftText, middleText, rightText, leftCorner, border, rightCorner string) string {
+		leftText = encloseText(leftText)
+		middleText = encloseText(middleText)
+		rightText = encloseText(rightText)
+
+		// Calculate remaining space for borders
+		remaining := maxWidth - lipgloss.Width(leftText) - lipgloss.Width(middleText) - lipgloss.Width(rightText)
+		if remaining < 0 {
+			remaining = 0
+		}
+
+		leftBorderLen := (remaining / 2)
+		rightBorderLen := remaining - leftBorderLen
+
+		// Build the border line
+		borderLine := leftText +
+			style.Render(strings.Repeat(border, leftBorderLen)) +
+			middleText +
+			style.Render(strings.Repeat(border, rightBorderLen)) +
+			rightText
+
+		// Add corners
+		return style.Render(leftCorner) + borderLine + style.Render(rightCorner)
+	}
+
+	// Create the bordered content
+	topBorder := buildBorderLine(
+		embeddedText[TopLeftBorder],
+		embeddedText[TopMiddleBorder],
+		embeddedText[TopRightBorder],
+		"╭", "─", "╮",
+	)
+
+	// Create side borders for content
+	borderedLines := make([]string, len(lines))
+	for i, line := range lines {
+		lineWidth := lipgloss.Width(line)
+		var paddedLine string
+		if lineWidth < maxWidth {
+			paddedLine = line + strings.Repeat(" ", maxWidth-lineWidth)
+		} else if lineWidth > maxWidth {
+			paddedLine = lipgloss.NewStyle().MaxWidth(maxWidth).Render(line)
+		} else {
+			paddedLine = line
+		}
+		borderedLines[i] = style.Render("│") + paddedLine + style.Render("│")
+	}
+	borderedContent := strings.Join(borderedLines, "\n")
+
+	// Create bottom border
+	bottomBorder := buildBorderLine(
+		embeddedText[BottomLeftBorder],
+		embeddedText[BottomMiddleBorder],
+		embeddedText[BottomRightBorder],
+		"╰", "─", "╯",
+	)
+
+	// Final content with borders
+	return topBorder + "\n" + borderedContent + "\n" + bottomBorder
 }
 
 func CenterText(width int, height int) lipgloss.Style {
@@ -278,20 +381,21 @@ func init() {
 
 	{
 		blur := lipgloss.NewStyle().
-			BorderStyle(lipgloss.RoundedBorder()).
 			Padding(0).
-			Margin(0).
-			BorderForeground(lipgloss.Color(ColorBlurBorder))
+			Margin(0)
 		focus := lipgloss.NewStyle().
-			BorderForeground(lipgloss.Color(ColorFocusBorder)).
 			Padding(0).
 			Margin(0).
 			Inherit(blur)
 		styles := table.DefaultStyles()
 		styles.Header = styles.Header.
-			BorderStyle(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("240")).
 			BorderBottom(true).
+			BorderTop(false).
+			BorderLeft(false).
+			BorderRight(false).
+			BorderStyle(lipgloss.Border{
+				Bottom: "─",
+			}).
 			Bold(false)
 		styles.Selected = styles.Selected.
 			Foreground(lipgloss.Color("#000000")).

@@ -2,10 +2,6 @@ package clusters_page
 
 import (
 	"fmt"
-	"github.com/charmbracelet/bubbles/table"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/log"
 	"ktea/config"
 	"ktea/kadmin"
 	"ktea/kontext"
@@ -19,6 +15,11 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+
+	"github.com/charmbracelet/bubbles/table"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 )
 
 type Model struct {
@@ -49,15 +50,15 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	m.table.SetWidth(ktx.WindowWidth - 2)
 	m.table.SetRows(m.rows)
 
-	var ts lipgloss.Style
-	if m.tableFocussed {
-		ts = styles.Table.Focus
-	} else {
-		ts = styles.Table.Blur
+	embeddedText := map[styles.BorderPosition]string{
+		styles.TopMiddleBorder: lipgloss.NewStyle().
+			Foreground(lipgloss.Color(styles.ColorPink)).
+			Bold(true).
+			Render(fmt.Sprintf("Total Clusters: %d", len(m.rows))),
 	}
-	tableView := renderer.RenderWithStyle(m.table.View(), ts)
+	borderedView := styles.Borderize(m.table.View(), m.tableFocussed, embeddedText)
 
-	return ui.JoinVertical(lipgloss.Top, cmdBarView, tableView)
+	return ui.JoinVertical(lipgloss.Top, cmdBarView, borderedView)
 }
 
 func (m *Model) Shortcuts() []statusbar.Shortcut {
