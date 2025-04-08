@@ -1,0 +1,171 @@
+package cmdbar
+
+import (
+	"fmt"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"ktea/kontext"
+	"ktea/styles"
+	"ktea/ui"
+	"ktea/ui/components/statusbar"
+	"strings"
+)
+
+const (
+	Asc       Direction = true
+	Desc      Direction = false
+	AscLabel            = "▲"
+	DescLabel           = "▼"
+)
+
+type Direction bool
+
+func (d Direction) String() string {
+	if d == Asc {
+		return AscLabel
+	}
+	return DescLabel
+}
+
+type SortLabel struct {
+	Label     string
+	Direction Direction
+}
+
+type SortSelectedCallback func(label SortLabel)
+
+type SortByCmdBar struct {
+	sorts                []SortLabel
+	selectedIdx          int
+	activeIdx            int
+	Direction            Direction
+	active               bool
+	sortSelectedCallback SortSelectedCallback
+}
+
+func (m *SortByCmdBar) Shortcuts() []statusbar.Shortcut {
+	return []statusbar.Shortcut{}
+}
+
+func (m *SortByCmdBar) IsFocussed() bool {
+	return true
+}
+
+func (m *SortByCmdBar) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
+	builder := strings.Builder{}
+
+	for i, sort := range m.sorts {
+		var (
+			style   lipgloss.Style
+			bgColor lipgloss.Color
+			render  string
+			arrow   string
+		)
+
+		if sort.Direction == Asc {
+			arrow = AscLabel
+		} else {
+			arrow = DescLabel
+		}
+
+		if m.activeIdx == i {
+			if m.selectedIdx == i {
+				bgColor = styles.ColorLightPink
+			} else {
+				bgColor = styles.ColorWhite
+			}
+			style = lipgloss.NewStyle().
+				Background(bgColor).
+				Foreground(lipgloss.Color(styles.ColorBlack))
+
+			render = fmt.Sprintf(" %s %s ", sort.Label, arrow)
+		} else if m.selectedIdx == i {
+			style = lipgloss.NewStyle().
+				Background(lipgloss.Color(styles.ColorPink)).
+				Foreground(lipgloss.Color(styles.ColorBlack))
+			render = fmt.Sprintf(" %s %s ", sort.Label, arrow)
+		} else {
+			style = lipgloss.NewStyle().
+				Background(lipgloss.Color(styles.ColorDarkGrey)).
+				Foreground(lipgloss.Color(styles.ColorWhite))
+			render = fmt.Sprintf(" %s %s ", sort.Label, arrow)
+		}
+
+		builder.WriteString(
+			style.
+				Padding(0, 1).
+				MarginLeft(1).
+				MarginRight(0).
+				Render(render),
+		)
+	}
+
+	return renderer.RenderWithStyle(builder.String(), styles.CmdBarWithWidth(ktx.WindowWidth-BorderedPadding))
+}
+
+func (m *SortByCmdBar) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "f3":
+			m.active = true
+		case "h", "left":
+			m.prevElem()
+		case "l", "right":
+			m.nextElem()
+		case "esc":
+			m.active = false
+			return m.active, nil, nil
+		case "enter":
+			if m.activeIdx == m.selectedIdx {
+				m.sorts[m.selectedIdx].Direction = !m.sorts[m.selectedIdx].Direction
+			} else {
+				m.activeIdx = m.selectedIdx
+			}
+			if m.sortSelectedCallback != nil {
+				m.sortSelectedCallback(m.sorts[m.selectedIdx])
+			}
+		}
+	}
+	return m.active, nil, nil
+}
+
+func (m *SortByCmdBar) prevElem() {
+	if m.selectedIdx >= 1 {
+		m.selectedIdx--
+	}
+}
+
+func (m *SortByCmdBar) nextElem() {
+	if m.selectedIdx < len(m.sorts)-1 {
+		m.selectedIdx++
+	}
+}
+
+func (m *SortByCmdBar) SortedBy() SortLabel {
+	return m.sorts[m.selectedIdx]
+}
+
+type SortByCmdBarOption func(*SortByCmdBar)
+
+func WithSortSelectedCallback(callback SortSelectedCallback) SortByCmdBarOption {
+	return func(bar *SortByCmdBar) {
+		bar.sortSelectedCallback = callback
+	}
+}
+
+func NewSortByCmdBar(
+	sorts []SortLabel,
+	options ...SortByCmdBarOption,
+) *SortByCmdBar {
+	bar := SortByCmdBar{
+		sorts:  sorts,
+		active: false,
+	}
+
+	for _, option := range options {
+		option(&bar)
+	}
+
+	return &bar
+}

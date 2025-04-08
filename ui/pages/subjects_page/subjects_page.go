@@ -1,6 +1,7 @@
 package subjects_page
 
 import (
+	"fmt"
 	"ktea/kontext"
 	"ktea/sradmin"
 	"ktea/styles"
@@ -40,6 +41,7 @@ type Model struct {
 	state            state
 	// when last subject in table is deleted no subject is focussed anymore
 	deletedLast bool
+	sort        cmdbar.SortLabel
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -56,8 +58,8 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	cmdBarView := m.cmdBar.View(ktx, renderer)
 
 	m.table.SetColumns([]table.Column{
-		{"Subject Name", int(float64(ktx.WindowWidth-5) * 0.9)},
-		{"Version Count", int(float64(ktx.WindowWidth-5) * 0.1)},
+		{m.columnTitle("Subject Name"), int(float64(ktx.WindowWidth-5) * 0.9)},
+		{m.columnTitle("Version Count"), int(float64(ktx.WindowWidth-5) * 0.1)},
 	})
 	m.table.SetHeight(ktx.AvailableHeight - 2)
 	m.table.SetWidth(ktx.WindowWidth - 2)
@@ -73,6 +75,16 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 
 	tableView := styles.Borderize(m.table.View(), m.tableFocussed, nil)
 	return ui.JoinVertical(lipgloss.Top, cmdBarView, tableView)
+}
+
+func (m *Model) columnTitle(title string) string {
+	if m.sort.Label == title {
+		return lipgloss.NewStyle().
+			Foreground(lipgloss.Color(styles.ColorPink)).
+			Bold(true).
+			Render(m.sort.Direction.String()) + " " + title
+	}
+	return title
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
@@ -173,6 +185,26 @@ func (m *Model) createRows(subjects []sradmin.Subject) []table.Row {
 			strconv.Itoa(len(subject.Versions)),
 		})
 	}
+
+	sort.SliceStable(rows, func(i, j int) bool {
+		switch m.sort.Label {
+		case "Subject Name":
+			if m.sort.Direction == cmdbar.Asc {
+				return rows[i][0] < rows[j][0]
+			}
+			return rows[i][0] > rows[j][0]
+		case "Version Count":
+			countI, _ := strconv.Atoi(rows[i][1])
+			countJ, _ := strconv.Atoi(rows[j][1])
+			if m.sort.Direction == cmdbar.Asc {
+				return countI < countJ
+			}
+			return countI > countJ
+		default:
+			panic(fmt.Sprintf("unexpected sort label: %s", m.sort.Label))
+		}
+	})
+
 	return rows
 }
 
@@ -284,15 +316,36 @@ func New(lister sradmin.SubjectLister, deleter sradmin.SubjectDeleter) (*Model, 
 	cmdbar.WithMsgHandler(notifierCmdBar, subjectDeletedNotifier)
 	cmdbar.WithMsgHandler(notifierCmdBar, subjectDeletionErrorNotifier)
 
-	return &Model{
-		cmdBar: cmdbar.NewTableCmdsBar[sradmin.Subject](
-			cmdbar.NewDeleteCmdBar(deleteMsgFunc, deleteFunc, nil),
-			cmdbar.NewSearchCmdBar("Search subjects by name"),
-			notifierCmdBar,
-		),
+	model := Model{
 		table:         ktable.NewDefaultTable(),
 		tableFocussed: true,
 		lister:        lister,
 		state:         initialized,
-	}, lister.ListSubjects
+	}
+
+	sortByBar := cmdbar.NewSortByCmdBar(
+		[]cmdbar.SortLabel{
+			{
+				Label:     "Subject Name",
+				Direction: cmdbar.Asc,
+			},
+			{
+				Label:     "Version Count",
+				Direction: cmdbar.Desc,
+			},
+		},
+		cmdbar.WithSortSelectedCallback(func(label cmdbar.SortLabel) {
+			model.sort = label
+		}),
+	)
+
+	model.sort = sortByBar.SortedBy()
+
+	model.cmdBar = cmdbar.NewTableCmdsBar[sradmin.Subject](
+		cmdbar.NewDeleteCmdBar(deleteMsgFunc, deleteFunc, nil),
+		cmdbar.NewSearchCmdBar("Search subjects by name"),
+		notifierCmdBar,
+		sortByBar,
+	)
+	return &model, lister.ListSubjects
 }

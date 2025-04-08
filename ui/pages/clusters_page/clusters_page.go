@@ -221,6 +221,7 @@ func New(ktx *kontext.ProgramKtx, connChecker kadmin.ConnChecker) (nav.Page, tea
 		deleteCmdBar,
 		searchCmdBar,
 		notifierCmdBar,
+		nil,
 	)
 	model.rows = model.createRows()
 	return &model, nil

@@ -4,7 +4,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"ktea/kadmin"
+	"ktea/kontext"
 	"ktea/tests/keys"
+	"ktea/ui"
+	"strings"
 	"testing"
 )
 
@@ -54,5 +57,248 @@ func TestTopicsPage(t *testing.T) {
 		cmd := page.Update(keys.Key(tea.KeyF5))
 
 		assert.IsType(t, ListTopicsCalledMsg{}, cmd())
+	})
+
+	t.Run("Default sort by Name Asc", func(t *testing.T) {
+		page, _ := New(&MockTopicDeleter{}, &MockTopicLister{})
+
+		_ = page.Update(kadmin.TopicListedMsg{
+			Topics: []kadmin.ListedTopic{
+				{
+					Name:           "topic1",
+					PartitionCount: 1,
+					Replicas:       1,
+				},
+				{
+					Name:           "topic2",
+					PartitionCount: 2,
+					Replicas:       1,
+				},
+				{
+					Name:           "topic3",
+					PartitionCount: 3,
+					Replicas:       1,
+				},
+			},
+		})
+
+		render := page.View(ui.NewTestKontext(), ui.TestRenderer)
+
+		assert.Contains(t, render, "▲ Name")
+	})
+
+	t.Run("Toggle sort by Name", func(t *testing.T) {
+		page, _ := New(&MockTopicDeleter{}, &MockTopicLister{})
+
+		_ = page.Update(kadmin.TopicListedMsg{
+			Topics: []kadmin.ListedTopic{
+				{
+					Name:           "topic1",
+					PartitionCount: 1,
+					Replicas:       1,
+				},
+				{
+					Name:           "topic2",
+					PartitionCount: 2,
+					Replicas:       1,
+				},
+				{
+					Name:           "topic3",
+					PartitionCount: 3,
+					Replicas:       1,
+				},
+			},
+		})
+
+		page.Update(keys.Key(tea.KeyF3))
+		page.Update(keys.Key(tea.KeyEnter))
+		render := page.View(ui.NewTestKontext(), ui.TestRenderer)
+
+		render = page.View(ui.NewTestKontext(), ui.TestRenderer)
+
+		assert.Contains(t, render, "▼ Name")
+
+		t1Idx := strings.Index(render, "topic1")
+		t2Idx := strings.Index(render, "topic2")
+		t3Idx := strings.Index(render, "topic3")
+
+		assert.Less(t, t3Idx, t1Idx)
+		assert.Less(t, t3Idx, t2Idx)
+		assert.Less(t, t2Idx, t1Idx)
+	})
+
+	t.Run("Toggle sort by Partitions", func(t *testing.T) {
+		page, _ := New(&MockTopicDeleter{}, &MockTopicLister{})
+
+		_ = page.Update(kadmin.TopicListedMsg{
+			Topics: []kadmin.ListedTopic{
+				{
+					Name:           "topic1",
+					PartitionCount: 1,
+					Replicas:       1,
+				},
+				{
+					Name:           "topic2",
+					PartitionCount: 2,
+					Replicas:       1,
+				},
+				{
+					Name:           "topic3",
+					PartitionCount: 3,
+					Replicas:       1,
+				},
+			},
+		})
+
+		page.Update(keys.Key(tea.KeyF3))
+		page.Update(keys.Key(tea.KeyRight))
+		page.Update(keys.Key(tea.KeyEnter))
+		render := page.View(ui.NewTestKontext(), ui.TestRenderer)
+
+		assert.NotContains(t, render, "▲ Name")
+		assert.Contains(t, render, "▼ Part")
+
+		t1Idx := strings.Index(render, "topic1")
+		t2Idx := strings.Index(render, "topic2")
+		t3Idx := strings.Index(render, "topic3")
+
+		assert.Less(t, t3Idx, t2Idx)
+		assert.Less(t, t3Idx, t1Idx)
+		assert.Less(t, t2Idx, t1Idx)
+
+		page.Update(keys.Key(tea.KeyEnter))
+		render = page.View(ui.NewTestKontext(), ui.TestRenderer)
+
+		assert.Contains(t, render, "▲ Part")
+
+		t1Idx = strings.Index(render, "topic1")
+		t2Idx = strings.Index(render, "topic2")
+		t3Idx = strings.Index(render, "topic3")
+
+		assert.Greater(t, t3Idx, t2Idx)
+		assert.Greater(t, t3Idx, t1Idx)
+		assert.Greater(t, t2Idx, t1Idx)
+	})
+
+	t.Run("Toggle sort by Replicas", func(t *testing.T) {
+		page, _ := New(&MockTopicDeleter{}, &MockTopicLister{})
+
+		_ = page.Update(kadmin.TopicListedMsg{
+			Topics: []kadmin.ListedTopic{
+				{
+					Name:           "b-topic1",
+					PartitionCount: 1,
+					Replicas:       1,
+				},
+				{
+					Name:           "c-topic2",
+					PartitionCount: 2,
+					Replicas:       2,
+				},
+				{
+					Name:           "d-topic3",
+					PartitionCount: 3,
+					Replicas:       3,
+				},
+			},
+		})
+
+		page.Update(keys.Key(tea.KeyF3))
+		page.Update(keys.Key(tea.KeyRight))
+		page.Update(keys.Key(tea.KeyRight))
+		page.Update(keys.Key(tea.KeyEnter))
+		render := page.View(ui.NewTestKontext(), ui.TestRenderer)
+
+		assert.NotContains(t, render, "▲ Name")
+		assert.Contains(t, render, "▼ Repl")
+
+		t1Idx := strings.Index(render, "b-topic1")
+		t2Idx := strings.Index(render, "c-topic2")
+		t3Idx := strings.Index(render, "d-topic3")
+
+		assert.Less(t, t3Idx, t2Idx)
+		assert.Less(t, t3Idx, t1Idx)
+		assert.Less(t, t2Idx, t1Idx)
+
+		page.Update(keys.Key(tea.KeyEnter))
+		render = page.View(ui.NewTestKontext(), ui.TestRenderer)
+
+		assert.Contains(t, render, "▲ Repl")
+
+		t1Idx = strings.Index(render, "b-topic1")
+		t2Idx = strings.Index(render, "c-topic2")
+		t3Idx = strings.Index(render, "d-topic3")
+
+		assert.Greater(t, t3Idx, t2Idx)
+		assert.Greater(t, t3Idx, t1Idx)
+		assert.Greater(t, t2Idx, t1Idx)
+	})
+
+	t.Run("Toggle sort by Record Count", func(t *testing.T) {
+		page, _ := New(&MockTopicDeleter{}, &MockTopicLister{})
+
+		_ = page.Update(kadmin.TopicListedMsg{
+			Topics: []kadmin.ListedTopic{
+				{
+					Name:           "topic1",
+					PartitionCount: 1,
+					Replicas:       1,
+					RecordCount:    333333333,
+				},
+				{
+					Name:           "topic2",
+					PartitionCount: 2,
+					Replicas:       2,
+					RecordCount:    111111,
+				},
+				{
+					Name:           "topic3",
+					PartitionCount: 3,
+					Replicas:       3,
+					RecordCount:    222222222,
+				},
+			},
+		})
+
+		page.Update(keys.Key(tea.KeyF3))
+		page.Update(keys.Key(tea.KeyRight))
+		page.Update(keys.Key(tea.KeyRight))
+		page.Update(keys.Key(tea.KeyRight))
+		page.Update(keys.Key(tea.KeyEnter))
+		render := page.View(&kontext.ProgramKtx{
+			Config:          nil,
+			WindowWidth:     200,
+			WindowHeight:    200,
+			AvailableHeight: 200,
+		}, ui.TestRenderer)
+
+		assert.NotContains(t, render, "▲ Name")
+		assert.Contains(t, render, "▼ ~ Record Count")
+
+		t1Idx := strings.Index(render, "topic1")
+		t2Idx := strings.Index(render, "topic2")
+		t3Idx := strings.Index(render, "topic3")
+
+		assert.Less(t, t1Idx, t2Idx)
+		assert.Less(t, t1Idx, t3Idx)
+		assert.Less(t, t3Idx, t2Idx)
+
+		page.Update(keys.Key(tea.KeyEnter))
+		render = page.View(&kontext.ProgramKtx{
+			Config:          nil,
+			WindowWidth:     200,
+			WindowHeight:    200,
+			AvailableHeight: 200,
+		}, ui.TestRenderer)
+
+		assert.Contains(t, render, "▲ ~ Record Count")
+
+		t1Idx = strings.Index(render, "topic1")
+		t2Idx = strings.Index(render, "topic2")
+		t3Idx = strings.Index(render, "topic3")
+
+		assert.Less(t, t2Idx, t3Idx)
+		assert.Less(t, t2Idx, t1Idx)
+		assert.Less(t, t3Idx, t1Idx)
 	})
 }

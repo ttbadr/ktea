@@ -34,6 +34,7 @@ type Model struct {
 	lister        kadmin.TopicLister
 	ctx           context.Context
 	tableFocussed bool
+	sort          cmdbar.SortLabel
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -44,10 +45,10 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	m.table.SetHeight(ktx.AvailableHeight - 2)
 	m.table.SetWidth(ktx.WindowWidth - 3)
 	m.table.SetColumns([]table.Column{
-		{"Name", int(float64(ktx.WindowWidth-10) * 0.7)},
-		{"Partitions", int(float64(ktx.WindowWidth-10) * 0.1)},
-		{"Replicas", int(float64(ktx.WindowWidth-10) * 0.1)},
-		{"~ Record Count", int(float64(ktx.WindowWidth-10) * 0.1)},
+		{m.columnTitle("Name"), int(float64(ktx.WindowWidth-10) * 0.7)},
+		{m.columnTitle("Partitions"), int(float64(ktx.WindowWidth-10) * 0.1)},
+		{m.columnTitle("Replicas"), int(float64(ktx.WindowWidth-10) * 0.1)},
+		{m.columnTitle("~ Record Count"), int(float64(ktx.WindowWidth-10) * 0.1)},
 	})
 	m.table.SetRows(m.rows)
 
@@ -77,6 +78,16 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	}
 
 	return ui.JoinVertical(lipgloss.Top, cmdBarView, tableView)
+}
+
+func (m *Model) columnTitle(title string) string {
+	if m.sort.Label == title {
+		return lipgloss.NewStyle().
+			Foreground(lipgloss.Color(styles.ColorPink)).
+			Bold(true).
+			Render(m.sort.Direction.String()) + " " + title
+	}
+	return title
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
@@ -136,7 +147,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	m.tableFocussed = !m.cmdBar.IsFocussed()
 	cmds = append(cmds, cmd)
 
-	m.rows = m.filterTopicsBySearchTerm()
+	m.rows = m.createRows()
 
 	// make sure table navigation is off when the cmdbar is focussed
 	if !m.cmdBar.IsFocussed() {
@@ -151,7 +162,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (m *Model) filterTopicsBySearchTerm() []table.Row {
+func (m *Model) createRows() []table.Row {
 	var rows []table.Row
 	for _, topic := range m.topics {
 		if m.cmdBar.GetSearchTerm() != "" {
@@ -178,8 +189,38 @@ func (m *Model) filterTopicsBySearchTerm() []table.Row {
 			)
 		}
 	}
+
 	sort.SliceStable(rows, func(i, j int) bool {
-		return rows[i][0] < rows[j][0]
+		switch m.sort.Label {
+		case "Name":
+			if m.sort.Direction == cmdbar.Asc {
+				return rows[i][0] < rows[j][0]
+			}
+			return rows[i][0] > rows[j][0]
+		case "Partitions":
+			partitionI, _ := strconv.Atoi(rows[i][1])
+			partitionJ, _ := strconv.Atoi(rows[j][1])
+			if m.sort.Direction == cmdbar.Asc {
+				return partitionI < partitionJ
+			}
+			return partitionI > partitionJ
+		case "Replicas":
+			replicasI, _ := strconv.Atoi(rows[i][2])
+			replicasJ, _ := strconv.Atoi(rows[j][2])
+			if m.sort.Direction == cmdbar.Asc {
+				return replicasI < replicasJ
+			}
+			return replicasI > replicasJ
+		case "~ Record Count":
+			countI, _ := strconv.Atoi(strings.ReplaceAll(rows[i][3], ",", ""))
+			countJ, _ := strconv.Atoi(strings.ReplaceAll(rows[j][3], ",", ""))
+			if m.sort.Direction == cmdbar.Asc {
+				return countI < countJ
+			}
+			return countI > countJ
+		default:
+			panic(fmt.Sprintf("unexpected sort label: %s", m.sort.Label))
+		}
 	})
 	return rows
 }
@@ -226,12 +267,12 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 		{"Create", "C-n"},
 		{"Delete", "F2"},
 		{"Configs", "C-o"},
+		{"Delete", "F2"},
+		{"Sort", "F3"},
 		{"Refresh", "F5"},
 	}
 
-	// Use ktable.NewDefaultTable() instead of direct initialization
-	t := ktable.NewDefaultTable()
-	m.table = t
+	m.table = ktable.NewDefaultTable()
 
 	m.table.SetColumns([]table.Column{
 		{"Name", 1},
@@ -322,11 +363,36 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 		},
 	)
 
+	sortByCmdBar := cmdbar.NewSortByCmdBar(
+		[]cmdbar.SortLabel{
+			{
+				Label:     "Name",
+				Direction: cmdbar.Asc,
+			},
+			{
+				Label:     "Partitions",
+				Direction: cmdbar.Desc,
+			},
+			{
+				Label:     "Replicas",
+				Direction: cmdbar.Desc,
+			},
+			{
+				Label:     "~ Record Count",
+				Direction: cmdbar.Desc,
+			},
+		},
+		cmdbar.WithSortSelectedCallback(func(label cmdbar.SortLabel) {
+			m.sort = label
+		}),
+	)
 	m.cmdBar = cmdbar.NewTableCmdsBar[string](
 		cmdbar.NewDeleteCmdBar(deleteMsgFunc, deleteFunc, nil),
 		cmdbar.NewSearchCmdBar("Search topics by name"),
 		notifierCmdBar,
+		sortByCmdBar,
 	)
+	m.sort = sortByCmdBar.SortedBy()
 	m.lister = lister
 	return &m, lister.ListTopics
 }

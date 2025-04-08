@@ -38,7 +38,9 @@ const ColorYellow = "#FFFF00"
 const ColorWhite = "#FFFFFF"
 const ColorBlack = "#000000"
 const ColorPink = "205"
+const ColorLightPink = "170"
 const ColorGrey = "#C1C1C1"
+const ColorDarkGrey = "#343433"
 const ColorFocusBorder = "#F5F5F5"
 const ColorBlurBorder = "235"
 
@@ -263,7 +265,7 @@ func init() {
 	{
 		statusBarStyle := StatusBarStyle{}
 		statusBarStyle.style = lipgloss.NewStyle().
-			Foreground(lipgloss.AdaptiveColor{Light: "#343433", Dark: "#C1C6B2"}).
+			Foreground(lipgloss.AdaptiveColor{Light: ColorDarkGrey, Dark: "#C1C6B2"}).
 			Background(lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#353533"})
 
 		statusBarStyle.Indicator = lipgloss.NewStyle().
@@ -305,7 +307,7 @@ func init() {
 		CmdBar = lipgloss.NewStyle().
 			MarginTop(0).
 			MarginBottom(0).
-			BorderStyle(lipgloss.RoundedBorder())
+			BorderStyle(lipgloss.ThickBorder())
 	}
 
 	{

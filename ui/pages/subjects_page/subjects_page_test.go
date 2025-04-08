@@ -159,7 +159,7 @@ func TestSubjectsPage(t *testing.T) {
 		assert.Contains(t, render, " ⏳ Deleting Subject")
 	})
 
-	t.Run("Order subjects by name desc", func(t *testing.T) {
+	t.Run("Order subjects default by Subject Name Asc", func(t *testing.T) {
 		deleter := MockSubjectsDeleter{}
 		subjectsPage, _ := New(
 			&MockSubjectsLister{},
@@ -182,6 +182,8 @@ func TestSubjectsPage(t *testing.T) {
 
 		render := subjectsPage.View(ui.NewTestKontext(), ui.TestRenderer)
 
+		assert.Contains(t, render, "▲ Subject Name")
+
 		subject1Idx := strings.Index(render, "subject1")
 		subject2Idx := strings.Index(render, "subject2")
 		subject50Idx := strings.Index(render, "subject50")
@@ -189,6 +191,49 @@ func TestSubjectsPage(t *testing.T) {
 		assert.Less(t, subject1Idx, subject2Idx, "subject2 came before subject1")
 		assert.Less(t, subject2Idx, subject50Idx, "subject50 came before subject2")
 		assert.Less(t, subject50Idx, subject88Idx, "subject88 came before subject50")
+	})
+
+	t.Run("Toggle sort by Subject Name Desc", func(t *testing.T) {
+		deleter := MockSubjectsDeleter{}
+		subjectsPage, _ := New(
+			&MockSubjectsLister{},
+			&deleter,
+		)
+
+		var subjects []sradmin.Subject
+		var versions []int
+		for i := 0; i < 100; i++ {
+			versions = append(versions, i)
+			subjects = append(subjects,
+				sradmin.Subject{
+					Name:     fmt.Sprintf("subject%d", i),
+					Versions: versions,
+				})
+		}
+		shuffle(subjects)
+
+		subjectsPage.Update(sradmin.SubjectsListedMsg{Subjects: subjects})
+		subjectsPage.View(ui.NewTestKontext(), ui.TestRenderer)
+		subjectsPage.Update(keys.Key(tea.KeyF3))
+		subjectsPage.Update(keys.Key(tea.KeyEnter))
+
+		render := subjectsPage.View(ui.NewTestKontext(), ui.TestRenderer)
+
+		assert.Contains(t, render, "▼ Subject Name")
+
+		subject1Idx := strings.Index(render, "subject1")
+		subject2Idx := strings.Index(render, "subject2")
+		subject50Idx := strings.Index(render, "subject50")
+		subject88Idx := strings.Index(render, "subject88")
+
+		assert.Less(t, subject88Idx, subject1Idx, "subject1 came before subject88")
+		assert.Less(t, subject88Idx, subject2Idx, "subject2 came before subject88")
+		assert.Less(t, subject88Idx, subject50Idx, "subject50 came before subject88")
+
+		assert.Less(t, subject50Idx, subject1Idx, "subject1 came before subject50")
+		assert.Less(t, subject50Idx, subject2Idx, "subject2 came before subject50")
+
+		assert.Less(t, subject2Idx, subject1Idx, "subject1 came before subject2")
 	})
 
 	t.Run("Loading details page (enter) after searching from selective list", func(t *testing.T) {

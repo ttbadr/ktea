@@ -11,6 +11,7 @@ type TableCmdsBar[T any] struct {
 	deleteWidget     *DeleteCmdBar[T]
 	searchWidget     CmdBar
 	notifierWidget   CmdBar
+	sortByCmdBar     *SortByCmdBar
 	active           CmdBar
 	searchPrevActive bool
 }
@@ -25,7 +26,7 @@ func (m *TableCmdsBar[T]) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) s
 }
 
 func (m *TableCmdsBar[T]) Update(msg tea.Msg, selection *T) (tea.Msg, tea.Cmd) {
-	// when the notifier is active and has priority (because of a loading spinner)
+	// when the notifier is active and has priority (because of a loading spinner) it should handle all msgs
 	if m.active == m.notifierWidget {
 		if m.notifierWidget.(*NotifierCmdBar).Notifier.HasPriority() {
 			active, pmsg, cmd := m.active.Update(msg)
@@ -44,27 +45,44 @@ func (m *TableCmdsBar[T]) Update(msg tea.Msg, selection *T) (tea.Msg, tea.Cmd) {
 		return msg, cmd
 	}
 
+	if _, ok := m.active.(*SearchCmdBar); ok {
+		m.searchPrevActive = true
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "/":
-			m.active = m.searchWidget
-			active, pmsg, cmd := m.active.Update(msg)
-			if !active {
+			active, pmsg, cmd := m.searchWidget.Update(msg)
+			if active {
+				m.active = m.searchWidget
+			} else {
 				m.active = nil
 			}
 			return pmsg, cmd
 		case "f2":
 			if selection != nil {
-				if _, ok := m.active.(*SearchCmdBar); ok {
-					m.searchPrevActive = true
+				active, pmsg, cmd := m.deleteWidget.Update(msg)
+				if active {
+					m.deleteWidget.Delete(*selection)
+					m.active = m.deleteWidget
+				} else {
+					m.active = nil
 				}
-				m.deleteWidget.Delete(*selection)
-				_, pmsg, cmd := m.deleteWidget.Update(msg)
-				m.active = m.deleteWidget
 				return pmsg, cmd
 			}
 			return nil, nil
+		case "f3":
+			if selection != nil && m.sortByCmdBar != nil {
+				active, pmsg, cmd := m.sortByCmdBar.Update(msg)
+				if !active {
+					m.active = nil
+				} else {
+					m.active = m.sortByCmdBar
+				}
+				return pmsg, cmd
+			}
+			return pmsg, cmd
 		}
 	}
 
@@ -110,12 +128,14 @@ func NewTableCmdsBar[T any](
 	deleteCmdBar *DeleteCmdBar[T],
 	searchCmdBar *SearchCmdBar,
 	notifierCmdBar *NotifierCmdBar,
+	sortByCmdBar *SortByCmdBar,
 ) *TableCmdsBar[T] {
 	return &TableCmdsBar[T]{
 		deleteCmdBar,
 		searchCmdBar,
 		notifierCmdBar,
-		nil,
+		sortByCmdBar,
+		notifierCmdBar,
 		false,
 	}
 }

@@ -27,6 +27,7 @@ type Model struct {
 	groups        []*kadmin.ConsumerGroup
 	rows          []table.Row
 	tableFocussed bool
+	sort          cmdbar.SortLabel
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -37,8 +38,8 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	m.table.SetHeight(ktx.AvailableHeight - 2)
 	m.table.SetWidth(ktx.WindowWidth - 3)
 	m.table.SetColumns([]table.Column{
-		{"Consumer Group", int(float64(ktx.WindowWidth-6) * 0.7)},
-		{"Members", int(float64(ktx.WindowWidth-6) * 0.3)},
+		{m.columnTitle("Consumer Group"), int(float64(ktx.WindowWidth-6) * 0.7)},
+		{m.columnTitle("Members"), int(float64(ktx.WindowWidth-6) * 0.3)},
 	})
 	m.table.SetRows(m.rows)
 
@@ -70,6 +71,16 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	return ui.JoinVertical(lipgloss.Top, cmdBarView, tableView)
 }
 
+func (m *Model) columnTitle(title string) string {
+	if m.sort.Label == title {
+		return lipgloss.NewStyle().
+			Foreground(lipgloss.Color(styles.ColorPink)).
+			Bold(true).
+			Render(m.sort.Direction.String()) + " " + title
+	}
+	return title
+}
+
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
@@ -97,7 +108,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	m.tableFocussed = !m.cmdBar.IsFocussed()
 	cmds = append(cmds, cmd)
 
-	m.rows = m.filterCGroupsBySearchTerm()
+	m.rows = m.createRows()
 
 	// make sure table navigation is off when the cmdbar is focussed
 	if !m.cmdBar.IsFocussed() {
@@ -113,7 +124,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (m *Model) filterCGroupsBySearchTerm() []table.Row {
+func (m *Model) createRows() []table.Row {
 	var rows []table.Row
 	for _, group := range m.groups {
 		if m.cmdBar.GetSearchTerm() != "" {
@@ -124,8 +135,24 @@ func (m *Model) filterCGroupsBySearchTerm() []table.Row {
 			rows = m.apppendGroupToRows(rows, group)
 		}
 	}
+
 	sort.SliceStable(rows, func(i, j int) bool {
-		return rows[i][0] < rows[j][0]
+		switch m.sort.Label {
+		case "Consumer Group":
+			if m.sort.Direction == cmdbar.Asc {
+				return rows[i][0] < rows[j][0]
+			}
+			return rows[i][0] > rows[j][0]
+		case "Members":
+			partitionI, _ := strconv.Atoi(rows[i][1])
+			partitionJ, _ := strconv.Atoi(rows[j][1])
+			if m.sort.Direction == cmdbar.Asc {
+				return partitionI < partitionJ
+			}
+			return partitionI > partitionJ
+		default:
+			panic(fmt.Sprintf("unexpected sort label: %s", m.sort.Label))
+		}
 	})
 	return rows
 }
@@ -154,6 +181,8 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 	return []statusbar.Shortcut{
 		{"Search", "/"},
 		{"View", "enter"},
+		{"Delete", "F2"},
+		{"Sort", "F3"},
 		{"Refresh", "F5"},
 	}
 }
@@ -162,7 +191,10 @@ func (m *Model) Title() string {
 	return "Consumer Groups"
 }
 
-func New(lister kadmin.CGroupLister, deleter kadmin.CGroupDeleter) (*Model, tea.Cmd) {
+func New(
+	lister kadmin.CGroupLister,
+	deleter kadmin.CGroupDeleter,
+) (*Model, tea.Cmd) {
 	m := &Model{}
 	m.lister = lister
 
@@ -239,10 +271,28 @@ func New(lister kadmin.CGroupLister, deleter kadmin.CGroupDeleter) (*Model, tea.
 		},
 	)
 
+	sortByBar := cmdbar.NewSortByCmdBar(
+		[]cmdbar.SortLabel{
+			{
+				Label:     "Consumer Group",
+				Direction: cmdbar.Asc,
+			},
+			{
+				Label:     "Members",
+				Direction: cmdbar.Desc,
+			},
+		},
+		cmdbar.WithSortSelectedCallback(func(label cmdbar.SortLabel) {
+			m.sort = label
+		}),
+	)
+
 	m.cmdBar = cmdbar.NewTableCmdsBar[string](
 		cmdbar.NewDeleteCmdBar(deleteMsgFunc, deleteFunc, nil),
 		cmdbar.NewSearchCmdBar("Search Consumer Group"),
 		notifierCmdBar,
+		sortByBar,
 	)
+	m.sort = sortByBar.SortedBy()
 	return m, m.lister.ListCGroups
 }
