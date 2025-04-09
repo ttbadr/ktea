@@ -44,29 +44,14 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	m.table.SetRows(m.rows)
 
 	var tableView string
-	if m.tableFocussed {
-		// Apply focus style
-		styledTable := renderer.RenderWithStyle(m.table.View(), styles.Table.Focus)
 
-		embeddedText := map[styles.BorderPosition]string{
-			styles.TopMiddleBorder: lipgloss.NewStyle().
-				Foreground(lipgloss.Color(styles.ColorPink)).
-				Bold(true).
-				Render(fmt.Sprintf("Total Consumer Groups: %d", len(m.rows))),
-		}
-		tableView = styles.Borderize(styledTable, true, embeddedText)
-	} else {
-		// Regular border approach for unfocused state
-		styledTable := renderer.RenderWithStyle(m.table.View(), styles.Table.Blur)
+	styledTable := renderer.RenderWithStyle(m.table.View(), styles.Table.Blur)
 
-		embeddedText := map[styles.BorderPosition]string{
-			styles.TopMiddleBorder: lipgloss.NewStyle().
-				Foreground(lipgloss.Color(styles.ColorPink)).
-				Bold(true).
-				Render(fmt.Sprintf("Total Consumer Groups: %d", len(m.rows))),
-		}
-		tableView = styles.Borderize(styledTable, false, embeddedText)
+	embeddedText := map[styles.BorderPosition]styles.EmbeddedTextFunc{
+		styles.TopMiddleBorder:    styles.BorderKeyValueTitle("Total Consumer Groups", fmt.Sprintf(" %d/%d", len(m.rows), len(m.groups))),
+		styles.BottomMiddleBorder: styles.BorderKeyValueTitle("Total Consumer Groups", fmt.Sprintf(" %d/%d", len(m.rows), len(m.groups))),
 	}
+	tableView = styles.Borderize(styledTable, m.tableFocussed, embeddedText)
 
 	return ui.JoinVertical(lipgloss.Top, cmdBarView, tableView)
 }

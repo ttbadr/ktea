@@ -1,6 +1,7 @@
 package styles
 
 import (
+	"fmt"
 	"ktea/kontext"
 	"strings"
 
@@ -38,14 +39,11 @@ const ColorYellow = "#FFFF00"
 const ColorWhite = "#FFFFFF"
 const ColorBlack = "#000000"
 const ColorPink = "205"
-const ColorLightPink = "170"
+const ColorLightPink = "132"
 const ColorGrey = "#C1C1C1"
 const ColorDarkGrey = "#343433"
 const ColorFocusBorder = "#F5F5F5"
 const ColorBlurBorder = "235"
-
-var Bold = lipgloss.NewStyle().
-	Bold(true)
 
 type NotifierStyle struct {
 	Spinner lipgloss.Style
@@ -81,10 +79,42 @@ const (
 	BottomRightBorder
 )
 
+type EmbeddedTextFunc func(active bool) string
+
+func BorderKeyValueTitle(
+	keyLabel string,
+	valueLabel string,
+) EmbeddedTextFunc {
+	return func(active bool) string {
+		var (
+			colorLabel lipgloss.Color
+			colorCount lipgloss.Color
+		)
+		if active {
+			colorLabel = ColorWhite
+			colorCount = ColorPink
+		} else {
+			colorLabel = ColorGrey
+			colorCount = ColorLightPink
+		}
+		return lipgloss.NewStyle().
+			Foreground(colorLabel).
+			Bold(true).
+			Render(fmt.Sprintf("[ %s:", keyLabel)) + lipgloss.NewStyle().
+			Foreground(colorCount).
+			Bold(true).
+			Render(fmt.Sprintf(" %s", valueLabel)) +
+			lipgloss.NewStyle().
+				Foreground(colorLabel).
+				Bold(true).
+				Render(" ]")
+	}
+}
+
 // Borderize creates a border around content with optional embedded text in different positions
-func Borderize(content string, active bool, embeddedText map[BorderPosition]string) string {
+func Borderize(content string, active bool, embeddedText map[BorderPosition]EmbeddedTextFunc) string {
 	if embeddedText == nil {
-		embeddedText = make(map[BorderPosition]string)
+		embeddedText = make(map[BorderPosition]EmbeddedTextFunc)
 	}
 
 	borderColor := ColorFocusBorder
@@ -137,9 +167,9 @@ func Borderize(content string, active bool, embeddedText map[BorderPosition]stri
 
 	// Create the bordered content
 	topBorder := buildBorderLine(
-		embeddedText[TopLeftBorder],
-		embeddedText[TopMiddleBorder],
-		embeddedText[TopRightBorder],
+		getTextOrEmpty(embeddedText[TopLeftBorder], active),
+		getTextOrEmpty(embeddedText[TopMiddleBorder], active),
+		getTextOrEmpty(embeddedText[TopRightBorder], active),
 		"╭", "─", "╮",
 	)
 
@@ -161,14 +191,21 @@ func Borderize(content string, active bool, embeddedText map[BorderPosition]stri
 
 	// Create bottom border
 	bottomBorder := buildBorderLine(
-		embeddedText[BottomLeftBorder],
-		embeddedText[BottomMiddleBorder],
-		embeddedText[BottomRightBorder],
+		getTextOrEmpty(embeddedText[BottomLeftBorder], active),
+		getTextOrEmpty(embeddedText[BottomMiddleBorder], active),
+		getTextOrEmpty(embeddedText[BottomRightBorder], active),
 		"╰", "─", "╯",
 	)
 
 	// Final content with borders
 	return topBorder + "\n" + borderedContent + "\n" + bottomBorder
+}
+
+func getTextOrEmpty(embeddedText EmbeddedTextFunc, active bool) string {
+	if embeddedText == nil {
+		return ""
+	}
+	return embeddedText(active)
 }
 
 func CenterText(width int, height int) lipgloss.Style {

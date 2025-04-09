@@ -70,19 +70,23 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	}
 
 	topicsTableView := renderer.RenderWithStyle(m.topicsTable.View(), topicTableStyle)
-	topicsTableEmbeddedText := map[styles.BorderPosition]string{
-		styles.TopMiddleBorder: lg.NewStyle().
-			Foreground(lg.Color(styles.ColorPink)).
-			Bold(true).
-			Render(fmt.Sprintf("Total Topics: %d", len(m.topicsRows))),
+	embeddedText := map[styles.BorderPosition]styles.EmbeddedTextFunc{
+		styles.TopMiddleBorder: func(active bool) string {
+			return lg.NewStyle().
+				Foreground(lg.Color(styles.ColorPink)).
+				Bold(true).
+				Render(fmt.Sprintf("Total Topics: %d", len(m.topicsRows)))
+		},
 	}
-	topicsTableBorderedView := styles.Borderize(topicsTableView, m.tableFocus == topicFocus, topicsTableEmbeddedText)
+	topicsTableBorderedView := styles.Borderize(topicsTableView, m.tableFocus == topicFocus, embeddedText)
 	offsetsTableView := renderer.RenderWithStyle(m.offsetsTable.View(), offsetTableStyle)
-	offsetsTableEmbeddedText := map[styles.BorderPosition]string{
-		styles.TopMiddleBorder: lg.NewStyle().
-			Foreground(lg.Color(styles.ColorPink)).
-			Bold(true).
-			Render(fmt.Sprintf("Total Partitions: %d", len(m.offsetRows))),
+	offsetsTableEmbeddedText := map[styles.BorderPosition]styles.EmbeddedTextFunc{
+		styles.TopMiddleBorder: func(active bool) string {
+			return lg.NewStyle().
+				Foreground(lg.Color(styles.ColorPink)).
+				Bold(true).
+				Render(fmt.Sprintf("Total Partitions: %d", len(m.offsetRows)))
+		},
 	}
 	offsetsTableBorderedView := styles.Borderize(offsetsTableView, m.tableFocus == offsetFocus, offsetsTableEmbeddedText)
 

@@ -73,7 +73,12 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 		m.table.GotoTop()
 	}
 
-	tableView := styles.Borderize(m.table.View(), m.tableFocussed, nil)
+	embeddedText := map[styles.BorderPosition]styles.EmbeddedTextFunc{
+		styles.TopMiddleBorder:    styles.BorderKeyValueTitle("Total Subjects", fmt.Sprintf(" %d/%d", len(m.rows), len(m.subjects))),
+		styles.BottomMiddleBorder: styles.BorderKeyValueTitle("Total Subjects", fmt.Sprintf(" %d/%d", len(m.rows), len(m.subjects))),
+	}
+
+	tableView := styles.Borderize(m.table.View(), m.tableFocussed, embeddedText)
 	return ui.JoinVertical(lipgloss.Top, cmdBarView, tableView)
 }
 

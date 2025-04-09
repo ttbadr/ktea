@@ -45,37 +45,21 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	m.table.SetHeight(ktx.AvailableHeight - 2)
 	m.table.SetWidth(ktx.WindowWidth - 3)
 	m.table.SetColumns([]table.Column{
-		{m.columnTitle("Name"), int(float64(ktx.WindowWidth-10) * 0.7)},
-		{m.columnTitle("Partitions"), int(float64(ktx.WindowWidth-10) * 0.1)},
-		{m.columnTitle("Replicas"), int(float64(ktx.WindowWidth-10) * 0.1)},
-		{m.columnTitle("~ Record Count"), int(float64(ktx.WindowWidth-10) * 0.1)},
+		{m.columnTitle("Name"), int(float64(ktx.WindowWidth-10) * 0.6)},
+		{m.columnTitle("Partitions"), int(float64(ktx.WindowWidth-10) * 0.133)},
+		{m.columnTitle("Replicas"), int(float64(ktx.WindowWidth-10) * 0.133)},
+		{m.columnTitle("~ Record Count"), int(float64(ktx.WindowWidth-10) * 0.133)},
 	})
 	m.table.SetRows(m.rows)
 
-	var tableView string
-	if m.tableFocussed {
-		// Apply focus style
-		styledTable := renderer.RenderWithStyle(m.table.View(), styles.Table.Focus)
+	styledTable := renderer.RenderWithStyle(m.table.View(), styles.Table.Blur)
 
-		embeddedText := map[styles.BorderPosition]string{
-			styles.TopMiddleBorder: lipgloss.NewStyle().
-				Foreground(lipgloss.Color(styles.ColorPink)).
-				Bold(true).
-				Render(fmt.Sprintf("Total Topics: %d", len(m.rows))),
-		}
-		tableView = styles.Borderize(styledTable, true, embeddedText)
-	} else {
-		// Regular border approach for unfocused state
-		styledTable := renderer.RenderWithStyle(m.table.View(), styles.Table.Blur)
-
-		embeddedText := map[styles.BorderPosition]string{
-			styles.TopMiddleBorder: lipgloss.NewStyle().
-				Foreground(lipgloss.Color(styles.ColorPink)).
-				Bold(true).
-				Render(fmt.Sprintf("Total Topics: %d", len(m.rows))),
-		}
-		tableView = styles.Borderize(styledTable, false, embeddedText)
+	embeddedText := map[styles.BorderPosition]styles.EmbeddedTextFunc{
+		styles.TopMiddleBorder:    styles.BorderKeyValueTitle("Total Topics", fmt.Sprintf(" %d/%d", len(m.rows), len(m.topics))),
+		styles.BottomMiddleBorder: styles.BorderKeyValueTitle("Total Topics", fmt.Sprintf(" %d/%d", len(m.rows), len(m.topics))),
 	}
+
+	tableView := styles.Borderize(styledTable, m.tableFocussed, embeddedText)
 
 	return ui.JoinVertical(lipgloss.Top, cmdBarView, tableView)
 }
