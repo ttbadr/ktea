@@ -2,6 +2,7 @@ package cgroups_page
 
 import (
 	"fmt"
+	"github.com/charmbracelet/log"
 	"ktea/kadmin"
 	"ktea/kontext"
 	"ktea/styles"
@@ -11,6 +12,7 @@ import (
 	"ktea/ui/components/statusbar"
 	ktable "ktea/ui/components/table"
 	"ktea/ui/pages/nav"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -18,6 +20,14 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+)
+
+type state int
+
+const (
+	stateRefreshing state = iota
+	stateLoading
+	stateLoaded
 )
 
 type Model struct {
@@ -28,6 +38,7 @@ type Model struct {
 	rows          []table.Row
 	tableFocussed bool
 	sort          cmdbar.SortLabel
+	state         state
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -67,6 +78,9 @@ func (m *Model) columnTitle(title string) string {
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
+
+	log.Debug("Received Update", "msg", reflect.TypeOf(msg))
+
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -79,9 +93,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				return ui.PublishMsg(nav.LoadCGroupTopicsPageMsg{GroupName: *m.SelectedCGroup()})
 			}
 		case "f5":
+			m.groups = nil
+			m.state = stateRefreshing
 			return m.lister.ListCGroups
 		}
 	case kadmin.ConsumerGroupsListedMsg:
+		m.state = stateLoaded
 		m.groups = msg.ConsumerGroups
 	case kadmin.CGroupDeletionStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
@@ -189,7 +206,7 @@ func New(
 
 	deleteMsgFunc := func(topic string) string {
 		message := topic + lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7571F9")).
+			Foreground(lipgloss.Color(styles.ColorIndigo)).
 			Bold(true).
 			Render(" will be deleted permanently")
 		return message
@@ -209,6 +226,20 @@ func New(
 		) (bool, tea.Cmd) {
 			cmd := m.SpinWithLoadingMsg("Loading Consumer Groups")
 			return true, cmd
+		},
+	)
+
+	cmdbar.WithMsgHandler(
+		notifierCmdBar,
+		func(
+			msg ui.RegainedFocusMsg,
+			model *notifier.Model,
+		) (bool, tea.Cmd) {
+			if m.state == stateRefreshing || m.state == stateLoading {
+				cmd := model.SpinWithLoadingMsg("Loading Consumer Groups")
+				return true, cmd
+			}
+			return false, nil
 		},
 	)
 
@@ -279,5 +310,6 @@ func New(
 		sortByBar,
 	)
 	m.sort = sortByBar.SortedBy()
+	m.state = stateLoading
 	return m, m.lister.ListCGroups
 }

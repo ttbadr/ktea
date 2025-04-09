@@ -25,16 +25,29 @@ import (
 	"strings"
 )
 
+const Name = "topics-page"
+
+type state int
+
+const (
+	stateRefreshing state = iota
+	stateLoading
+	stateLoaded
+	stateRecordCountLoading
+)
+
 type Model struct {
-	topics        []kadmin.ListedTopic
-	table         table.Model
-	shortcuts     []statusbar.Shortcut
-	cmdBar        *cmdbar.TableCmdsBar[string]
-	rows          []table.Row
-	lister        kadmin.TopicLister
-	ctx           context.Context
-	tableFocussed bool
-	sort          cmdbar.SortLabel
+	topics             []kadmin.ListedTopic
+	table              table.Model
+	shortcuts          []statusbar.Shortcut
+	cmdBar             *cmdbar.TableCmdsBar[string]
+	rows               []table.Row
+	lister             kadmin.TopicLister
+	ctx                context.Context
+	recordCountSpinner spinner.Model
+	tableFocussed      bool
+	sort               cmdbar.SortLabel
+	state              state
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -46,9 +59,9 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	m.table.SetWidth(ktx.WindowWidth - 3)
 	m.table.SetColumns([]table.Column{
 		{m.columnTitle("Name"), int(float64(ktx.WindowWidth-10) * 0.6)},
-		{m.columnTitle("Partitions"), int(float64(ktx.WindowWidth-10) * 0.133)},
-		{m.columnTitle("Replicas"), int(float64(ktx.WindowWidth-10) * 0.133)},
-		{m.columnTitle("~ Record Count"), int(float64(ktx.WindowWidth-10) * 0.133)},
+		{m.columnTitle("Partitions"), int(float64(ktx.WindowWidth-10) * 0.125)},
+		{m.columnTitle("Replicas"), int(float64(ktx.WindowWidth-10) * 0.125)},
+		{m.columnTitle("~ Record Count"), int(float64(ktx.WindowWidth-10) * 0.15)},
 	})
 	m.table.SetRows(m.rows)
 
@@ -80,6 +93,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	cmds := make([]tea.Cmd, 2)
 
+	var cmd tea.Cmd
+	m.recordCountSpinner, cmd = m.recordCountSpinner.Update(msg)
+	cmds = append(cmds, cmd)
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if m.topics == nil {
@@ -94,7 +111,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			return ui.PublishMsg(nav.LoadPublishPageMsg{Topic: m.SelectedTopic()})
 		case "f5":
 			m.topics = nil
-			return m.lister.ListTopics
+			m.state = stateRefreshing
+			return tea.Batch(m.lister.ListTopics, m.recordCountSpinner.Tick)
 		case "ctrl+l":
 			return ui.PublishMsg(nav.LoadLiveConsumePageMsg{Topic: m.SelectedTopic()})
 		case "enter":
@@ -106,18 +124,36 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				})
 			}
 		}
+	case ui.RegainedFocusMsg:
+		if m.state == stateRefreshing || m.state == stateLoading || m.state == stateRecordCountLoading {
+			cmds = append(cmds, m.recordCountSpinner.Tick)
+			tea.Batch(cmds...)
+		}
 	case spinner.TickMsg:
 		selectedTopic := m.SelectedTopicName()
 		_, c := m.cmdBar.Update(msg, &selectedTopic)
 		if c != nil {
 			cmds = append(cmds, c)
 		}
+	case kadmin.TopicRecordCountCalculatedMsg:
+		for i := range m.topics {
+			if m.topics[i].Name == msg.Topic {
+				m.topics[i].RecordCount = msg.RecordCount
+			}
+		}
+		log.Debug("Updated record count", "topic", msg.Topic, "recordCount", msg.RecordCount)
+		return msg.AwaitRecordCountCompletion
+	case kadmin.AllTopicRecordCountCalculatedMsg:
+		m.state = stateLoaded
+		m.recordCountSpinner = spinner.New()
+		m.recordCountSpinner.Spinner = spinner.MiniDot
+		log.Debug("All record counts calculated")
 	case kadmin.TopicDeletionStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
 	case kadmin.TopicListingStartedMsg:
-		cmds = append(cmds, msg.AwaitCompletion)
+		cmds = append(cmds, msg.AwaitTopicListCompletion, msg.AwaitRecordCountCompletion)
 	case kadmin.TopicListedMsg:
-		log.Debug("Topics listed")
+		m.state = stateRecordCountLoading
 		m.topics = msg.Topics
 	case kadmin.TopicDeletedMsg:
 		m.topics = slices.DeleteFunc(
@@ -127,7 +163,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	}
 
 	name := m.SelectedTopicName()
-	msg, cmd := m.cmdBar.Update(msg, &name)
+	msg, cmd = m.cmdBar.Update(msg, &name)
 	m.tableFocussed = !m.cmdBar.IsFocussed()
 	cmds = append(cmds, cmd)
 
@@ -149,6 +185,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 func (m *Model) createRows() []table.Row {
 	var rows []table.Row
 	for _, topic := range m.topics {
+		var recordCount string
+		if topic.RecordCount == kadmin.UnknownRecordCount {
+			recordCount = m.recordCountSpinner.View()
+		} else {
+			recordCount = humanize.Comma(topic.RecordCount)
+		}
 		if m.cmdBar.GetSearchTerm() != "" {
 			if strings.Contains(strings.ToLower(topic.Name), strings.ToLower(m.cmdBar.GetSearchTerm())) {
 				rows = append(
@@ -157,7 +199,7 @@ func (m *Model) createRows() []table.Row {
 						topic.Name,
 						strconv.Itoa(topic.PartitionCount),
 						strconv.Itoa(topic.Replicas),
-						humanize.Comma(topic.RecordCount),
+						recordCount,
 					},
 				)
 			}
@@ -168,7 +210,7 @@ func (m *Model) createRows() []table.Row {
 					topic.Name,
 					strconv.Itoa(topic.PartitionCount),
 					strconv.Itoa(topic.Replicas),
-					humanize.Comma(topic.RecordCount),
+					recordCount,
 				},
 			)
 		}
@@ -267,7 +309,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 
 	deleteMsgFunc := func(topic string) string {
 		message := topic + lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7571F9")).
+			Foreground(lipgloss.Color(styles.ColorIndigo)).
 			Bold(true).
 			Render(" will be deleted permanently")
 		return message
@@ -279,7 +321,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 		}
 	}
 
-	notifierCmdBar := cmdbar.NewNotifierCmdBar("topics-page")
+	notifierCmdBar := cmdbar.NewNotifierCmdBar(Name)
 
 	cmdbar.WithMsgHandler(
 		notifierCmdBar,
@@ -295,11 +337,25 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 	cmdbar.WithMsgHandler(
 		notifierCmdBar,
 		func(
+			msg ui.RegainedFocusMsg,
+			model *notifier.Model,
+		) (bool, tea.Cmd) {
+			if m.state == stateRefreshing || m.state == stateLoading {
+				cmd := model.SpinWithLoadingMsg("Loading Topics")
+				return true, cmd
+			}
+			return false, nil
+		},
+	)
+
+	cmdbar.WithMsgHandler(
+		notifierCmdBar,
+		func(
 			msg kadmin.TopicListedMsg,
 			m *notifier.Model,
 		) (bool, tea.Cmd) {
 			m.Idle()
-			return true, m.AutoHideCmd("topics-page")
+			return true, m.AutoHideCmd(Name)
 		},
 	)
 
@@ -321,7 +377,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 			m *notifier.Model,
 		) (bool, tea.Cmd) {
 			m.ShowSuccessMsg("Topic Deleted")
-			return true, m.AutoHideCmd("topics-page")
+			return true, m.AutoHideCmd(Name)
 		},
 	)
 
@@ -343,7 +399,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 			m *notifier.Model,
 		) (bool, tea.Cmd) {
 			m.ShowErrorMsg("Error Deleting Topic", msg.Err)
-			return true, m.AutoHideCmd("topics-page")
+			return true, m.AutoHideCmd(Name)
 		},
 	)
 
@@ -378,5 +434,11 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 	)
 	m.sort = sortByCmdBar.SortedBy()
 	m.lister = lister
-	return &m, lister.ListTopics
+	m.recordCountSpinner = spinner.New()
+	m.recordCountSpinner.Spinner = spinner.MiniDot
+	m.state = stateLoading
+	var cmds []tea.Cmd
+	cmds = append(cmds, m.recordCountSpinner.Tick)
+	cmds = append(cmds, m.lister.ListTopics)
+	return &m, tea.Batch(cmds...)
 }

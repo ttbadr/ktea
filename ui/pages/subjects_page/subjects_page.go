@@ -2,6 +2,7 @@ package subjects_page
 
 import (
 	"fmt"
+	"github.com/charmbracelet/log"
 	"ktea/kontext"
 	"ktea/sradmin"
 	"ktea/styles"
@@ -11,6 +12,7 @@ import (
 	"ktea/ui/components/statusbar"
 	ktable "ktea/ui/components/table"
 	"ktea/ui/pages/nav"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -93,6 +95,9 @@ func (m *Model) columnTitle(title string) string {
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
+
+	log.Debug("Received Update", "msg", reflect.TypeOf(msg))
+
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -274,9 +279,16 @@ func (m *Model) Title() string {
 }
 
 func New(lister sradmin.SubjectLister, deleter sradmin.SubjectDeleter) (*Model, tea.Cmd) {
+	model := Model{
+		table:         ktable.NewDefaultTable(),
+		tableFocussed: true,
+		lister:        lister,
+		state:         initialized,
+	}
+
 	deleteMsgFunc := func(subject sradmin.Subject) string {
 		message := subject.Name + lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7571F9")).
+			Foreground(lipgloss.Color(styles.ColorIndigo)).
 			Bold(true).
 			Render(" will be deleted permanently")
 		return message
@@ -314,19 +326,30 @@ func New(lister sradmin.SubjectLister, deleter sradmin.SubjectDeleter) (*Model, 
 		m.ShowErrorMsg("Failed to delete subject", msg.Err)
 		return true, m.AutoHideCmd("subjects-page")
 	}
+
 	cmdbar.WithMsgHandler(notifierCmdBar, subjectListingStartedNotifier)
 	cmdbar.WithMsgHandler(notifierCmdBar, subjectsListedNotifier)
 	cmdbar.WithMsgHandler(notifierCmdBar, subjectDeletionStartedNotifier)
 	cmdbar.WithMsgHandler(notifierCmdBar, subjectListingErrorMsg)
 	cmdbar.WithMsgHandler(notifierCmdBar, subjectDeletedNotifier)
 	cmdbar.WithMsgHandler(notifierCmdBar, subjectDeletionErrorNotifier)
-
-	model := Model{
-		table:         ktable.NewDefaultTable(),
-		tableFocussed: true,
-		lister:        lister,
-		state:         initialized,
-	}
+	cmdbar.WithMsgHandler(
+		notifierCmdBar,
+		func(
+			msg ui.RegainedFocusMsg,
+			m *notifier.Model,
+		) (bool, tea.Cmd) {
+			if model.state == loading {
+				cmd := m.SpinWithLoadingMsg("Loading subjects")
+				return true, cmd
+			}
+			if model.state == deleting {
+				cmd := m.SpinWithLoadingMsg("Deleting Subject")
+				return true, cmd
+			}
+			return false, nil
+		},
+	)
 
 	sortByBar := cmdbar.NewSortByCmdBar(
 		[]cmdbar.SortLabel{
@@ -352,5 +375,5 @@ func New(lister sradmin.SubjectLister, deleter sradmin.SubjectDeleter) (*Model, 
 		notifierCmdBar,
 		sortByBar,
 	)
-	return &model, lister.ListSubjects
+	return &model, nil
 }

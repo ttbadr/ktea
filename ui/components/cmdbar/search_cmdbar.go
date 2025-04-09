@@ -4,6 +4,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 	"ktea/kontext"
 	"ktea/styles"
 	"ktea/ui"
@@ -77,9 +78,11 @@ func (s *SearchCmdBar) handleKeyMsg(msg tea.KeyMsg) (bool, tea.Msg, tea.Cmd) {
 
 func (s *SearchCmdBar) toggleSearch() {
 	if s.state == searching {
+		log.Debug("Toggling search off")
 		s.state = hidden
 		s.searchInput.Blur()
 	} else {
+		log.Debug("Toggling search on")
 		s.state = searching
 		s.searchInput.Focus()
 	}

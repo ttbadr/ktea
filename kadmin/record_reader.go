@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"github.com/charmbracelet/log"
 	"ktea/serdes"
 	"strconv"
 	"strings"
@@ -378,6 +379,9 @@ func (ka *SaramaKafkaAdmin) fetchOffsets(
 	errorsChan := make(chan error, len(partitions))
 
 	for _, partition := range partitions {
+
+		log.Debug("fetching offsets", "topic", topicName, "partition", partition)
+
 		wg.Add(1)
 		go func(partition int) {
 			defer wg.Done()

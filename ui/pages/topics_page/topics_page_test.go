@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"ktea/kadmin"
 	"ktea/kontext"
+	"ktea/tests"
 	"ktea/tests/keys"
 	"ktea/ui"
 	"strings"
@@ -56,7 +57,7 @@ func TestTopicsPage(t *testing.T) {
 
 		cmd := page.Update(keys.Key(tea.KeyF5))
 
-		assert.IsType(t, ListTopicsCalledMsg{}, cmd())
+		assert.Contains(t, tests.ExecuteBatchCmd(cmd), ListTopicsCalledMsg{})
 	})
 
 	t.Run("Default sort by Name Asc", func(t *testing.T) {

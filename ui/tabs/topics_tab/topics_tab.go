@@ -2,8 +2,10 @@ package topics_tab
 
 import (
 	"context"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 	"ktea/kadmin"
 	"ktea/kontext"
 	"ktea/ui"
@@ -46,7 +48,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	switch msg := msg.(type) {
 
-	case kadmin.TopicListedMsg:
+	case kadmin.TopicListedMsg,
+		kadmin.TopicRecordCountCalculatedMsg,
+		kadmin.AllTopicRecordCountCalculatedMsg,
+		spinner.TickMsg:
 		// Make sure TopicListedMsg is explicitly captured and
 		// properly propagated in the case when cgroupsPage
 		//isn't focused anymore.
@@ -75,6 +80,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.active = page
 
 	case nav.LoadCreateTopicPageMsg:
+		log.Debug("Loading create topic page")
 		m.active = create_topic_page.New(m.ka)
 
 	case nav.LoadPublishPageMsg:

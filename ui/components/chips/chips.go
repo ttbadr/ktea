@@ -17,7 +17,7 @@ type Model struct {
 	selectedIdx  int
 }
 
-func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
+func (m *Model) View(_ *kontext.ProgramKtx, _ *ui.Renderer) string {
 	builder := strings.Builder{}
 	builder.WriteString(m.label + ":")
 

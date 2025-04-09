@@ -162,7 +162,7 @@ func New(ktx *kontext.ProgramKtx, connChecker kadmin.ConnChecker) (nav.Page, tea
 	}
 	deleteMsgFunc := func(subject string) string {
 		message := subject + lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7571F9")).
+			Foreground(lipgloss.Color(styles.ColorIndigo)).
 			Bold(true).
 			Render(" will be deleted permanently")
 		return message

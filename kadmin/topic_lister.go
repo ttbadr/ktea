@@ -3,8 +3,11 @@ package kadmin
 import (
 	"github.com/IBM/sarama"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/log"
 	"sync"
 )
+
+const UnknownRecordCount = -1
 
 type TopicLister interface {
 	ListTopics() tea.Msg
@@ -14,21 +17,56 @@ type TopicListedMsg struct {
 	Topics []ListedTopic
 }
 
+type TopicRecordCount struct {
+	Topic        string
+	RecordCount  int64
+	CountedTopic chan TopicRecordCount
+}
+
 type TopicListingStartedMsg struct {
-	Err    chan error
-	Topics chan []ListedTopic
+	Err              chan error
+	Topics           chan []ListedTopic
+	TopicRecordCount chan TopicRecordCount
 }
 
 type TopicListedErrorMsg struct {
 	Err error
 }
 
-func (m *TopicListingStartedMsg) AwaitCompletion() tea.Msg {
+func (m *TopicListingStartedMsg) AwaitTopicListCompletion() tea.Msg {
 	select {
 	case topics := <-m.Topics:
 		return TopicListedMsg{Topics: topics}
 	case err := <-m.Err:
 		return TopicListedErrorMsg{Err: err}
+	}
+}
+
+type TopicRecordCountCalculatedMsg struct {
+	TopicRecordCount
+	TopicRecordCountChan chan TopicRecordCount
+}
+
+func (m *TopicListingStartedMsg) AwaitRecordCountCompletion() tea.Msg {
+	select {
+	case recordCount := <-m.TopicRecordCount:
+		return TopicRecordCountCalculatedMsg{recordCount, m.TopicRecordCount}
+	case err := <-m.Err:
+		return TopicListedErrorMsg{Err: err}
+	}
+}
+
+type AllTopicRecordCountCalculatedMsg struct {
+}
+
+func (m *TopicRecordCountCalculatedMsg) AwaitRecordCountCompletion() tea.Msg {
+	select {
+	case recordCount, ok := <-m.TopicRecordCountChan:
+		// channel closed
+		if !ok {
+			return AllTopicRecordCountCalculatedMsg{}
+		}
+		return TopicRecordCountCalculatedMsg{recordCount, m.TopicRecordCountChan}
 	}
 }
 
@@ -50,27 +88,41 @@ func (t *ListedTopic) Partitions() []int {
 func (ka *SaramaKafkaAdmin) ListTopics() tea.Msg {
 	errChan := make(chan error)
 	topicsChan := make(chan []ListedTopic)
+	topicRecordCountChan := make(chan TopicRecordCount)
 
-	go ka.doListTopics(errChan, topicsChan)
+	go ka.doListTopics(errChan, topicsChan, topicRecordCountChan)
 
 	return TopicListingStartedMsg{
 		errChan,
 		topicsChan,
+		topicRecordCountChan,
 	}
 }
 
-func (ka *SaramaKafkaAdmin) doListTopics(errChan chan error, topicsChan chan []ListedTopic) {
+func (ka *SaramaKafkaAdmin) doListTopics(
+	errChan chan error,
+	topicsChan chan []ListedTopic,
+	recordCountChan chan TopicRecordCount,
+) {
 	MaybeIntroduceLatency()
 	listResult, err := ka.admin.ListTopics()
 	if err != nil {
 		errChan <- err
 	}
 
-	partByTopic := make(map[string]ListedTopic)
-	var (
-		wg sync.WaitGroup
-		mu sync.Mutex
-	)
+	var topics []ListedTopic
+	for name, t := range listResult {
+		topics = append(topics, ListedTopic{
+			name,
+			int(t.NumPartitions),
+			int(t.ReplicationFactor),
+			UnknownRecordCount,
+		})
+	}
+	topicsChan <- topics
+	close(topicsChan)
+
+	var wg sync.WaitGroup
 
 	for name, topic := range listResult {
 		wg.Add(1)
@@ -86,7 +138,6 @@ func (ka *SaramaKafkaAdmin) doListTopics(errChan chan error, topicsChan chan []L
 			offsets, err := ka.fetchOffsets(partitions, name)
 			if err != nil {
 				errChan <- err
-				wg.Done()
 				return
 			}
 
@@ -95,27 +146,12 @@ func (ka *SaramaKafkaAdmin) doListTopics(errChan chan error, topicsChan chan []L
 				recordCount += offset.firstAvailable - offset.oldest
 			}
 
-			mu.Lock()
-			partByTopic[name] = ListedTopic{
-				Name:           name,
-				PartitionCount: int(topic.NumPartitions),
-				Replicas:       int(topic.ReplicationFactor),
-				RecordCount:    offsets[0].firstAvailable - offsets[0].oldest,
-			}
-			mu.Unlock()
-
+			recordCountChan <- TopicRecordCount{name, recordCount, recordCountChan}
+			log.Debug("done calculating record count", "topic", name)
 		}(name, topic)
 	}
 	wg.Wait()
 
-	var topics []ListedTopic
-	for _, t := range partByTopic {
-		topics = append(topics, ListedTopic{
-			t.Name,
-			t.PartitionCount,
-			t.Replicas,
-			t.RecordCount,
-		})
-	}
-	topicsChan <- topics
+	close(recordCountChan)
+	log.Debug("done fetching offsets")
 }

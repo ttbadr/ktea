@@ -29,7 +29,7 @@ func TestCreateTopic(t *testing.T) {
 		listTopicsMsg := ka.ListTopics().(TopicListingStartedMsg)
 
 		var topics []ListedTopic
-		msg := listTopicsMsg.AwaitCompletion()
+		msg := listTopicsMsg.AwaitTopicListCompletion()
 		switch msg := msg.(type) {
 		case TopicListedMsg:
 			topics = msg.Topics
@@ -38,7 +38,7 @@ func TestCreateTopic(t *testing.T) {
 			return
 		}
 
-		assert.Contains(t, topics, ListedTopic{topic, 2, 1, 0})
+		assert.Contains(t, topics, ListedTopic{topic, 2, 1, -1})
 
 		// and
 		var configs map[string]string

@@ -88,9 +88,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Make sure the events, because of their async nature,
 		// are explicitly captured and properly propagated
 		// in the case when the tabCtrl hence the page isn't focussed anymore
-	case kadmin.TopicListedMsg:
-		return m, m.topicsTabCtrl.Update(msg)
-	case kadmin.ConsumerGroupsListedMsg:
+	case kadmin.TopicListedMsg,
+		kadmin.TopicRecordCountCalculatedMsg,
+		kadmin.AllTopicRecordCountCalculatedMsg:
+		if m.topicsTabCtrl != nil {
+			return m, m.topicsTabCtrl.Update(msg)
+		}
+	case kadmin.ConsumerGroupsListedMsg,
+		kadmin.ConsumerGroupListingStartedMsg:
 		return m, m.cgroupsTabCtrl.Update(msg)
 	case sradmin.SubjectDeletedMsg:
 		return m, m.schemaRegistryTabCtrl.Update(msg)
@@ -100,7 +105,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case sradmin.SubjectListingStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
-
+		if m.schemaRegistryTabCtrl != nil {
+			cmd := m.schemaRegistryTabCtrl.Update(msg)
+			cmds = append(cmds, cmd)
+		}
 	case kadmin.ConnCheckStartedMsg:
 		m.switchingCluster = true
 	case kadmin.ConnCheckErrMsg, kadmin.ConnCheckSucceededMsg:
@@ -134,16 +142,21 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.ktx.Config = msg.Config
 		if m.ktx.Config.HasClusters() {
 			m.tabs.GoToTab(tabs.TopicsTab)
-			cmds := []tea.Cmd{}
+			var cmds []tea.Cmd
 			cmd, err := m.initTopicsTabOrError(msg.Config.ActiveCluster())
+			cmds = append(cmds, cmd)
 			if err == nil {
+				cmds = append(cmds, cmd)
 				// cluster has been activated and sradmin has been loaded only if a
 				// schema registry has been configured
 				if m.ktx.Config.ActiveCluster().HasSchemaRegistry() {
 					cmds = append(cmds, m.sra.ListSubjects)
 				}
+				m.cgroupsTabCtrl, cmd = cgroups_tab.New(m.ka, m.ka, m.ka)
+				cmds = append(cmds, cmd)
+				m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.sra, m.ktx)
+				cmds = append(cmds, cmd)
 			}
-			cmds = append(cmds, cmd)
 			return m, tea.Batch(cmds...)
 		} else {
 			t, c := clusters_tab.New(m.ktx, kadmin.SaramaConnectivityChecker)
@@ -179,26 +192,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.activeTab = m.tabs.ActiveTab()
 			switch m.activeTab {
 			case 0:
-				if m.topicsTabCtrl == nil {
-					var cmd tea.Cmd
-					m.topicsTabCtrl, cmd = topics_tab.New(m.ktx, m.ka)
-					cmds = append(cmds, cmd)
-				}
 				m.tabCtrl = m.topicsTabCtrl
 			case 1:
-				if m.cgroupsTabCtrl == nil {
-					var cmd tea.Cmd
-					m.cgroupsTabCtrl, cmd = cgroups_tab.New(m.ka, m.ka, m.ka)
-					cmds = append(cmds, cmd)
-				}
 				m.tabCtrl = m.cgroupsTabCtrl
 			case 2:
 				if m.ktx.Config.ActiveCluster().HasSchemaRegistry() {
-					if m.schemaRegistryTabCtrl == nil {
-						var cmd tea.Cmd
-						m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.sra, m.ktx)
-						cmds = append(cmds, cmd)
-					}
 					m.tabCtrl = m.schemaRegistryTabCtrl
 					break
 				}
@@ -211,6 +209,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				m.tabCtrl = m.clustersTabCtrl
 			}
+			cmds = append(cmds, m.tabCtrl.Update(ui.RegainedFocusMsg{}))
 		}
 	}
 
