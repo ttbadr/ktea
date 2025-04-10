@@ -28,7 +28,6 @@ func (n *NotifierCmdBar) IsFocussed() bool {
 }
 
 func (n *NotifierCmdBar) Shortcuts() []statusbar.Shortcut {
-	// TODO
 	return nil
 }
 

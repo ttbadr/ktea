@@ -44,7 +44,12 @@ type SortByCmdBar struct {
 }
 
 func (m *SortByCmdBar) Shortcuts() []statusbar.Shortcut {
-	return []statusbar.Shortcut{}
+	return []statusbar.Shortcut{
+		{"Move", "←/→"},
+		{"Select sorting", "enter"},
+		{"Toggle direction", "enter"},
+		{"Cancel", "esc/F3"},
+	}
 }
 
 func (m *SortByCmdBar) IsFocussed() bool {

@@ -33,7 +33,8 @@ func (s *SearchCmdBar) Shortcuts() []statusbar.Shortcut {
 	return []statusbar.Shortcut{
 		{Name: "Confirm", Keybinding: "enter"},
 		{Name: "Cancel", Keybinding: "esc"},
-		{Name: "Toggle", Keybinding: "/"},
+		{Name: "Cancel", Keybinding: "/"},
+		{Name: "Clear", Keybinding: "C-u"},
 	}
 }
 
@@ -80,6 +81,8 @@ func (s *SearchCmdBar) toggleSearch() {
 	if s.state == searching {
 		log.Debug("Toggling search off")
 		s.state = hidden
+		emptyString := ""
+		s.searchInput.Value(&emptyString)
 		s.searchInput.Blur()
 	} else {
 		log.Debug("Toggling search on")

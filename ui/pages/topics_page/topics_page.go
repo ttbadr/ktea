@@ -275,6 +275,12 @@ func (m *Model) Title() string {
 }
 
 func (m *Model) Shortcuts() []statusbar.Shortcut {
+	if m.cmdBar.IsFocussed() {
+		shortCuts := m.cmdBar.Shortcuts()
+		if shortCuts != nil {
+			return shortCuts
+		}
+	}
 	return m.shortcuts
 }
 
@@ -355,7 +361,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 			m *notifier.Model,
 		) (bool, tea.Cmd) {
 			m.Idle()
-			return true, m.AutoHideCmd(Name)
+			return false, m.AutoHideCmd(Name)
 		},
 	)
 

@@ -48,7 +48,7 @@ func (s *DeleteCmdBar[any]) Shortcuts() []statusbar.Shortcut {
 		{"Confirm", "enter"},
 		{"Select Cancel", "c"},
 		{"Select Delete", "d"},
-		{"Quit", "esc"},
+		{"Cancel", "esc/F2"},
 	}
 }
 

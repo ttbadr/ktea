@@ -131,10 +131,10 @@ func (m *Model) createRows() []table.Row {
 	for _, group := range m.groups {
 		if m.cmdBar.GetSearchTerm() != "" {
 			if strings.Contains(strings.ToLower(group.Name), strings.ToLower(m.cmdBar.GetSearchTerm())) {
-				rows = m.apppendGroupToRows(rows, group)
+				rows = m.appendGroupToRows(rows, group)
 			}
 		} else {
-			rows = m.apppendGroupToRows(rows, group)
+			rows = m.appendGroupToRows(rows, group)
 		}
 	}
 
@@ -159,7 +159,7 @@ func (m *Model) createRows() []table.Row {
 	return rows
 }
 
-func (m *Model) apppendGroupToRows(rows []table.Row, group *kadmin.ConsumerGroup) []table.Row {
+func (m *Model) appendGroupToRows(rows []table.Row, group *kadmin.ConsumerGroup) []table.Row {
 	rows = append(
 		rows,
 		table.Row{
@@ -180,6 +180,12 @@ func (m *Model) SelectedCGroup() *string {
 }
 
 func (m *Model) Shortcuts() []statusbar.Shortcut {
+	if m.cmdBar.IsFocussed() {
+		shortCuts := m.cmdBar.Shortcuts()
+		if shortCuts != nil {
+			return shortCuts
+		}
+	}
 	return []statusbar.Shortcut{
 		{"Search", "/"},
 		{"View", "enter"},
