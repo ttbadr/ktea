@@ -89,6 +89,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// are explicitly captured and properly propagated
 		// in the case when the tabCtrl hence the page isn't focussed anymore
 	case kadmin.TopicListedMsg,
+		kadmin.TopicListingStartedMsg,
 		kadmin.TopicRecordCountCalculatedMsg,
 		kadmin.AllTopicRecordCountCalculatedMsg:
 		if m.topicsTabCtrl != nil {
@@ -176,9 +177,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.tabs.GoToTab(2)
 		}
 		// reset all cached tabs, so they are loaded again for the new cluster
-		m.topicsTabCtrl = nil
-		m.cgroupsTabCtrl = nil
-		m.schemaRegistryTabCtrl = nil
+		var cmd tea.Cmd
+		m.topicsTabCtrl, cmd = topics_tab.New(m.ktx, m.ka)
+		cmds = append(cmds, cmd)
+		m.cgroupsTabCtrl, cmd = cgroups_tab.New(m.ka, m.ka, m.ka)
+		cmds = append(cmds, cmd)
+		m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.sra, m.sra, m.ktx)
+		cmds = append(cmds, cmd)
 
 	case tea.WindowSizeMsg:
 		m.onWindowSizeUpdated(msg)
