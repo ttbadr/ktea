@@ -8,6 +8,10 @@ type MockSrAdmin struct {
 	GetSchemaByIdFunc func(id int) tea.Msg
 }
 
+func (m *MockSrAdmin) ListGlobalCompatibility() tea.Msg {
+	return nil
+}
+
 func (m *MockSrAdmin) GetSchemaById(id int) tea.Msg {
 	if m.GetSchemaByIdFunc != nil {
 		return m.GetSchemaByIdFunc(id)

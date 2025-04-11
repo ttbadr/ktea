@@ -32,6 +32,13 @@ type DeletedSubjectMsg struct {
 	Version int
 }
 
+type MockGlobalCompatibilityLister struct {
+}
+
+func (m MockGlobalCompatibilityLister) ListGlobalCompatibility() tea.Msg {
+	return nil
+}
+
 func (m *MockSubjectsDeleter) DeleteSubject(subject string) tea.Msg {
 	return m.deletionResultMsg
 }
@@ -42,6 +49,7 @@ func TestSubjectsPage(t *testing.T) {
 
 		subjectsPage, _ := New(
 			&MockSubjectsLister{},
+			&MockGlobalCompatibilityLister{},
 			&MockSubjectsDeleter{},
 		)
 
@@ -63,6 +71,7 @@ func TestSubjectsPage(t *testing.T) {
 
 		subjectsPage, _ := New(
 			&MockSubjectsLister{},
+			&MockGlobalCompatibilityLister{},
 			&MockSubjectsDeleter{},
 		)
 
@@ -89,6 +98,7 @@ func TestSubjectsPage(t *testing.T) {
 
 		subjectsPage, _ := New(
 			&MockSubjectsLister{},
+			&MockGlobalCompatibilityLister{},
 			&MockSubjectsDeleter{},
 		)
 
@@ -122,6 +132,7 @@ func TestSubjectsPage(t *testing.T) {
 
 		subjectsPage, _ := New(
 			&MockSubjectsLister{},
+			&MockGlobalCompatibilityLister{},
 			&MockSubjectsDeleter{},
 		)
 
@@ -148,6 +159,7 @@ func TestSubjectsPage(t *testing.T) {
 
 		subjectsPage, _ := New(
 			&MockSubjectsLister{},
+			&MockGlobalCompatibilityLister{},
 			&MockSubjectsDeleter{},
 		)
 		subjectsPage.Update(sradmin.SubjectDeletionStartedMsg{})
@@ -163,6 +175,7 @@ func TestSubjectsPage(t *testing.T) {
 		deleter := MockSubjectsDeleter{}
 		subjectsPage, _ := New(
 			&MockSubjectsLister{},
+			&MockGlobalCompatibilityLister{},
 			&deleter,
 		)
 
@@ -193,53 +206,150 @@ func TestSubjectsPage(t *testing.T) {
 		assert.Less(t, subject50Idx, subject88Idx, "subject88 came before subject50")
 	})
 
-	t.Run("Toggle sort by Subject Name Desc", func(t *testing.T) {
+	t.Run("Sorting", func(t *testing.T) {
 		deleter := MockSubjectsDeleter{}
 		subjectsPage, _ := New(
 			&MockSubjectsLister{},
+			&MockGlobalCompatibilityLister{},
 			&deleter,
 		)
 
-		var subjects []sradmin.Subject
-		var versions []int
+		var (
+			subjects      []sradmin.Subject
+			versions      []int
+			compatibility string
+		)
 		for i := 0; i < 100; i++ {
 			versions = append(versions, i)
+			if i%2 == 0 {
+				compatibility = "BACKWARD"
+			} else {
+				compatibility = "FORWARD_TRANSITIVE"
+			}
 			subjects = append(subjects,
 				sradmin.Subject{
-					Name:     fmt.Sprintf("subject%d", i),
-					Versions: versions,
+					Name:          fmt.Sprintf("subject%d", i),
+					Versions:      versions,
+					Compatibility: compatibility,
 				})
 		}
 		shuffle(subjects)
 
 		subjectsPage.Update(sradmin.SubjectsListedMsg{Subjects: subjects})
 		subjectsPage.View(ui.NewTestKontext(), ui.TestRenderer)
-		subjectsPage.Update(keys.Key(tea.KeyF3))
-		subjectsPage.Update(keys.Key(tea.KeyEnter))
 
-		render := subjectsPage.View(ui.NewTestKontext(), ui.TestRenderer)
+		t.Run("by Subject Name", func(t *testing.T) {
 
-		assert.Contains(t, render, "▼ Subject Name")
+			subjectsPage.Update(keys.Key(tea.KeyF3))
+			subjectsPage.Update(keys.Key(tea.KeyEnter))
+			subjectsPage.Update(keys.Key(tea.KeyEsc))
 
-		subject1Idx := strings.Index(render, "subject1")
-		subject2Idx := strings.Index(render, "subject2")
-		subject50Idx := strings.Index(render, "subject50")
-		subject88Idx := strings.Index(render, "subject88")
+			render := subjectsPage.View(ui.NewTestKontext(), ui.TestRenderer)
 
-		assert.Less(t, subject88Idx, subject1Idx, "subject1 came before subject88")
-		assert.Less(t, subject88Idx, subject2Idx, "subject2 came before subject88")
-		assert.Less(t, subject88Idx, subject50Idx, "subject50 came before subject88")
+			assert.Contains(t, render, "▼ Subject Name")
 
-		assert.Less(t, subject50Idx, subject1Idx, "subject1 came before subject50")
-		assert.Less(t, subject50Idx, subject2Idx, "subject2 came before subject50")
+			subject1Idx := strings.Index(render, "subject1")
+			subject2Idx := strings.Index(render, "subject2")
+			subject50Idx := strings.Index(render, "subject50")
+			subject88Idx := strings.Index(render, "subject88")
 
-		assert.Less(t, subject2Idx, subject1Idx, "subject1 came before subject2")
+			assert.Less(t, subject88Idx, subject1Idx, "subject1 came before subject88")
+			assert.Less(t, subject88Idx, subject2Idx, "subject2 came before subject88")
+			assert.Less(t, subject88Idx, subject50Idx, "subject50 came before subject88")
+
+			assert.Less(t, subject50Idx, subject1Idx, "subject1 came before subject50")
+			assert.Less(t, subject50Idx, subject2Idx, "subject2 came before subject50")
+
+			assert.Less(t, subject2Idx, subject1Idx, "subject1 came before subject2")
+
+			subjectsPage.Update(keys.Key(tea.KeyF3))
+			subjectsPage.Update(keys.Key(tea.KeyEnter))
+			subjectsPage.Update(keys.Key(tea.KeyEsc))
+
+			render = subjectsPage.View(ui.NewTestKontext(), ui.TestRenderer)
+
+			assert.Contains(t, render, "▲ Subject Name")
+
+			subject1Idx = strings.Index(render, "subject1")
+			subject2Idx = strings.Index(render, "subject2")
+			subject50Idx = strings.Index(render, "subject50")
+			subject88Idx = strings.Index(render, "subject88")
+
+			assert.Greater(t, subject88Idx, subject1Idx, "subject1 came before subject88")
+			assert.Greater(t, subject88Idx, subject2Idx, "subject2 came before subject88")
+			assert.Greater(t, subject88Idx, subject50Idx, "subject50 came before subject88")
+
+			assert.Greater(t, subject50Idx, subject1Idx, "subject1 came before subject50")
+			assert.Greater(t, subject50Idx, subject2Idx, "subject2 came before subject50")
+
+			assert.Greater(t, subject2Idx, subject1Idx, "subject1 came before subject2")
+
+		})
+
+		t.Run("by Compatibility", func(t *testing.T) {
+
+			subjectsPage.Update(keys.Key(tea.KeyF3))
+			subjectsPage.Update(keys.Key(tea.KeyRight))
+			subjectsPage.Update(keys.Key(tea.KeyRight))
+			subjectsPage.Update(keys.Key(tea.KeyEnter))
+			subjectsPage.Update(keys.Key(tea.KeyEsc))
+
+			render := subjectsPage.View(ui.NewTestKontext(), ui.TestRenderer)
+
+			assert.Contains(t, render, "▲ Comp")
+
+			lastBackwardIdx := strings.LastIndex(render, "BACKWARD")
+			lastForwardIdx := strings.Index(render, "FORWARD")
+
+			assert.Less(t, lastBackwardIdx, lastForwardIdx, "FORWARD came before BACKWARD")
+
+			subjectsPage.Update(keys.Key(tea.KeyF3))
+			subjectsPage.Update(keys.Key(tea.KeyEnter))
+			subjectsPage.Update(keys.Key(tea.KeyEsc))
+
+			render = subjectsPage.View(ui.NewTestKontext(), ui.TestRenderer)
+
+			assert.Contains(t, render, "▼ Comp")
+
+			lastBackwardIdx = strings.LastIndex(render, "BACKWARD")
+			lastForwardIdx = strings.Index(render, "FORWARD")
+
+			assert.Greater(t, lastBackwardIdx, lastForwardIdx, "BACKWARD came before FORWARD")
+		})
+
+		t.Run("by Versions", func(t *testing.T) {
+			subjectsPage.Update(keys.Key(tea.KeyF3))
+			subjectsPage.Update(keys.Key(tea.KeyLeft))
+			subjectsPage.Update(keys.Key(tea.KeyEnter))
+			subjectsPage.Update(keys.Key(tea.KeyEsc))
+
+			render := subjectsPage.View(ui.NewTestKontext(), ui.TestRenderer)
+			assert.Contains(t, render, "▼ V")
+
+			subject1Idx := strings.Index(render, "subject1")
+			subject88Idx := strings.Index(render, "subject2")
+
+			assert.Greater(t, subject1Idx, subject88Idx, "subject1 came not before subject2")
+
+			subjectsPage.Update(keys.Key(tea.KeyF3))
+			subjectsPage.Update(keys.Key(tea.KeyEnter))
+			subjectsPage.Update(keys.Key(tea.KeyEsc))
+
+			render = subjectsPage.View(ui.NewTestKontext(), ui.TestRenderer)
+			assert.Contains(t, render, "▲ V")
+
+			subject1Idx = strings.Index(render, "subject1")
+			subject88Idx = strings.Index(render, "subject2")
+
+			assert.Less(t, subject1Idx, subject88Idx, "subject2 came not before subject1")
+		})
 	})
 
 	t.Run("Loading details page (enter) after searching from selective list", func(t *testing.T) {
 		deleter := MockSubjectsDeleter{}
 		subjectsPage, _ := New(
 			&MockSubjectsLister{},
+			&MockGlobalCompatibilityLister{},
 			&deleter,
 		)
 
@@ -277,6 +387,7 @@ func TestSubjectsPage(t *testing.T) {
 		deleter := MockSubjectsDeleter{}
 		subjectsPage, _ := New(
 			&MockSubjectsLister{},
+			&MockGlobalCompatibilityLister{},
 			&deleter,
 		)
 
@@ -365,6 +476,7 @@ func TestSubjectsPage(t *testing.T) {
 
 			subjectsPage, _ := New(
 				&MockSubjectsLister{},
+				&MockGlobalCompatibilityLister{},
 				&MockSubjectsDeleter{},
 			)
 			subjectsPage.Update(sradmin.SubjectDeletionStartedMsg{})
@@ -377,6 +489,7 @@ func TestSubjectsPage(t *testing.T) {
 		t.Run("Disable delete when no subject selected", func(t *testing.T) {
 			emptyPage, _ := New(
 				&MockSubjectsLister{},
+				&MockGlobalCompatibilityLister{},
 				&deleter,
 			)
 
@@ -398,6 +511,7 @@ func TestSubjectsPage(t *testing.T) {
 
 		subjectsPage, _ := New(
 			&MockSubjectsLister{},
+			&MockGlobalCompatibilityLister{},
 			&MockSubjectsDeleter{},
 		)
 		subjectsPage.Update(sradmin.SubjectListingStartedMsg{})

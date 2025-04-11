@@ -97,14 +97,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case kadmin.ConsumerGroupsListedMsg,
 		kadmin.ConsumerGroupListingStartedMsg:
 		return m, m.cgroupsTabCtrl.Update(msg)
-	case sradmin.SubjectDeletedMsg:
-		return m, m.schemaRegistryTabCtrl.Update(msg)
-	case sradmin.SubjectsListedMsg:
+	case sradmin.SubjectsListedMsg,
+		sradmin.GlobalCompatibilityListingStartedMsg,
+		sradmin.GlobalCompatibilityListedMsg,
+		sradmin.SubjectDeletedMsg:
 		if m.schemaRegistryTabCtrl != nil {
 			return m, m.schemaRegistryTabCtrl.Update(msg)
 		}
 	case sradmin.SubjectListingStartedMsg:
-		cmds = append(cmds, msg.AwaitCompletion)
 		if m.schemaRegistryTabCtrl != nil {
 			cmd := m.schemaRegistryTabCtrl.Update(msg)
 			cmds = append(cmds, cmd)
@@ -150,11 +150,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// cluster has been activated and sradmin has been loaded only if a
 				// schema registry has been configured
 				if m.ktx.Config.ActiveCluster().HasSchemaRegistry() {
-					cmds = append(cmds, m.sra.ListSubjects)
+					m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.sra, m.sra, m.ktx)
+					cmds = append(cmds, cmd)
 				}
 				m.cgroupsTabCtrl, cmd = cgroups_tab.New(m.ka, m.ka, m.ka)
-				cmds = append(cmds, cmd)
-				m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.sra, m.ktx)
 				cmds = append(cmds, cmd)
 			}
 			return m, tea.Batch(cmds...)

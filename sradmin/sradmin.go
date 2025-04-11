@@ -22,3 +22,7 @@ type SubjectDeleter interface {
 type VersionLister interface {
 	ListVersions(subject string, versions []int) tea.Msg
 }
+
+type GlobalCompatibilityLister interface {
+	ListGlobalCompatibility() tea.Msg
+}

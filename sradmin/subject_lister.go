@@ -41,8 +41,9 @@ func (s *DefaultSrAdmin) ListSubjects() tea.Msg {
 }
 
 type Subject struct {
-	Name     string
-	Versions []int
+	Name          string
+	Versions      []int
+	Compatibility string
 }
 
 func (s *Subject) LatestVersion() int {
@@ -60,11 +61,12 @@ func (s *DefaultSrAdmin) doListSubject(subjectsChan chan []Subject, errChan chan
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	results := make([][]int, len(subjects))
+	versionResults := make([][]int, len(subjects))
+	compResults := make([]string, len(subjects))
 
 	for i, subject := range subjects {
 
-		wg.Add(1)
+		wg.Add(2)
 
 		go func(index int, subject string) {
 			defer wg.Done()
@@ -74,7 +76,19 @@ func (s *DefaultSrAdmin) doListSubject(subjectsChan chan []Subject, errChan chan
 				return
 			}
 			mu.Lock()
-			results[i] = versions
+			versionResults[i] = versions
+			mu.Unlock()
+		}(i, subject)
+
+		go func(index int, subject string) {
+			defer wg.Done()
+			comp, err := s.client.GetCompatibilityLevel(subject, true)
+			if err != nil {
+				errChan <- fmt.Errorf("failed to get compatibility for subject %s: %w", subject, err)
+				return
+			}
+			mu.Lock()
+			compResults[i] = comp.String()
 			mu.Unlock()
 		}(i, subject)
 
@@ -86,8 +100,9 @@ func (s *DefaultSrAdmin) doListSubject(subjectsChan chan []Subject, errChan chan
 	for i, str := range subjects {
 		ptr := str
 		subjectPtrs = append(subjectPtrs, Subject{
-			Name:     ptr,
-			Versions: results[i],
+			Name:          ptr,
+			Versions:      versionResults[i],
+			Compatibility: compResults[i],
 		})
 	}
 

@@ -23,6 +23,7 @@ type SrAdmin interface {
 	SchemaCreator
 	VersionLister
 	SchemaFetcher
+	GlobalCompatibilityLister
 }
 
 func (s *DefaultSrAdmin) GetSubjects() []Subject {

@@ -40,10 +40,12 @@ type Model struct {
 	renderedSubjects []sradmin.Subject
 	tableFocussed    bool
 	lister           sradmin.SubjectLister
+	gCompLister      sradmin.GlobalCompatibilityLister
 	state            state
 	// when last subject in table is deleted no subject is focussed anymore
-	deletedLast bool
-	sort        cmdbar.SortLabel
+	deletedLast     bool
+	sort            cmdbar.SortLabel
+	globalCompLevel string
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -59,9 +61,14 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 
 	cmdBarView := m.cmdBar.View(ktx, renderer)
 
+	available := ktx.WindowWidth - 8
+	subjCol := int(float64(available) * 0.8)
+	versionCol := int(float64(available) * 0.08)
+	compCol := available - subjCol - versionCol
 	m.table.SetColumns([]table.Column{
-		{m.columnTitle("Subject Name"), int(float64(ktx.WindowWidth-5) * 0.9)},
-		{m.columnTitle("Version Count"), int(float64(ktx.WindowWidth-5) * 0.1)},
+		{m.columnTitle("Subject Name"), subjCol},
+		{m.columnTitle("Versions"), versionCol},
+		{m.columnTitle("Compatibility"), compCol},
 	})
 	m.table.SetHeight(ktx.AvailableHeight - 2)
 	m.table.SetWidth(ktx.WindowWidth - 2)
@@ -76,7 +83,17 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	}
 
 	embeddedText := map[styles.BorderPosition]styles.EmbeddedTextFunc{
-		styles.TopMiddleBorder:    styles.BorderKeyValueTitle("Total Subjects", fmt.Sprintf(" %d/%d", len(m.rows), len(m.subjects))),
+		styles.TopMiddleBorder: func(active bool) string {
+			var compLevel string
+			if m.globalCompLevel == "" {
+				compLevel = ""
+			} else {
+				compLevel = " ── " +
+					styles.BorderKeyValueTitle("Global Compatibility", m.globalCompLevel)(active)
+			}
+			return styles.BorderKeyValueTitle("Total Subjects", fmt.Sprintf(" %d/%d", len(m.rows), len(m.subjects)))(active) +
+				compLevel
+		},
 		styles.BottomMiddleBorder: styles.BorderKeyValueTitle("Total Subjects", fmt.Sprintf(" %d/%d", len(m.rows), len(m.subjects))),
 	}
 
@@ -134,6 +151,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		} else {
 			m.state = noSubjectsFound
 		}
+	case sradmin.GlobalCompatibilityListingStartedMsg:
+		cmds = append(cmds, msg.AwaitCompletion)
+	case sradmin.GlobalCompatibilityListedMsg:
+		m.globalCompLevel = msg.Compatibility
 	case sradmin.SubjectDeletionStartedMsg:
 		m.state = deleting
 		cmds = append(cmds, msg.AwaitCompletion)
@@ -193,6 +214,7 @@ func (m *Model) createRows(subjects []sradmin.Subject) []table.Row {
 		rows = append(rows, table.Row{
 			subject.Name,
 			strconv.Itoa(len(subject.Versions)),
+			subject.Compatibility,
 		})
 	}
 
@@ -203,13 +225,18 @@ func (m *Model) createRows(subjects []sradmin.Subject) []table.Row {
 				return rows[i][0] < rows[j][0]
 			}
 			return rows[i][0] > rows[j][0]
-		case "Version Count":
+		case "Versions":
 			countI, _ := strconv.Atoi(rows[i][1])
 			countJ, _ := strconv.Atoi(rows[j][1])
 			if m.sort.Direction == cmdbar.Asc {
 				return countI < countJ
 			}
 			return countI > countJ
+		case "Compatibility":
+			if m.sort.Direction == cmdbar.Asc {
+				return rows[i][2] < rows[j][2]
+			}
+			return rows[i][2] > rows[j][2]
 		default:
 			panic(fmt.Sprintf("unexpected sort label: %s", m.sort.Label))
 		}
@@ -278,7 +305,11 @@ func (m *Model) Title() string {
 	return "Subjects"
 }
 
-func New(lister sradmin.SubjectLister, deleter sradmin.SubjectDeleter) (*Model, tea.Cmd) {
+func New(
+	lister sradmin.SubjectLister,
+	compLister sradmin.GlobalCompatibilityLister,
+	deleter sradmin.SubjectDeleter,
+) (*Model, tea.Cmd) {
 	model := Model{
 		table:         ktable.NewDefaultTable(),
 		tableFocussed: true,
@@ -358,8 +389,12 @@ func New(lister sradmin.SubjectLister, deleter sradmin.SubjectDeleter) (*Model, 
 				Direction: cmdbar.Asc,
 			},
 			{
-				Label:     "Version Count",
+				Label:     "Versions",
 				Direction: cmdbar.Desc,
+			},
+			{
+				Label:     "Compatibility",
+				Direction: cmdbar.Asc,
 			},
 		},
 		cmdbar.WithSortSelectedCallback(func(label cmdbar.SortLabel) {
@@ -375,5 +410,5 @@ func New(lister sradmin.SubjectLister, deleter sradmin.SubjectDeleter) (*Model, 
 		notifierCmdBar,
 		sortByBar,
 	)
-	return &model, nil
+	return &model, tea.Batch(lister.ListSubjects, compLister.ListGlobalCompatibility)
 }

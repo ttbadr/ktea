@@ -19,6 +19,7 @@ type Model struct {
 	ktx               *kontext.ProgramKtx
 	schemaCreator     sradmin.SchemaCreator
 	subjectLister     sradmin.SubjectLister
+	compLister        sradmin.GlobalCompatibilityLister
 	subjectDeleter    sradmin.SubjectDeleter
 	subjectsPage      *subjects_page.Model
 	schemaDetailsPage *schema_details_page.Model
@@ -47,7 +48,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case nav.LoadSubjectsPageMsg:
 		if m.subjectsPage == nil || msg.Refresh {
 			var cmd tea.Cmd
-			m.subjectsPage, cmd = subjects_page.New(m.subjectLister, m.subjectDeleter)
+			m.subjectsPage, cmd = subjects_page.New(m.subjectLister, m.compLister, m.subjectDeleter)
 			cmds = append(cmds, cmd)
 		}
 		m.active = m.subjectsPage
@@ -67,18 +68,20 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 func New(
 	subjectLister sradmin.SubjectLister,
+	compLister sradmin.GlobalCompatibilityLister,
 	schemaLister sradmin.VersionLister,
 	subjectCreator sradmin.SchemaCreator,
 	subjectDeleter sradmin.SubjectDeleter,
 	ktx *kontext.ProgramKtx,
 ) (*Model, tea.Cmd) {
-	subjectsPage, cmd := subjects_page.New(subjectLister, subjectDeleter)
+	subjectsPage, cmd := subjects_page.New(subjectLister, compLister, subjectDeleter)
 	model := Model{active: subjectsPage}
 	model.subjectsPage = subjectsPage
 	model.statusbar = statusbar.New(subjectsPage)
 	model.ktx = ktx
 	model.schemaCreator = subjectCreator
 	model.subjectLister = subjectLister
+	model.compLister = compLister
 	model.schemaLister = schemaLister
 	model.subjectDeleter = subjectDeleter
 	return &model, cmd
