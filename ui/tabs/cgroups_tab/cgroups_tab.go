@@ -43,7 +43,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			m.cgroupsPage, cmd = cgroups_page.New(m.cgroupLister, m.cgroupDeleter)
 		}
 		m.active = m.cgroupsPage
-		return cmd
+		cmds = append(cmds, cmd)
 	case kadmin.ConsumerGroupListingStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
 	}
