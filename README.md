@@ -24,6 +24,21 @@ Coming soon
 
 ## Usage
 
+### Configuration
+
+All configuration is stored in `~/.config/ktea/config.conf`
+
+### Cluster Management
+
+Multiple clusters can be added. 
+Upon startup when no cluster is configured you will be prompted
+to add one.
+
+#### Supported Auth Methods
+- No Auth
+- SASL (SSL)
+  - PLAIN
+
 ### Switching Tabs
 
 To switch between tabs the meta key is required, which in most terminals needs to be enabled and will map to `Alt`.
@@ -40,10 +55,10 @@ To switch between tabs the meta key is required, which in most terminals needs t
 - *Schema Registry Integration*: Browse, view, and register schemas effortlessly.
 
 ## Todo
+- Add more authentication methods
 - Add support for more message formats such as protobuf.
 - Add ACL management.
 - File based import/export of topics.
 - Add ability to delete specific schema versions.
 - Add consumption templating support.
-- Add sorting Topic capabilities- 
 - Many more, just file an issue requesting a feature!
