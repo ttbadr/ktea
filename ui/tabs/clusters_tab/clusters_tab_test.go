@@ -388,6 +388,10 @@ func TestClustersTab(t *testing.T) {
 			assert.Contains(t, render, "> prd")
 			assert.Contains(t, render, "> localhost:9092")
 			assert.Contains(t, render, "> Enable SSL")
+
+			t.Run("updates shortcuts", func(t *testing.T) {
+				assert.Contains(t, render, "Prev. Field:")
+			})
 		})
 	})
 }

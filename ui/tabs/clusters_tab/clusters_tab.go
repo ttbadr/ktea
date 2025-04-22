@@ -96,7 +96,6 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				m.ktx,
 				formValues,
 			)
-			return nil
 		}
 	}
 
