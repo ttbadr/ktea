@@ -1,6 +1,7 @@
 package kadmin
 
 import (
+	"fmt"
 	"github.com/IBM/sarama"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/log"
@@ -42,16 +43,26 @@ type ConnCheckErrMsg struct {
 func ToConnectionDetails(cluster *config.Cluster) ConnectionDetails {
 	var saslConfig *SASLConfig
 	if cluster.SASLConfig != nil {
+		var protocol SASLProtocol
+		switch cluster.SASLConfig.SecurityProtocol {
+		// SSL, to make wrongly configured PLAINTEXT protocols (as SSL) compatible. Should be removed in the future.
+		case config.SASLPlaintextSecurityProtocol, "SSL":
+			protocol = PLAIN_TEXT
+		default:
+			panic(fmt.Sprintf("Unknown SASL protocol: %s", cluster.SASLConfig.SecurityProtocol))
+		}
+
 		saslConfig = &SASLConfig{
 			Username: cluster.SASLConfig.Username,
 			Password: cluster.SASLConfig.Password,
-			Protocol: SSL,
+			Protocol: protocol,
 		}
 	}
 
 	connDetails := ConnectionDetails{
 		BootstrapServers: cluster.BootstrapServers,
 		SASLConfig:       saslConfig,
+		SSLEnabled:       cluster.SSLEnabled,
 	}
 	return connDetails
 }
@@ -102,8 +113,9 @@ func SaramaConnectivityChecker(cluster *config.Cluster) tea.Msg {
 	cd := ToConnectionDetails(cluster)
 	cfg := sarama.NewConfig()
 
+	cfg.Net.TLS.Enable = cd.SSLEnabled
+
 	if cd.SASLConfig != nil {
-		cfg.Net.TLS.Enable = true
 		cfg.Net.SASL.Enable = true
 		cfg.Net.SASL.Mechanism = sarama.SASLTypePlaintext
 		cfg.Net.SASL.User = cd.SASLConfig.Username

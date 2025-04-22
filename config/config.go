@@ -12,10 +12,9 @@ type AuthMethod int
 type SecurityProtocol string
 
 const (
-	NoneAuthMethod            AuthMethod       = 0
-	SASLAuthMethod            AuthMethod       = 1
-	SSLSecurityProtocol       SecurityProtocol = "SSL"
-	PlaintextSecurityProtocol SecurityProtocol = "PLAIN_TEXT"
+	NoneAuthMethod                AuthMethod       = 0
+	SASLAuthMethod                AuthMethod       = 1
+	SASLPlaintextSecurityProtocol SecurityProtocol = "PLAIN_TEXT"
 )
 
 type SASLConfig struct {
@@ -37,6 +36,7 @@ type Cluster struct {
 	BootstrapServers []string              `yaml:"servers"`
 	SASLConfig       *SASLConfig           `yaml:"sasl"`
 	SchemaRegistry   *SchemaRegistryConfig `yaml:"schema-registry"`
+	SSLEnabled       bool                  `yaml:"ssl-enabled"`
 }
 
 func (c *Cluster) HasSchemaRegistry() bool {
@@ -64,6 +64,7 @@ type RegistrationDetails struct {
 	Host             string
 	AuthMethod       AuthMethod
 	SecurityProtocol SecurityProtocol
+	SSLEnabled       bool
 	NewName          *string
 	Username         string
 	Password         string
@@ -127,6 +128,7 @@ func ToCluster(details RegistrationDetails) Cluster {
 		Name:             details.Name,
 		Color:            details.Color,
 		BootstrapServers: []string{details.Host},
+		SSLEnabled:       details.SSLEnabled,
 	}
 
 	if details.AuthMethod == SASLAuthMethod {

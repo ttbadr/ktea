@@ -71,6 +71,7 @@ type FormValues struct {
 	Host             string
 	AuthMethod       config.AuthMethod
 	SecurityProtocol config.SecurityProtocol
+	SSLEnabled       bool
 	Username         string
 	Password         string
 	SrEnabled        bool
@@ -203,6 +204,7 @@ func (m *Model) getRegistrationDetails() config.RegistrationDetails {
 		Host:             m.formValues.Host,
 		AuthMethod:       authMethod,
 		SecurityProtocol: securityProtocol,
+		SSLEnabled:       m.formValues.SSLEnabled,
 		Username:         m.formValues.Username,
 		Password:         m.formValues.Password,
 	}
@@ -286,12 +288,18 @@ func (m *Model) createForm() *huh.Form {
 	clusterFields = append(clusterFields, name, color, host, auth)
 
 	if m.formValues.HasSASLAuthMethodSelected() {
+		sslEnabled := huh.NewSelect[bool]().
+			Value(&m.formValues.SSLEnabled).
+			Title("SSL").
+			Options(
+				huh.NewOption("Disable SSL", false),
+				huh.NewOption("Enable SSL", true),
+			)
 		securityProtocol := huh.NewSelect[config.SecurityProtocol]().
 			Value(&m.formValues.SecurityProtocol).
 			Title("Security Protocol").
 			Options(
-				huh.NewOption("SASL_SSL", config.SSLSecurityProtocol),
-				huh.NewOption("SASL_PLAINTEXT", config.PlaintextSecurityProtocol),
+				huh.NewOption("SASL_PLAINTEXT", config.SASLPlaintextSecurityProtocol),
 			)
 		username := huh.NewInput().
 			Value(&m.formValues.Username).
@@ -300,7 +308,7 @@ func (m *Model) createForm() *huh.Form {
 			Value(&m.formValues.Password).
 			EchoMode(huh.EchoModePassword).
 			Title("Password")
-		clusterFields = append(clusterFields, securityProtocol, username, pwd)
+		clusterFields = append(clusterFields, sslEnabled, securityProtocol, username, pwd)
 	}
 
 	var schemaRegistryFields []huh.Field

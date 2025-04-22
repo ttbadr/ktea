@@ -347,10 +347,14 @@ func TestClustersTab(t *testing.T) {
 	t.Run("Edit cluster", func(t *testing.T) {
 		cfg := config.New(&config.InMemoryConfigIO{})
 		cfg.RegisterCluster(config.RegistrationDetails{
-			Name:       "prd",
-			Color:      styles.ColorRed,
-			Host:       "localhost:9092",
-			AuthMethod: config.NoneAuthMethod,
+			Name:             "prd",
+			Color:            styles.ColorRed,
+			Host:             "localhost:9092",
+			AuthMethod:       config.SASLAuthMethod,
+			SecurityProtocol: config.SASLPlaintextSecurityProtocol,
+			SSLEnabled:       true,
+			Username:         "John",
+			Password:         "Doe",
 		})
 		cfg.RegisterCluster(config.RegistrationDetails{
 			Name:       "tst",
@@ -383,6 +387,7 @@ func TestClustersTab(t *testing.T) {
 			render := clustersTab.View(programKtx, ui.TestRenderer)
 			assert.Contains(t, render, "> prd")
 			assert.Contains(t, render, "> localhost:9092")
+			assert.Contains(t, render, "> Enable SSL")
 		})
 	})
 }

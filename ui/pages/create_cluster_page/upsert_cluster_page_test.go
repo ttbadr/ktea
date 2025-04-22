@@ -336,12 +336,12 @@ func TestCreateClusterPage(t *testing.T) {
 
 		// then
 		render := createEnvPage.View(&programKtx, ui.TestRenderer)
-		assert.Contains(t, render, "SASL_SSL")
+		assert.Contains(t, render, "SASL_PLAINTEXT")
 		assert.Contains(t, render, "Username")
 		assert.Contains(t, render, "Password")
 	})
 
-	t.Run("After selecting SASL_SSL auth method and going back to select none username and password fields are not visible anymore", func(t *testing.T) {
+	t.Run("After selecting SASL_PLAINTEXT auth method and going back to select none username and password fields are not visible anymore", func(t *testing.T) {
 		// given
 		programKtx := kontext.ProgramKtx{
 			WindowWidth:  100,
@@ -387,7 +387,7 @@ func TestCreateClusterPage(t *testing.T) {
 		assert.NotContains(t, render, "Password")
 	})
 
-	t.Run("Selecting SASL_SSL auth method and filling all SASL fields creates cluster", func(t *testing.T) {
+	t.Run("Selecting SASL_PLAINTEXT auth method and filling all SASL fields creates cluster", func(t *testing.T) {
 		// given
 		programKtx := kontext.ProgramKtx{
 			WindowWidth:  100,
@@ -425,6 +425,9 @@ func TestCreateClusterPage(t *testing.T) {
 		// and: select SASL_SSL security protocol
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
 		createEnvPage.Update(cmd())
+		// and: select SSL disabled
+		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+		createEnvPage.Update(cmd())
 		// and: enter SASL username
 		keys.UpdateKeys(createEnvPage, "username")
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
@@ -449,10 +452,87 @@ func TestCreateClusterPage(t *testing.T) {
 			Active:           false,
 			BootstrapServers: []string{"localhost:9092"},
 			SchemaRegistry:   nil,
+			SSLEnabled:       false,
 			SASLConfig: &config.SASLConfig{
 				Username:         "username",
 				Password:         "password",
-				SecurityProtocol: config.SSLSecurityProtocol,
+				SecurityProtocol: config.SASLPlaintextSecurityProtocol,
+			},
+		}, msgs[0])
+	})
+
+	t.Run("Enabling SSL", func(t *testing.T) {
+		// given
+		programKtx := kontext.ProgramKtx{
+			WindowWidth:  100,
+			WindowHeight: 100,
+			Config: &config.Config{
+				Clusters: []config.Cluster{
+					{
+						Name:             "PRD",
+						BootstrapServers: []string{"localhost:9092"},
+						SASLConfig:       nil,
+					},
+				},
+			},
+		}
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &programKtx)
+		// and: enter name
+		keys.UpdateKeys(createEnvPage, "TST")
+		cmd := createEnvPage.Update(keys.Key(tea.KeyEnter))
+		createEnvPage.Update(cmd())
+		// select Primary
+		cmd = createEnvPage.Update(keys.Key(tea.KeyUp))
+		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+		createEnvPage.Update(cmd())
+		// and: select Color
+		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+		// and: Host is entered
+		keys.UpdateKeys(createEnvPage, "localhost:9092")
+		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+		createEnvPage.Update(cmd())
+		// and: auth method none is selected
+		cmd = createEnvPage.Update(keys.Key(tea.KeyDown))
+		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+		// next field
+		cmd = createEnvPage.Update(cmd())
+		// and: select SSL enabled
+		cmd = createEnvPage.Update(keys.Key(tea.KeyDown))
+		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+		// next field
+		createEnvPage.Update(cmd())
+		// and: select SASL_SSL security protocol
+		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+		createEnvPage.Update(cmd())
+		// and: enter SASL username
+		keys.UpdateKeys(createEnvPage, "username")
+		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+		createEnvPage.Update(cmd())
+		// and: enter SASL password
+		keys.UpdateKeys(createEnvPage, "password")
+		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+		// next field
+		cmd = createEnvPage.Update(cmd())
+		// next group
+		createEnvPage.Update(cmd())
+		// submit
+		msgs := keys.Submit(createEnvPage)
+
+		// then
+		assert.Len(t, msgs, 1)
+		assert.IsType(t, &config.Cluster{}, msgs[0])
+		// and
+		assert.Equal(t, &config.Cluster{
+			Name:             "TST",
+			Color:            styles.ColorRed,
+			Active:           false,
+			BootstrapServers: []string{"localhost:9092"},
+			SchemaRegistry:   nil,
+			SSLEnabled:       true,
+			SASLConfig: &config.SASLConfig{
+				Username:         "username",
+				Password:         "password",
+				SecurityProtocol: config.SASLPlaintextSecurityProtocol,
 			},
 		}, msgs[0])
 	})
@@ -493,6 +573,9 @@ func TestCreateClusterPage(t *testing.T) {
 		// next field
 		cmd = createEnvPage.Update(cmd())
 		// and: select SASL_SSL security protocol
+		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+		createEnvPage.Update(cmd())
+		// and: select SSL disabled
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
 		createEnvPage.Update(cmd())
 		// and: enter SASL username
@@ -547,7 +630,7 @@ func TestCreateClusterPage(t *testing.T) {
 				SASLConfig: &config.SASLConfig{
 					Username:         "username",
 					Password:         "password",
-					SecurityProtocol: config.SSLSecurityProtocol,
+					SecurityProtocol: config.SASLPlaintextSecurityProtocol,
 				},
 				SchemaRegistry: &config.SchemaRegistryConfig{
 					Url:      "sr-url",

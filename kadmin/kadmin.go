@@ -19,6 +19,7 @@ const (
 type ConnectionDetails struct {
 	BootstrapServers []string
 	SASLConfig       *SASLConfig
+	SSLEnabled       bool
 }
 
 type SASLProtocol int

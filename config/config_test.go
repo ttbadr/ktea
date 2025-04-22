@@ -7,7 +7,7 @@ import (
 
 func TestConfig(t *testing.T) {
 
-	t.Run("Registering a SASL_SSL cluster", func(t *testing.T) {
+	t.Run("Registering a SASL cluster", func(t *testing.T) {
 		// given
 		config := New(&InMemoryConfigIO{})
 
@@ -19,15 +19,41 @@ func TestConfig(t *testing.T) {
 			AuthMethod:       SASLAuthMethod,
 			Username:         "john",
 			Password:         "test123",
-			SecurityProtocol: SSLSecurityProtocol,
+			SecurityProtocol: SASLPlaintextSecurityProtocol,
 		})
 
 		// then
 		assert.Equal(t, config.Clusters[0].Color, "#880808")
 		assert.Equal(t, config.Clusters[0].BootstrapServers, []string{"localhost:9092"})
-		assert.Equal(t, config.Clusters[0].SASLConfig.SecurityProtocol, SSLSecurityProtocol)
+		assert.Equal(t, config.Clusters[0].SASLConfig.SecurityProtocol, SASLPlaintextSecurityProtocol)
 		assert.Equal(t, config.Clusters[0].SASLConfig.Username, "john")
 		assert.Equal(t, config.Clusters[0].SASLConfig.Password, "test123")
+		assert.False(t, config.Clusters[0].SSLEnabled)
+	})
+
+	t.Run("Registering a SASL cluster with SSL", func(t *testing.T) {
+		// given
+		config := New(&InMemoryConfigIO{})
+
+		// when
+		config.RegisterCluster(RegistrationDetails{
+			Name:             "prd",
+			Color:            "#880808",
+			Host:             "localhost:9092",
+			AuthMethod:       SASLAuthMethod,
+			Username:         "john",
+			Password:         "test123",
+			SecurityProtocol: SASLPlaintextSecurityProtocol,
+			SSLEnabled:       true,
+		})
+
+		// then
+		assert.Equal(t, config.Clusters[0].Color, "#880808")
+		assert.Equal(t, config.Clusters[0].BootstrapServers, []string{"localhost:9092"})
+		assert.Equal(t, config.Clusters[0].SASLConfig.SecurityProtocol, SASLPlaintextSecurityProtocol)
+		assert.Equal(t, config.Clusters[0].SASLConfig.Username, "john")
+		assert.Equal(t, config.Clusters[0].SASLConfig.Password, "test123")
+		assert.True(t, config.Clusters[0].SSLEnabled)
 	})
 
 	t.Run("Registering an existing cluster updates it", func(t *testing.T) {
@@ -65,7 +91,7 @@ func TestConfig(t *testing.T) {
 			AuthMethod:       SASLAuthMethod,
 			Username:         "john",
 			Password:         "test123",
-			SecurityProtocol: SSLSecurityProtocol,
+			SecurityProtocol: SASLPlaintextSecurityProtocol,
 			SchemaRegistry: &SchemaRegistryDetails{
 				Url:      "https://sr:1923",
 				Username: "srJohn",
@@ -76,7 +102,7 @@ func TestConfig(t *testing.T) {
 		// then
 		assert.Equal(t, config.Clusters[0].Color, "#880808")
 		assert.Equal(t, config.Clusters[0].BootstrapServers, []string{"localhost:9092"})
-		assert.Equal(t, config.Clusters[0].SASLConfig.SecurityProtocol, SSLSecurityProtocol)
+		assert.Equal(t, config.Clusters[0].SASLConfig.SecurityProtocol, SASLPlaintextSecurityProtocol)
 		assert.Equal(t, config.Clusters[0].SASLConfig.Username, "john")
 		assert.Equal(t, config.Clusters[0].SASLConfig.Password, "test123")
 		assert.Equal(t, config.Clusters[0].SchemaRegistry.Url, "https://sr:1923")

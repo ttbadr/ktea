@@ -82,6 +82,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				formValues.Username = selectedCluster.SASLConfig.Username
 				formValues.Password = selectedCluster.SASLConfig.Password
 				formValues.AuthMethod = config.SASLAuthMethod
+				formValues.SSLEnabled = selectedCluster.SSLEnabled
 			}
 			if selectedCluster.SchemaRegistry != nil {
 				formValues.SrEnabled = true
