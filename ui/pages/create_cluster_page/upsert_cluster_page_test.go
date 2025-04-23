@@ -4,6 +4,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"ktea/config"
+	"ktea/kadmin"
 	"ktea/kontext"
 	"ktea/styles"
 	"ktea/tests/keys"
@@ -640,4 +641,55 @@ func TestCreateClusterPage(t *testing.T) {
 			}, msgs[0])
 		})
 	})
+
+	t.Run("After editing, display notification when checking connectivity", func(t *testing.T) {
+		// given
+		programKtx := &kontext.ProgramKtx{
+			WindowWidth:  100,
+			WindowHeight: 100,
+			Config: &config.Config{
+				Clusters: []config.Cluster{
+					{
+						Name:             "prd",
+						Color:            "#808080",
+						Active:           true,
+						BootstrapServers: []string{":19092"},
+						SASLConfig:       nil,
+					},
+					{
+						Name:             "tst",
+						Color:            "#F0F0F0",
+						Active:           false,
+						BootstrapServers: nil,
+						SASLConfig:       nil,
+					},
+				},
+			},
+		}
+		createEnvPage := NewEditForm(mockConnChecker, mockClusterRegisterer{}, programKtx, &FormValues{
+			Name:  "prd",
+			Color: "#808080",
+			Host:  ":9092",
+		})
+
+		// when
+		createEnvPage.Update(kadmin.ConnCheckStartedMsg{})
+
+		// then
+		render := createEnvPage.View(programKtx, ui.TestRenderer)
+		assert.Contains(t, render, "Testing cluster connectivity")
+	})
+
+	t.Run("After creating a new cluster, display notification when checking connectivity", func(t *testing.T) {
+		// given
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &ktx)
+
+		// when
+		createEnvPage.Update(kadmin.ConnCheckStartedMsg{})
+
+		// then
+		render := createEnvPage.View(&ktx, ui.TestRenderer)
+		assert.Contains(t, render, "Testing cluster connectivity")
+	})
+
 }
