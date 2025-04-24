@@ -128,13 +128,13 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.authSelectionState == saslSelected {
 		// if SASL authentication mode was previously selected and switched back to none
 		m.form = m.createForm()
-		m.NextField(3)
+		m.NextField(4)
 		m.authSelectionState = noneSelected
 	} else if m.formValues.HasSASLAuthMethodSelected() &&
 		(m.authSelectionState == nothingSelected || m.authSelectionState == noneSelected) {
 		// SASL authentication mode selected and previously nothing or none auth mode was selected
 		m.form = m.createForm()
-		m.NextField(3)
+		m.NextField(4)
 		m.authSelectionState = saslSelected
 	}
 
@@ -284,17 +284,18 @@ func (m *Model) createForm() *huh.Form {
 			huh.NewOption("Enabled", true),
 		)
 
+	sslEnabled := huh.NewSelect[bool]().
+		Value(&m.formValues.SSLEnabled).
+		Title("SSL").
+		Options(
+			huh.NewOption("Disable SSL", false),
+			huh.NewOption("Enable SSL", true),
+		)
+
 	var clusterFields []huh.Field
-	clusterFields = append(clusterFields, name, color, host, auth)
+	clusterFields = append(clusterFields, name, color, host, sslEnabled, auth)
 
 	if m.formValues.HasSASLAuthMethodSelected() {
-		sslEnabled := huh.NewSelect[bool]().
-			Value(&m.formValues.SSLEnabled).
-			Title("SSL").
-			Options(
-				huh.NewOption("Disable SSL", false),
-				huh.NewOption("Enable SSL", true),
-			)
 		securityProtocol := huh.NewSelect[config.SecurityProtocol]().
 			Value(&m.formValues.SecurityProtocol).
 			Title("Security Protocol").
@@ -308,7 +309,7 @@ func (m *Model) createForm() *huh.Form {
 			Value(&m.formValues.Password).
 			EchoMode(huh.EchoModePassword).
 			Title("Password")
-		clusterFields = append(clusterFields, sslEnabled, securityProtocol, username, pwd)
+		clusterFields = append(clusterFields, securityProtocol, username, pwd)
 	}
 
 	var schemaRegistryFields []huh.Field

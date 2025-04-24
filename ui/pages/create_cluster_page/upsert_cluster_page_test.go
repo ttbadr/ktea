@@ -158,6 +158,10 @@ func TestCreateClusterPage(t *testing.T) {
 			cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
 			// next field
 			cmd = createEnvPage.Update(cmd())
+			// and: select SSL disabled
+			cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+			// next field
+			cmd = createEnvPage.Update(cmd())
 			// next group
 			createEnvPage.Update(cmd())
 			// and: select disabled schema registry and in doing so submitting the form
@@ -284,6 +288,10 @@ func TestCreateClusterPage(t *testing.T) {
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
 		// next field
 		cmd = createEnvPage.Update(cmd())
+		// and: select SSL disabled
+		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+		// next field
+		cmd = createEnvPage.Update(cmd())
 		// next group
 		createEnvPage.Update(cmd())
 		// and: select disabled schema registry and in doing so submitting the form
@@ -331,7 +339,12 @@ func TestCreateClusterPage(t *testing.T) {
 		// and: Host is entered
 		keys.UpdateKeys(createEnvPage, "localhost:9092")
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+		// next field
 		createEnvPage.Update(cmd())
+		// and: SSL is disabled
+		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+		// next field
+		cmd = createEnvPage.Update(cmd())
 		// and: auth method SASL is selected
 		createEnvPage.Update(keys.Key(tea.KeyDown))
 
@@ -418,16 +431,20 @@ func TestCreateClusterPage(t *testing.T) {
 		keys.UpdateKeys(createEnvPage, "localhost:9092")
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
 		createEnvPage.Update(cmd())
-		// and: auth method none is selected
+		// and: SSL is enabled
 		cmd = createEnvPage.Update(keys.Key(tea.KeyDown))
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
 		// next field
 		cmd = createEnvPage.Update(cmd())
-		// and: select SASL_SSL security protocol
+		// and: auth method SASL is selected
+		cmd = createEnvPage.Update(keys.Key(tea.KeyDown))
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+		// next field
 		createEnvPage.Update(cmd())
-		// and: select SSL disabled
+		// and: security protocol SASL_PLAINTEXT
+		cmd = createEnvPage.Update(keys.Key(tea.KeyDown))
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+		// next field
 		createEnvPage.Update(cmd())
 		// and: enter SASL username
 		keys.UpdateKeys(createEnvPage, "username")
@@ -453,7 +470,7 @@ func TestCreateClusterPage(t *testing.T) {
 			Active:           false,
 			BootstrapServers: []string{"localhost:9092"},
 			SchemaRegistry:   nil,
-			SSLEnabled:       false,
+			SSLEnabled:       true,
 			SASLConfig: &config.SASLConfig{
 				Username:         "username",
 				Password:         "password",
@@ -568,17 +585,20 @@ func TestCreateClusterPage(t *testing.T) {
 		keys.UpdateKeys(createEnvPage, "localhost:9092")
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
 		createEnvPage.Update(cmd())
+		// and: SSL is enabled
+		cmd = createEnvPage.Update(keys.Key(tea.KeyDown))
+		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
+		// next field
+		cmd = createEnvPage.Update(cmd())
 		// and: auth method SASL is selected
 		cmd = createEnvPage.Update(keys.Key(tea.KeyDown))
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
 		// next field
 		cmd = createEnvPage.Update(cmd())
-		// and: select SASL_SSL security protocol
+		// and: SASL_PLAINTEXT protocol is selected
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
-		createEnvPage.Update(cmd())
-		// and: select SSL disabled
-		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
-		createEnvPage.Update(cmd())
+		// next field
+		cmd = createEnvPage.Update(cmd())
 		// and: enter SASL username
 		keys.UpdateKeys(createEnvPage, "username")
 		cmd = createEnvPage.Update(keys.Key(tea.KeyEnter))
@@ -628,6 +648,7 @@ func TestCreateClusterPage(t *testing.T) {
 				Color:            styles.ColorRed,
 				Active:           false,
 				BootstrapServers: []string{"localhost:9092"},
+				SSLEnabled:       true,
 				SASLConfig: &config.SASLConfig{
 					Username:         "username",
 					Password:         "password",

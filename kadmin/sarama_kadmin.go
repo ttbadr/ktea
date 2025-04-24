@@ -74,8 +74,9 @@ func NewSaramaKadmin(cd ConnectionDetails) (Kadmin, error) {
 	cfg.Producer.Partitioner = sarama.NewRoundRobinPartitioner
 	cfg.Consumer.Offsets.Initial = sarama.OffsetOldest
 
+	cfg.Net.TLS.Enable = cd.SSLEnabled
+
 	if cd.SASLConfig != nil {
-		cfg.Net.TLS.Enable = true
 		cfg.Net.SASL.Enable = true
 		cfg.Net.SASL.Mechanism = sarama.SASLTypePlaintext
 		cfg.Net.SASL.User = cd.SASLConfig.Username
