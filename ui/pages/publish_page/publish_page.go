@@ -81,7 +81,7 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 }
 
 func (m *Model) Title() string {
-	return "Topics / " + m.topic.Name + " / Publish"
+	return "Topics / " + m.topic.Name + " / Produce"
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
@@ -199,7 +199,7 @@ func (m *Model) newForm(ktx *kontext.ProgramKtx) *huh.Form {
 		),
 		huh.NewGroup(huh.NewConfirm().
 			Inline(true).
-			Affirmative("Publish").
+			Affirmative("Produce").
 			Negative(""),
 		),
 	)

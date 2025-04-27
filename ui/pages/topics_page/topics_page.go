@@ -99,29 +99,36 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if m.topics == nil {
-			return nil
-		}
 		switch msg.String() {
 		case "ctrl+n":
 			return ui.PublishMsg(nav.LoadCreateTopicPageMsg{})
 		case "ctrl+o":
+			if m.SelectedTopic() == nil {
+				return nil
+			}
 			return ui.PublishMsg(nav.LoadTopicConfigPageMsg{})
 		case "ctrl+p":
+			if m.SelectedTopic() == nil {
+				return nil
+			}
 			return ui.PublishMsg(nav.LoadPublishPageMsg{Topic: m.SelectedTopic()})
 		case "f5":
 			m.topics = nil
 			m.state = stateRefreshing
 			return tea.Batch(m.lister.ListTopics, m.recordCountSpinner.Tick)
 		case "ctrl+l":
+			if m.SelectedTopic() == nil {
+				return nil
+			}
 			return ui.PublishMsg(nav.LoadLiveConsumePageMsg{Topic: m.SelectedTopic()})
 		case "enter":
 			// only accept enter when the table is focussed
 			if !m.cmdBar.IsFocussed() {
-				// TODO ignore enter when there are no topics loaded
-				return ui.PublishMsg(nav.LoadConsumptionFormPageMsg{
-					Topic: m.SelectedTopic(),
-				})
+				if m.SelectedTopic() != nil {
+					return ui.PublishMsg(nav.LoadConsumptionFormPageMsg{
+						Topic: m.SelectedTopic(),
+					})
+				}
 			}
 		}
 	case ui.RegainedFocusMsg:
@@ -258,7 +265,7 @@ func (m *Model) SelectedTopic() *kadmin.ListedTopic {
 			return &t
 		}
 	}
-	panic("selected topic not found")
+	return nil
 }
 
 func (m *Model) SelectedTopicName() string {
@@ -295,7 +302,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 		{"Consume", "enter"},
 		{"Live Consume", "C-l"},
 		{"Search", "/"},
-		{"Publish", "C-p"},
+		{"Produce", "C-p"},
 		{"Create", "C-n"},
 		{"Delete", "F2"},
 		{"Configs", "C-o"},

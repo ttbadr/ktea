@@ -33,7 +33,7 @@ func TestTopicsPage(t *testing.T) {
 		page, _ := New(&MockTopicDeleter{}, &MockTopicLister{})
 
 		cmd := page.Update(keys.Key(tea.KeyCtrlN))
-		assert.Nil(t, cmd)
+		assert.NotNil(t, cmd)
 
 		cmd = page.Update(keys.Key(tea.KeyCtrlI))
 		assert.Nil(t, cmd)
