@@ -22,3 +22,20 @@ services:
       KAFKA_LISTENERS: 'PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092'
     ports:
       - "9092:9092"
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: kafka-init
+    depends_on:
+      - broker
+    volumes:
+      - ./kafka-init.sh:/kafka-init.sh
+    command: >
+      bash -c "
+        echo 'Waiting for Kafka to be ready...'
+        while ! nc -z broker 29092; do
+          sleep 1
+        done
+        echo 'Kafka is ready!'
+        bash /kafka-init.sh
+      "

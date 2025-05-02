@@ -236,6 +236,7 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 	return []statusbar.Shortcut{
 		{"Go Back", "esc"},
 		{"Search", "/"},
+		{"Refresh", "F5"},
 	}
 }
 

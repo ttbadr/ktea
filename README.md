@@ -10,16 +10,20 @@ ktea is a tool designed to simplify and accelerate interactions with Kafka clust
 ![demo.gif](demo.gif)
 
 ## Installation
+
 ### Mac
+
 ```sh
 brew tap jonas-grgt/ktea
 brew install ktea
 ```
 
 ### Linux
+
 Binaries available at the release page.
 
 ### Windows
+
 Coming soon
 
 ## Usage
@@ -30,14 +34,15 @@ All configuration is stored in `~/.config/ktea/config.conf`
 
 ### Cluster Management
 
-Multiple clusters can be added. 
+Multiple clusters can be added.
 Upon startup when no cluster is configured you will be prompted
 to add one.
 
 #### Supported Auth Methods
+
 - No Auth
 - SASL (SSL)
-  - PLAIN
+    - PLAIN
 
 ### Switching Tabs
 
@@ -48,6 +53,7 @@ To switch between tabs the meta key is required, which in most terminals needs t
 - Mac Terminal: https://superuser.com/questions/496090/how-to-use-alt-commands-in-a-terminal-on-os-x
 
 ## Features
+
 - *Multi-Cluster Support*: Seamlessly connect to multiple Kafka clusters and switch between them with ease.
 - *Topic Management*: List, create, delete, and modify topics, including partition and offset details.
 - *Record Consumption*: Consume records in text, JSON, and Avro formats, with powerful search capabilities.
@@ -55,6 +61,7 @@ To switch between tabs the meta key is required, which in most terminals needs t
 - *Schema Registry Integration*: Browse, view, and register schemas effortlessly.
 
 ## Todo
+
 - Add more authentication methods
 - Add support for more message formats such as protobuf.
 - Add ACL management.
@@ -62,3 +69,15 @@ To switch between tabs the meta key is required, which in most terminals needs t
 - Add ability to delete specific schema versions.
 - Add consumption templating support.
 - Many more, just file an issue requesting a feature!
+
+## Development
+
+### Dev cluster setup
+
+A docker-compose setup is provided to quickly spin up a local Kafka cluster with pre-created topics, consumer groups,
+commited offsets etc ...
+
+```sh
+cd docker
+docker-compose up -d
+```
