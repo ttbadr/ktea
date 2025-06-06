@@ -47,7 +47,7 @@ func ToConnectionDetails(cluster *config.Cluster) ConnectionDetails {
 		switch cluster.SASLConfig.SecurityProtocol {
 		// SSL, to make wrongly configured PLAINTEXT protocols (as SSL) compatible. Should be removed in the future.
 		case config.SASLPlaintextSecurityProtocol, "SSL":
-			protocol = PLAIN_TEXT
+			protocol = PlainText
 		default:
 			panic(fmt.Sprintf("Unknown SASL protocol: %s", cluster.SASLConfig.SecurityProtocol))
 		}

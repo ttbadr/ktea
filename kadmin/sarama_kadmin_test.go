@@ -37,7 +37,7 @@ func TestToConnectionDetails(t *testing.T) {
 				SASLConfig: &SASLConfig{
 					Username: "Fred",
 					Password: "Wrong",
-					Protocol: PLAIN_TEXT,
+					Protocol: PlainText,
 				},
 				SSLEnabled: true,
 			},

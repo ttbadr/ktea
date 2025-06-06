@@ -46,7 +46,7 @@ func (ka *SaramaKafkaAdmin) ListConfigs(topic string) tea.Msg {
 func (ka *SaramaKafkaAdmin) doListConfigs(topic string, configsChan chan map[string]string, errorChan chan error) {
 	MaybeIntroduceLatency()
 	configsResp, err := ka.admin.DescribeConfig(sarama.ConfigResource{
-		Type: TOPIC_RESOURCE_TYPE,
+		Type: TopicResourceType,
 		Name: topic,
 	})
 	if err != nil {

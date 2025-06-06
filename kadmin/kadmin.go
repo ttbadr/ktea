@@ -3,17 +3,14 @@ package kadmin
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"ktea/config"
-	"time"
 )
 
 const (
-	PLAIN_TEXT SASLProtocol = 0
-	SSL        SASLProtocol = 1
+	PlainText SASLProtocol = 0
 )
 
 const (
-	TOPIC_RESOURCE_TYPE = 2
-	DEFAULT_TIMEOUT     = 10 * time.Second
+	TopicResourceType = 2
 )
 
 type ConnectionDetails struct {

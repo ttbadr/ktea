@@ -20,7 +20,7 @@ type UpdateTopicConfigErrorMsg struct {
 
 func (ka *SaramaKafkaAdmin) UpdateConfig(t TopicConfigToUpdate) tea.Msg {
 	err := ka.admin.AlterConfig(
-		TOPIC_RESOURCE_TYPE,
+		TopicResourceType,
 		t.Topic,
 		map[string]*string{t.Key: &t.Value},
 		false,

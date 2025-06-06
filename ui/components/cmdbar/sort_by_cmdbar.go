@@ -113,7 +113,7 @@ func (m *SortByCmdBar) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "f3":
-			m.active = true
+			m.active = !m.active
 		case "h", "left":
 			m.prevElem()
 		case "l", "right":
