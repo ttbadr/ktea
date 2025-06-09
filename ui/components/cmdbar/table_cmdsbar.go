@@ -8,9 +8,9 @@ import (
 )
 
 type TableCmdsBar[T any] struct {
+	notifierWidget   CmdBar
 	deleteWidget     *DeleteCmdBar[T]
 	searchWidget     CmdBar
-	notifierWidget   CmdBar
 	sortByCmdBar     *SortByCmdBar
 	active           CmdBar
 	searchPrevActive bool
@@ -53,34 +53,15 @@ func (m *TableCmdsBar[T]) Update(msg tea.Msg, selection *T) (tea.Msg, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "/":
-			active, pmsg, cmd := m.searchWidget.Update(msg)
-			if active {
-				m.active = m.searchWidget
-			} else {
-				m.active = nil
-			}
-			return pmsg, cmd
+			return m.handleSlash(msg)
 		case "f2":
 			if selection != nil {
-				active, pmsg, cmd := m.deleteWidget.Update(msg)
-				if active {
-					m.deleteWidget.Delete(*selection)
-					m.active = m.deleteWidget
-				} else {
-					m.active = nil
-				}
-				return pmsg, cmd
+				return m.handleF2(selection, msg)
 			}
 			return nil, nil
 		case "f3":
 			if selection != nil && m.sortByCmdBar != nil {
-				active, pmsg, cmd := m.sortByCmdBar.Update(msg)
-				if !active {
-					m.active = nil
-				} else {
-					m.active = m.sortByCmdBar
-				}
-				return pmsg, cmd
+				return m.handleF3(msg, pmsg, cmd)
 			}
 			return pmsg, cmd
 		}
@@ -100,6 +81,47 @@ func (m *TableCmdsBar[T]) Update(msg tea.Msg, selection *T) (tea.Msg, tea.Cmd) {
 	}
 
 	return msg, nil
+}
+
+func (m *TableCmdsBar[T]) handleSlash(msg tea.Msg) (tea.Msg, tea.Cmd) {
+	active, pmsg, cmd := m.searchWidget.Update(msg)
+	if active {
+		m.active = m.searchWidget
+		m.deleteWidget.active = false
+		if m.sortByCmdBar != nil {
+			m.sortByCmdBar.active = false
+		}
+	} else {
+		m.active = nil
+	}
+	return pmsg, cmd
+}
+
+func (m *TableCmdsBar[T]) handleF3(msg tea.Msg, pmsg tea.Msg, cmd tea.Cmd) (tea.Msg, tea.Cmd) {
+	active, pmsg, cmd := m.sortByCmdBar.Update(msg)
+	if !active {
+		m.active = nil
+	} else {
+		m.active = m.sortByCmdBar
+		m.searchWidget.(*SearchCmdBar).state = hidden
+		m.deleteWidget.active = false
+	}
+	return pmsg, cmd
+}
+
+func (m *TableCmdsBar[T]) handleF2(selection *T, msg tea.Msg) (tea.Msg, tea.Cmd) {
+	active, pmsg, cmd := m.deleteWidget.Update(msg)
+	if active {
+		m.active = m.deleteWidget
+		m.deleteWidget.Delete(*selection)
+		m.searchWidget.(*SearchCmdBar).state = hidden
+		if m.sortByCmdBar != nil {
+			m.sortByCmdBar.active = false
+		}
+	} else {
+		m.active = nil
+	}
+	return pmsg, cmd
 }
 
 func (m *TableCmdsBar[T]) HasSearchedAtLeastOneChar() bool {
@@ -131,9 +153,9 @@ func NewTableCmdsBar[T any](
 	sortByCmdBar *SortByCmdBar,
 ) *TableCmdsBar[T] {
 	return &TableCmdsBar[T]{
+		notifierCmdBar,
 		deleteCmdBar,
 		searchCmdBar,
-		notifierCmdBar,
 		sortByCmdBar,
 		notifierCmdBar,
 		false,

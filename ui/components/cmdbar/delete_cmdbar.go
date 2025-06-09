@@ -57,7 +57,7 @@ func (s *DeleteCmdBar[any]) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "f2":
-			s.active = true
+			s.active = !s.active
 			return s.active, nil, nil
 		case "esc":
 			s.active = false

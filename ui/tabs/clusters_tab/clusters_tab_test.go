@@ -244,6 +244,20 @@ func TestClustersTab(t *testing.T) {
 			AvailableHeight: 100,
 		}
 
+		t.Run("/ raises search prompt", func(t *testing.T) {
+			// given
+			var clustersTab, _ = New(programKtx, mockConnChecker)
+			// and table has been initialized
+			render := clustersTab.View(programKtx, ui.TestRenderer)
+
+			// when
+			clustersTab.Update(keys.Key('/'))
+
+			// then
+			render = clustersTab.View(programKtx, ui.TestRenderer)
+			assert.Contains(t, render, "┃ >")
+		})
+
 		t.Run("F2 raises delete confirmation", func(t *testing.T) {
 			// given
 			var clustersTab, _ = New(programKtx, mockConnChecker)
