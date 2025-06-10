@@ -2,12 +2,13 @@ package sradmin
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"strconv"
 	"sync"
 )
 
 type Schema struct {
 	Id      string
-	Schema  string
+	Value   string
 	Version int
 	Err     error
 }
@@ -44,15 +45,15 @@ func (s *DefaultSrAdmin) ListVersions(subject string, versions []int) tea.Msg {
 	schemaChan := make(chan Schema, len(versions))
 	var wg sync.WaitGroup
 
-	wg.Add(len(versions)) // Ensure this is outside the goroutine
+	wg.Add(len(versions))
 	for _, version := range versions {
 		go func(version int) {
-			defer wg.Done() // Ensure Done() is called even on panic or early return
+			defer wg.Done()
 			schema, err := s.client.GetSchemaByVersion(subject, version)
 			if err == nil {
 				schemaChan <- Schema{
-					Id:      schema.Schema(),
-					Schema:  schema.Schema(),
+					Id:      strconv.Itoa(schema.ID()),
+					Value:   schema.Schema(),
 					Version: version,
 				}
 			} else {
@@ -65,8 +66,8 @@ func (s *DefaultSrAdmin) ListVersions(subject string, versions []int) tea.Msg {
 	}
 
 	go func() {
-		wg.Wait()         // Wait for all goroutines to finish
-		close(schemaChan) // Close the channel to signal completion
+		wg.Wait()
+		close(schemaChan)
 	}()
 
 	return SchemaListingStarted{
