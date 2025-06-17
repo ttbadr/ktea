@@ -166,7 +166,7 @@ func (m *Model) newForm(ktx *kontext.ProgramKtx) *huh.Form {
 		Value(&m.formValues.Key)
 	partition := huh.NewInput().
 		Value(&m.formValues.Partition).
-		Description("Leave empty to use the default hash partitioner.").
+		Description("Leave empty to use murmur2 based partitioner.").
 		Title("Partition").
 		Validate(func(str string) error {
 			if str == "" {

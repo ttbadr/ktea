@@ -2,6 +2,7 @@ package kadmin
 
 import (
 	"github.com/IBM/sarama"
+	"github.com/burdiyan/kafkautil"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -58,7 +59,7 @@ func (ka *SaramaKafkaAdmin) doPublishRecord(
 	MaybeIntroduceLatency()
 	var partition int32
 	if p.Partition == nil {
-		ka.config.Producer.Partitioner = sarama.NewHashPartitioner
+		ka.config.Producer.Partitioner = kafkautil.NewJVMCompatiblePartitioner
 	} else {
 		partition = int32(*p.Partition)
 		ka.config.Producer.Partitioner = sarama.NewManualPartitioner
