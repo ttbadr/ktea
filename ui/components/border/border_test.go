@@ -44,7 +44,7 @@ func TestBorderTab(t *testing.T) {
 		render := bt.View(content())
 
 		tests.TrimAndEqual(t, render, `
-╭ [ tab1 tab2 tab3 tab4 tab5 ] ────────────────────╮
+╭ | tab1  tab2  tab3  tab4  tab5 | ────────────────╮
 │content                                           │
 ╰──────────────────────────────────────────────────╯`)
 	})
@@ -73,7 +73,7 @@ func TestBorderTab(t *testing.T) {
 		render := bt.View(content())
 
 		tests.TrimAndEqual(t, render, `
-╭ [ tab1 tab2 ] ──────────── My Title ─────────────╮
+╭ | tab1  tab2 | ──────────── My Title ────────────╮
 │content                                           │
 ╰──────────────────────────────────────────────────╯`)
 	})

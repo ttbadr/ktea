@@ -164,23 +164,18 @@ func WithTabs(tabs ...string) Option {
 			var renderedTabs string
 			for i, tab := range tabs {
 
-				var padding string
-				if i != 0 {
-					padding = " "
-				}
-
 				if m.activeTabIdx == i {
-					renderedTabs += padding + lipgloss.NewStyle().
+					renderedTabs += lipgloss.NewStyle().
 						Background(lipgloss.Color(styles.ColorPurple)).
-						Padding(0).
+						Padding(0, 1).
 						Render(tab)
 				} else {
-					renderedTabs += padding + lipgloss.NewStyle().
-						Padding(0).
+					renderedTabs += lipgloss.NewStyle().
+						Padding(0, 1).
 						Render(tab)
 				}
 			}
-			return fmt.Sprintf("[ %s ]", renderedTabs)
+			return fmt.Sprintf("|%s|", renderedTabs)
 		}
 	}
 }

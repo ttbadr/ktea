@@ -57,6 +57,9 @@ type Model struct {
 type PayloadCopiedMsg struct {
 }
 
+type SchemaCopiedMsg struct {
+}
+
 type HeaderValueCopiedMsg struct {
 }
 
@@ -243,11 +246,21 @@ func (m *Model) headerStyle() lipgloss.Style {
 
 func (m *Model) handleCopy(cmds []tea.Cmd) []tea.Cmd {
 	if m.focus == mainViewFocus {
-		err := m.clipWriter.Write(ansi.Strip(m.payload))
+		var copiedValue string
+		if m.state == schemaView {
+			copiedValue = ansi.Strip(m.record.Payload.Schema)
+		} else {
+			copiedValue = ansi.Strip(m.payload)
+		}
+
+		err := m.clipWriter.Write(copiedValue)
+
 		if err != nil {
 			cmds = append(cmds, ui.PublishMsg(CopyErrorMsg{Err: err}))
-		} else {
+		} else if m.state == recordView {
 			cmds = append(cmds, ui.PublishMsg(PayloadCopiedMsg{}))
+		} else {
+			cmds = append(cmds, ui.PublishMsg(SchemaCopiedMsg{}))
 		}
 	} else {
 		err := m.clipWriter.Write(m.selectedHeaderValue())
@@ -287,19 +300,23 @@ func (m *Model) updatedFocussedArea(msg tea.Msg, cmds []tea.Cmd) []tea.Cmd {
 func (m *Model) Shortcuts() []statusbar.Shortcut {
 	whatToCopy := "Header Value"
 	if m.focus == mainViewFocus {
-		whatToCopy = "Content"
+		if m.state == schemaView {
+			whatToCopy = "Schema"
+		} else {
+			whatToCopy = "Record"
+		}
 	}
 	if m.err == nil {
 		shortcuts := []statusbar.Shortcut{
-			{"Toggle Headers/Content", "C-h/Arrows"},
+			{"Toggle Headers/Content", "C-h/left/right"},
 			{"Go Back", "esc"},
 			{"Copy " + whatToCopy, "c"},
 		}
 
-		if m.config.ActiveCluster().HasSchemaRegistry() {
+		if m.config.ActiveCluster().HasSchemaRegistry() && m.focus == mainViewFocus {
 			shortcuts = append(shortcuts, statusbar.Shortcut{
-				Name:       "View Schema",
-				Keybinding: "C-s",
+				Name:       "Toggle Record/Schema",
+				Keybinding: "<tab>",
 			})
 		}
 
@@ -353,6 +370,10 @@ func New(
 
 	cmdbar.WithMsgHandler(notifierCmdBar, func(msg PayloadCopiedMsg, m *notifier.Model) (bool, tea.Cmd) {
 		m.ShowSuccessMsg("Payload copied")
+		return true, m.AutoHideCmd("record-details-page")
+	})
+	cmdbar.WithMsgHandler(notifierCmdBar, func(msg SchemaCopiedMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.ShowSuccessMsg("Schema copied")
 		return true, m.AutoHideCmd("record-details-page")
 	})
 	cmdbar.WithMsgHandler(notifierCmdBar, func(msg HeaderValueCopiedMsg, m *notifier.Model) (bool, tea.Cmd) {

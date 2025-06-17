@@ -134,8 +134,8 @@ func TestRecordDetailsPage(t *testing.T) {
 			shortcuts := m.Shortcuts()
 
 			assert.Contains(t, shortcuts, statusbar.Shortcut{
-				Name:       "View Schema",
-				Keybinding: "C-s",
+				Name:       "Toggle Record/Schema",
+				Keybinding: "<tab>",
 			})
 		})
 
@@ -247,6 +247,56 @@ func TestRecordDetailsPage(t *testing.T) {
 
 		assert.Equal(t, "{\n\t\"name\": \"John\"\n}", clippedText)
 		assert.Contains(t, render, "Payload copied")
+	})
+
+	t.Run("Copy schema", func(t *testing.T) {
+		var clippedText string
+		clipMock := clipper.NewMock()
+		clipMock.WriteFunc = func(text string) error {
+			clippedText = text
+			return nil
+		}
+		m := New(&kadmin.ConsumerRecord{
+			Key: "740ed9fd-195f-427e-8e0d-adb63d9c16ed",
+			Payload: serdes.DesData{Value: `{"name":"John"}`, Schema: `
+{
+  "type"": "record",
+  "name": "Person",
+  "namespace": "io.jonasg.ktea",
+  "fields": [ {"name": "name", "type": "string"} ]
+}`},
+			Partition: 0,
+			Offset:    123,
+			Headers: []kadmin.Header{
+				{
+					Key:   "h1",
+					Value: kadmin.NewHeaderValue("v1"),
+				},
+			},
+		},
+			"",
+			clipMock,
+			tests.NewKontext(),
+		)
+
+		m.View(tests.NewKontext(), tests.TestRenderer)
+
+		cmds := m.Update(tests.Key(tea.KeyTab))
+		cmds = m.Update(tests.Key('c'))
+		for _, msg := range tests.ExecuteBatchCmd(cmds) {
+			m.Update(msg)
+		}
+
+		render := ansi.Strip(m.View(tests.NewKontext(), tests.TestRenderer))
+
+		tests.TrimAndEqual(t, clippedText, `
+{
+  "type"": "record",
+  "name": "Person",
+  "namespace": "io.jonasg.ktea",
+  "fields": [ {"name": "name", "type": "string"} ]
+}`)
+		assert.Contains(t, render, "Schema copied")
 	})
 
 	t.Run("Copy header value", func(t *testing.T) {
