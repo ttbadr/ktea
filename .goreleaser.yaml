@@ -7,6 +7,7 @@ before:
 builds:
   - id: ktea
     binary: ktea
+    main: cmd/ktea/main.go
     env:
       - CGO_ENABLED=0
     tags: prd

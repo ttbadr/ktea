@@ -5,7 +5,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/riferrei/srclient"
 	"ktea/config"
-	"ktea/kontext"
 	"net/http"
 	"sync"
 )
@@ -24,6 +23,7 @@ type SrAdmin interface {
 	VersionLister
 	SchemaFetcher
 	GlobalCompatibilityLister
+	LatestSchemaBySubjectFetcher
 }
 
 func (s *DefaultSrAdmin) GetSubjects() []Subject {
@@ -78,11 +78,10 @@ func (s *DefaultSrAdmin) doCreateSchema(details SubjectCreationDetails, createdC
 	createdChan <- true
 }
 
-func New(ktx *kontext.ProgramKtx) *DefaultSrAdmin {
-	registry := ktx.Config.ActiveCluster().SchemaRegistry
-	client := createHttpClient(registry)
+func New(registryConfig *config.SchemaRegistryConfig) *DefaultSrAdmin {
+	client := createHttpClient(registryConfig)
 	return &DefaultSrAdmin{
-		client: srclient.NewSchemaRegistryClient(registry.Url, srclient.WithClient(client)),
+		client: srclient.NewSchemaRegistryClient(registryConfig.Url, srclient.WithClient(client)),
 	}
 }
 

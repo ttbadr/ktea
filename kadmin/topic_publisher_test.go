@@ -25,7 +25,7 @@ func TestPublish(t *testing.T) {
 			psm := ka.PublishRecord(&ProducerRecord{
 				Topic: topic,
 				Key:   "123",
-				Value: "{\"id\":\"123\"}",
+				Value: []byte("{\"id\":\"123\"}"),
 			})
 
 			select {
@@ -69,7 +69,7 @@ func TestPublish(t *testing.T) {
 			psm := ka.PublishRecord(&ProducerRecord{
 				Topic: topic,
 				Key:   "123",
-				Value: "{\"id\":\"123\"}",
+				Value: []byte("{\"id\":\"123\"}"),
 				Headers: map[string]string{
 					"id":   "123",
 					"user": "456",
@@ -139,7 +139,7 @@ func TestPublish(t *testing.T) {
 			psm := ka.PublishRecord(&ProducerRecord{
 				Topic:     topic,
 				Key:       "123",
-				Value:     "{\"id\":\"123\"}",
+				Value:     []byte("{\"id\":\"123\"}"),
 				Partition: &partition,
 			})
 

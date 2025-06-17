@@ -21,6 +21,9 @@ type SubjectListingStartedMsg struct {
 	err      chan error
 }
 
+// AwaitCompletion return
+// a SubjectsListedMsg upon success
+// or SubjectListingErrorMsg upon failure.
 func (msg *SubjectListingStartedMsg) AwaitCompletion() tea.Msg {
 	select {
 	case subjects := <-msg.subjects:

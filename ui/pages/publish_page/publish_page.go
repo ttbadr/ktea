@@ -133,7 +133,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 					return m.publisher.PublishRecord(&kadmin.ProducerRecord{
 						Key:       m.formValues.Key,
-						Value:     m.formValues.Payload,
+						Value:     []byte(m.formValues.Payload),
 						Topic:     m.topic.Name,
 						Headers:   m.formValues.parsedHeaders(),
 						Partition: part,

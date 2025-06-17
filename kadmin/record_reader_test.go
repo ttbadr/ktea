@@ -31,7 +31,7 @@ func TestReadRecords(t *testing.T) {
 					psm := ka.PublishRecord(&ProducerRecord{
 						Topic: topic,
 						Key:   strconv.Itoa(i),
-						Value: "{\"id\":\"123\"}",
+						Value: []byte("{\"id\":\"123\"}"),
 					})
 
 					select {
@@ -98,7 +98,7 @@ func TestReadRecords(t *testing.T) {
 						Topic:     topic,
 						Key:       strconv.Itoa(i),
 						Partition: &partition,
-						Value:     "{\"id\":\"123\"}",
+						Value:     []byte("{\"id\":\"123\"}"),
 					})
 
 					select {
@@ -163,7 +163,7 @@ func TestReadRecords(t *testing.T) {
 					psm := ka.PublishRecord(&ProducerRecord{
 						Topic: topic,
 						Key:   strconv.Itoa(i),
-						Value: "{\"id\":\"123\"}",
+						Value: []byte("{\"id\":\"123\"}"),
 					})
 
 					select {
@@ -225,7 +225,7 @@ func TestReadRecords(t *testing.T) {
 					psm := ka.PublishRecord(&ProducerRecord{
 						Topic: topic,
 						Key:   strconv.Itoa(i),
-						Value: "{\"id\":\"123\"}",
+						Value: []byte("{\"id\":\"123\"}"),
 					})
 
 					select {
@@ -288,7 +288,7 @@ func TestReadRecords(t *testing.T) {
 				psm := ka.PublishRecord(&ProducerRecord{
 					Topic: topic,
 					Key:   strconv.Itoa(i),
-					Value: "{\"id\":\"123\"}",
+					Value: []byte("{\"id\":\"123\"}"),
 				})
 
 				select {
@@ -314,7 +314,7 @@ func TestReadRecords(t *testing.T) {
 					psm := ka.PublishRecord(&ProducerRecord{
 						Topic: topic,
 						Key:   strconv.Itoa(i),
-						Value: "{\"id\":\"123\"}",
+						Value: []byte("{\"id\":\"123\"}"),
 					})
 
 					select {
@@ -375,7 +375,7 @@ func TestReadRecords(t *testing.T) {
 						psm := ka.PublishRecord(&ProducerRecord{
 							Topic: topic,
 							Key:   strconv.Itoa(i),
-							Value: "{\"id\":\"3\"}",
+							Value: []byte("{\"id\":\"3\"}"),
 						})
 
 						select {
@@ -445,7 +445,7 @@ func TestReadRecords(t *testing.T) {
 					psm := ka.PublishRecord(&ProducerRecord{
 						Topic: topic,
 						Key:   strconv.Itoa(i),
-						Value: "{\"id\":\"3\"}",
+						Value: []byte("{\"id\":\"3\"}"),
 					})
 
 					select {

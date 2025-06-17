@@ -2,6 +2,7 @@ package sradmin
 
 import tea "github.com/charmbracelet/bubbletea"
 
+// SubjectLister returns a sradmin.SubjectListingStartedMsg
 type SubjectLister interface {
 	ListSubjects() tea.Msg
 }

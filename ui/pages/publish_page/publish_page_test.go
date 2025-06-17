@@ -104,7 +104,7 @@ func TestPublish(t *testing.T) {
 		assert.Equal(t, "key", producerRecord.Key)
 		assert.Equal(t, "topic1", producerRecord.Topic)
 		assert.Equal(t, 2, *producerRecord.Partition)
-		assert.Equal(t, "payload", producerRecord.Value)
+		assert.Equal(t, []byte("payload"), producerRecord.Value)
 		assert.Equal(
 			t,
 			map[string]string{
@@ -204,7 +204,7 @@ func TestPublish(t *testing.T) {
 		assert.Equal(t, "key", producerRecord.Key)
 		assert.Equal(t, "topic1", producerRecord.Topic)
 		assert.Nil(t, producerRecord.Partition)
-		assert.Equal(t, "payload", producerRecord.Value)
+		assert.Equal(t, []byte("payload"), producerRecord.Value)
 	})
 
 	t.Run("upon successful publication", func(t *testing.T) {

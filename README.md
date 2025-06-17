@@ -81,3 +81,8 @@ commited offsets etc ...
 cd docker
 docker-compose up -d
 ```
+
+### Generate data
+
+After the local cluster is up and running, you can generate some data to work with, 
+using`go run -tags prd ./cmd/generate`.

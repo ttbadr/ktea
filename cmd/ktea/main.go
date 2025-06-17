@@ -251,7 +251,7 @@ func (m *Model) activateCluster(cluster *config.Cluster) error {
 	}
 
 	if cluster.HasSchemaRegistry() {
-		m.sra = sradmin.New(m.ktx)
+		m.sra = sradmin.New(m.ktx.Config.ActiveCluster().SchemaRegistry)
 		m.ka.SetSra(m.sra)
 	}
 

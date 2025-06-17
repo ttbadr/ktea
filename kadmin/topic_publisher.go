@@ -11,7 +11,7 @@ type Publisher interface {
 
 type ProducerRecord struct {
 	Key       string
-	Value     string
+	Value     []byte
 	Topic     string
 	Partition *int
 	Headers   map[string]string
@@ -23,6 +23,7 @@ type PublicationStartedMsg struct {
 }
 
 type PublicationFailed struct {
+	Err error
 }
 
 type PublicationSucceeded struct {
@@ -30,8 +31,8 @@ type PublicationSucceeded struct {
 
 func (p *PublicationStartedMsg) AwaitCompletion() tea.Msg {
 	select {
-	case <-p.Err:
-		return PublicationFailed{}
+	case err := <-p.Err:
+		return PublicationFailed{err}
 	case <-p.Published:
 		return PublicationSucceeded{}
 	}
@@ -74,7 +75,7 @@ func (ka *SaramaKafkaAdmin) doPublishRecord(
 	_, _, err := ka.producer.SendMessage(&sarama.ProducerMessage{
 		Topic:     p.Topic,
 		Key:       sarama.StringEncoder(p.Key),
-		Value:     sarama.StringEncoder(p.Value),
+		Value:     sarama.ByteEncoder(p.Value),
 		Partition: partition,
 		Headers:   headers,
 	})

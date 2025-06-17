@@ -10,9 +10,8 @@ import (
 	"ktea/sradmin"
 )
 
-type GoAvroAvroDeserializer struct {
-	subjects []sradmin.Subject
-	sra      sradmin.SrAdmin
+type GoAvroDeserializer struct {
+	sra sradmin.SrAdmin
 }
 
 type DesData struct {
@@ -22,7 +21,7 @@ type DesData struct {
 
 var ErrNoSchemaRegistry = errors.New("no schema registry configured")
 
-func (d *GoAvroAvroDeserializer) Deserialize(data []byte) (DesData, error) {
+func (d *GoAvroDeserializer) Deserialize(data []byte) (DesData, error) {
 	if data == nil || len(data) == 0 {
 		return DesData{}, nil
 	}
@@ -60,7 +59,7 @@ func (d *GoAvroAvroDeserializer) Deserialize(data []byte) (DesData, error) {
 
 }
 
-func (d *GoAvroAvroDeserializer) getSchema(schemaId int) (sradmin.Schema, error) {
+func (d *GoAvroDeserializer) getSchema(schemaId int) (sradmin.Schema, error) {
 	var schema sradmin.Schema
 
 	switch msg := d.sra.GetSchemaById(schemaId).(type) {
@@ -73,7 +72,7 @@ func (d *GoAvroAvroDeserializer) getSchema(schemaId int) (sradmin.Schema, error)
 				{
 					schema = msg.Schema
 				}
-			case sradmin.FailedToGetSchemaById:
+			case sradmin.FailedToFetchLatestSchemaBySubject:
 				{
 					return sradmin.Schema{}, msg.Err
 				}
@@ -110,5 +109,5 @@ func isAvroWithSchemaID(data []byte) (int, bool) {
 }
 
 func NewAvroDeserializer(sra sradmin.SrAdmin) Deserializer {
-	return &GoAvroAvroDeserializer{sra: sra}
+	return &GoAvroDeserializer{sra: sra}
 }

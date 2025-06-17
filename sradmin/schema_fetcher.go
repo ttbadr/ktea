@@ -18,7 +18,7 @@ type SchemaByIdReceived struct {
 	Schema Schema
 }
 
-type FailedToGetSchemaById struct {
+type FailedToFetchLatestSchemaBySubject struct {
 	Err error
 }
 
@@ -29,7 +29,7 @@ func (msg *GettingSchemaByIdMsg) AwaitCompletion() tea.Msg {
 			Schema: schema,
 		}
 	case err := <-msg.ErrChan:
-		return FailedToGetSchemaById{Err: err}
+		return FailedToFetchLatestSchemaBySubject{Err: err}
 	}
 }
 

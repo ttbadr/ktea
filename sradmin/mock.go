@@ -19,7 +19,7 @@ func (m *MockSrAdmin) GetSchemaById(id int) tea.Msg {
 	return nil
 }
 
-func (m *MockSrAdmin) DeleteSubject(subject string) tea.Msg {
+func (m *MockSrAdmin) DeleteSubject(string) tea.Msg {
 	return nil
 }
 
@@ -27,11 +27,15 @@ func (m *MockSrAdmin) ListSubjects() tea.Msg {
 	return nil
 }
 
-func (m *MockSrAdmin) CreateSchema(details SubjectCreationDetails) tea.Msg {
+func (m *MockSrAdmin) CreateSchema(SubjectCreationDetails) tea.Msg {
 	return nil
 }
 
-func (m *MockSrAdmin) ListVersions(subject string, versions []int) tea.Msg {
+func (m *MockSrAdmin) ListVersions(string, []int) tea.Msg {
+	return nil
+}
+
+func (m *MockSrAdmin) GetLatestSchemaBySubject(string) tea.Msg {
 	return nil
 }
 

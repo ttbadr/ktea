@@ -29,7 +29,7 @@ func TestConsumerGroups(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			ka.PublishRecord(&ProducerRecord{
 				Key:       "key",
-				Value:     "value",
+				Value:     []byte("value"),
 				Topic:     topic,
 				Partition: nil,
 			})
