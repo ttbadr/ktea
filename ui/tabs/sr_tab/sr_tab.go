@@ -24,6 +24,7 @@ type Model struct {
 	subjectsPage      *subjects_page.Model
 	schemaDetailsPage *schema_details_page.Model
 	schemaLister      sradmin.VersionLister
+	schemaDeleter     sradmin.SchemaDeleter
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -46,7 +47,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		cmds = append(cmds, cmd)
 		m.active = createPage
 	case nav.LoadSubjectsPageMsg:
-		if m.subjectsPage == nil || msg.Refresh {
+		if m.subjectsPage == nil || msg.Refresh && m.active != m.subjectsPage {
 			var cmd tea.Cmd
 			m.subjectsPage, cmd = subjects_page.New(m.subjectLister, m.compLister, m.subjectDeleter)
 			cmds = append(cmds, cmd)
@@ -54,7 +55,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.active = m.subjectsPage
 	case nav.LoadSchemaDetailsPageMsg:
 		var cmd tea.Cmd
-		m.schemaDetailsPage, cmd = schema_details_page.New(m.schemaLister, msg.Subject)
+		m.schemaDetailsPage, cmd = schema_details_page.New(m.schemaLister, m.schemaDeleter, msg.Subject)
 		m.active = m.schemaDetailsPage
 		cmds = append(cmds, cmd)
 	}
@@ -67,11 +68,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 }
 
 func New(
-	subjectLister sradmin.SubjectLister,
+	subjectLister sradmin.SrAdmin,
 	compLister sradmin.GlobalCompatibilityLister,
 	schemaLister sradmin.VersionLister,
 	subjectCreator sradmin.SchemaCreator,
 	subjectDeleter sradmin.SubjectDeleter,
+	schemaDeleter sradmin.SchemaDeleter,
 	ktx *kontext.ProgramKtx,
 ) (*Model, tea.Cmd) {
 	subjectsPage, cmd := subjects_page.New(subjectLister, compLister, subjectDeleter)
@@ -84,5 +86,6 @@ func New(
 	model.compLister = compLister
 	model.schemaLister = schemaLister
 	model.subjectDeleter = subjectDeleter
+	model.schemaDeleter = schemaDeleter
 	return &model, cmd
 }

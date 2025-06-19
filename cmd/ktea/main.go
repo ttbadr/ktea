@@ -151,7 +151,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// cluster has been activated and sradmin has been loaded only if a
 				// schema registry has been configured
 				if m.ktx.Config.ActiveCluster().HasSchemaRegistry() {
-					m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.sra, m.sra, m.ktx)
+					m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.sra, m.sra, m.sra, m.ktx)
 					cmds = append(cmds, cmd)
 				}
 				m.cgroupsTabCtrl, cmd = cgroups_tab.New(m.ka, m.ka, m.ka)
@@ -182,7 +182,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 		m.cgroupsTabCtrl, cmd = cgroups_tab.New(m.ka, m.ka, m.ka)
 		cmds = append(cmds, cmd)
-		m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.sra, m.sra, m.ktx)
+		m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.sra, m.sra, m.sra, m.ktx)
 		cmds = append(cmds, cmd)
 
 	case tea.WindowSizeMsg:

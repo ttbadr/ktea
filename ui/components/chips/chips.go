@@ -99,6 +99,9 @@ func (m *Model) nextElem() {
 }
 
 func (m *Model) SelectedLabel() string {
+	if m == nil || len(m.elems) == 0 {
+		return ""
+	}
 	return m.elems[m.selectedIdx]
 }
 

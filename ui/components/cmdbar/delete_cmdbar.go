@@ -72,6 +72,9 @@ func (s *DeleteCmdBar[any]) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
 			if s.deleteConfirm.GetValue().(bool) {
 				s.deleteConfirm = newDeleteConfirm()
 				return s.active, nil, s.deleteFunc(s.deleteValue)
+			} else {
+				s.active = false
+				return s.active, nil, nil
 			}
 		}
 	}

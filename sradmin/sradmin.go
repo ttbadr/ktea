@@ -20,6 +20,10 @@ type SubjectDeleter interface {
 	DeleteSubject(subject string) tea.Msg
 }
 
+type SchemaDeleter interface {
+	DeleteSchema(subject string, version int) tea.Msg
+}
+
 type VersionLister interface {
 	ListVersions(subject string, versions []int) tea.Msg
 }

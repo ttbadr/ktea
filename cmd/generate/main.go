@@ -19,7 +19,7 @@ type eventGenFunc func(id string) interface{}
 type generationData struct {
 	topic   string
 	subject string
-	schema  string
+	schema  []string
 	eventGenFunc
 }
 
@@ -27,7 +27,7 @@ func main() {
 	genData := []generationData{
 		{"dev.finance.invoice",
 			"dev.finance.invoice-io.jonasg.ktea.invoice.InvoiceCreated",
-			`
+			[]string{`
 			{
 				"type": "record",
 				"name": "InvoiceCreated",
@@ -44,7 +44,7 @@ func main() {
 					{"name": "description", "type": "string", "doc": "Description or notes about the invoice."}
 				]
 			}
-		`,
+		`},
 			func(id string) interface{} {
 				return map[string]interface{}{
 					"id":          id,
@@ -62,7 +62,7 @@ func main() {
 		{
 			"dev.finance.payment",
 			"dev.finance.payment-io.jonasg.ktea.payment.PaymentProcessed",
-			`
+			[]string{`
 	{
 		"type": "record",
 		"name": "PaymentProcessed",
@@ -78,7 +78,7 @@ func main() {
 			{"name": "method", "type": "string", "doc": "Payment method used (e.g., 'Credit Card', 'Bank Transfer')."}
 		]
 	}
-	`,
+	`},
 			func(id string) interface{} {
 				return map[string]interface{}{
 					"id":          id,
@@ -95,7 +95,7 @@ func main() {
 		{
 			"dev.order.checkout",
 			"dev.order.checkout-io.jonasg.ktea.order.CheckoutInitiated",
-			`
+			[]string{`
 	{
 		"type": "record",
 		"name": "CheckoutInitiated",
@@ -109,7 +109,7 @@ func main() {
 			{"name": "checkoutDate", "type": "string", "doc": "Date when the checkout was initiated, in ISO 8601 format."}
 		]
 	}
-	`,
+	`},
 			func(id string) interface{} {
 				return map[string]interface{}{
 					"id":           id,
@@ -123,7 +123,7 @@ func main() {
 		{
 			"dev.order.shipment",
 			"dev.order.shipment-io.jonasg.ktea.order.ShipmentCreated",
-			`
+			[]string{`
 	{
 		"type": "record",
 		"name": "ShipmentCreated",
@@ -137,7 +137,7 @@ func main() {
 			{"name": "trackingNumber", "type": "string", "doc": "Tracking number for the shipment."}
 		]
 	}
-	`,
+	`},
 			func(id string) interface{} {
 				return map[string]interface{}{
 					"id":             id,
@@ -151,7 +151,7 @@ func main() {
 		{
 			"dev.product.stock",
 			"dev.product.stock-io.jonasg.ktea.product.StockUpdated",
-			`
+			[]string{`
 	{
 		"type": "record",
 		"name": "StockUpdated",
@@ -164,7 +164,7 @@ func main() {
 			{"name": "updateDate", "type": "string", "doc": "Date when the stock was updated, in ISO 8601 format."}
 		]
 	}
-	`,
+	`},
 			func(id string) interface{} {
 				return map[string]interface{}{
 					"id":         id,
@@ -177,7 +177,7 @@ func main() {
 		{
 			"dev.product.category",
 			"dev.product.category-io.jonasg.ktea.product.CategoryAssigned",
-			`
+			[]string{`
 	{
 		"type": "record",
 		"name": "CategoryAssigned",
@@ -190,7 +190,7 @@ func main() {
 			{"name": "assignmentDate", "type": "string", "doc": "Date when the category was assigned, in ISO 8601 format."}
 		]
 	}
-	`,
+	`},
 			func(id string) interface{} {
 				return map[string]interface{}{
 					"id":             id,
@@ -203,7 +203,7 @@ func main() {
 		{
 			"dev.product.price",
 			"dev.product.price-io.jonasg.ktea.product.PriceUpdated",
-			`
+			[]string{`
 	{
 		"type": "record",
 		"name": "PriceUpdated",
@@ -217,7 +217,7 @@ func main() {
 			{"name": "updateDate", "type": "string", "doc": "Date when the price was updated, in ISO 8601 format."}
 		]
 	}
-	`,
+	`},
 			func(id string) interface{} {
 				return map[string]interface{}{
 					"id":         id,
@@ -231,7 +231,7 @@ func main() {
 		{
 			"dev.customer.profile",
 			"dev.customer.profile-io.jonasg.ktea.customer.ProfileUpdated",
-			`
+			[]string{`
 	{
 		"type": "record",
 		"name": "ProfileUpdated",
@@ -244,7 +244,7 @@ func main() {
 			{"name": "changes", "type": "string", "doc": "Description of the changes made to the profile."}
 		]
 	}
-	`,
+	`},
 			func(id string) interface{} {
 				return map[string]interface{}{
 					"id":         id,
@@ -257,7 +257,39 @@ func main() {
 		{
 			"dev.customer.action",
 			"dev.customer.action-io.jonasg.ktea.customer.ActionLogged",
-			`
+			[]string{
+				`
+	{
+		"type": "record",
+		"name": "ActionLogged",
+		"namespace": "io.jonasg.ktea.customer",
+		"doc": "Schema for the ActionLogged event.",
+		"fields": [
+			{"name": "id", "type": "string", "doc": "Unique identifier for the action log."},
+			{"name": "customerId", "type": "string", "doc": "Unique identifier for the customer."},
+			{"name": "origin", "type": "string", "doc": "Original of the action."},
+			{"name": "platform", "type": "string", "doc": "Platform from which the action was performed."},
+			{"name": "action", "type": "string", "doc": "Description of the action performed by the customer."},
+			{"name": "actionDate", "type": "string", "doc": "Date when the action was performed, in ISO 8601 format."}
+		]
+	}
+	`,
+				`
+	{
+		"type": "record",
+		"name": "ActionLogged",
+		"namespace": "io.jonasg.ktea.customer",
+		"doc": "Schema for the ActionLogged event.",
+		"fields": [
+			{"name": "id", "type": "string", "doc": "Unique identifier for the action log."},
+			{"name": "customerId", "type": "string", "doc": "Unique identifier for the customer."},
+			{"name": "origin", "type": "string", "doc": "Original of the action."},
+			{"name": "action", "type": "string", "doc": "Description of the action performed by the customer."},
+			{"name": "actionDate", "type": "string", "doc": "Date when the action was performed, in ISO 8601 format."}
+		]
+	}
+	`,
+				`
 	{
 		"type": "record",
 		"name": "ActionLogged",
@@ -270,7 +302,7 @@ func main() {
 			{"name": "actionDate", "type": "string", "doc": "Date when the action was performed, in ISO 8601 format."}
 		]
 	}
-	`,
+	`},
 			func(id string) interface{} {
 				return map[string]interface{}{
 					"id":         id,
@@ -283,7 +315,7 @@ func main() {
 		{
 			"dev.customer.feedback",
 			"dev.customer.feedback-io.jonasg.ktea.customer.FeedbackReceived",
-			`
+			[]string{`
 	{
 		"type": "record",
 		"name": "FeedbackReceived",
@@ -296,7 +328,7 @@ func main() {
 			{"name": "feedbackDate", "type": "string", "doc": "Date when the feedback was provided, in ISO 8601 format."}
 		]
 	}
-	`,
+	`},
 			func(id string) interface{} {
 				return map[string]interface{}{
 					"id":           id,
@@ -321,12 +353,14 @@ func main() {
 			}
 
 			if !subjectExists(sa, gd.subject) {
-				createSubject(sa, gd.subject, gd.schema)
+				for _, s := range gd.schema {
+					registerSchema(sa, gd.subject, s)
+				}
 			}
 
 			schemaInfo := getLatestSchema(sa, gd.subject)
 
-			for i := 0; i < 10_000; i++ {
+			for i := 0; i < 1000; i++ {
 				id := uuid.New().String()
 				event := gd.eventGenFunc(id)
 				publish(ka, gd.topic, id, event, schemaInfo)
@@ -393,7 +427,7 @@ func getLatestSchema(sa sradmin.SrAdmin, subject string) sradmin.Schema {
 	return schemaInfo
 }
 
-func createSubject(srAdmin sradmin.SrAdmin, subject string, schema string) {
+func registerSchema(srAdmin sradmin.SrAdmin, subject string, schema string) {
 	msg := srAdmin.CreateSchema(sradmin.SubjectCreationDetails{
 		Subject: subject,
 		Schema:  schema,
@@ -448,7 +482,7 @@ func topicExists(ka kadmin.Kadmin, expectedTopic string) bool {
 		topics := msg.Topics
 		for _, topic := range topics {
 			if topic.Name == expectedTopic {
-				fmt.Printf("Topic %s already exists", expectedTopic)
+				fmt.Println("Topic " + expectedTopic + " already exists")
 				return true
 			}
 		}

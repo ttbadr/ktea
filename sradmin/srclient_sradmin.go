@@ -24,6 +24,7 @@ type SrAdmin interface {
 	SchemaFetcher
 	GlobalCompatibilityLister
 	LatestSchemaBySubjectFetcher
+	SchemaDeleter
 }
 
 func (s *DefaultSrAdmin) GetSubjects() []Subject {

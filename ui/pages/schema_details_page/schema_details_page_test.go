@@ -7,21 +7,29 @@ import (
 	"ktea/kontext"
 	"ktea/sradmin"
 	"ktea/tests"
+	"ktea/ui/components/notifier"
 	"ktea/ui/pages/nav"
 	"testing"
 )
 
 type MockSchemaLister struct{}
 
-func (m *MockSchemaLister) ListVersions(subject string, versions []int) tea.Msg {
+func (m *MockSchemaLister) ListVersions(string, []int) tea.Msg {
 	return nil
+}
+
+type MockSchemaDeleter struct {
+}
+
+func (m *MockSchemaDeleter) DeleteSchema(string, int) tea.Msg {
+	return sradmin.SchemaDeletionStartedMsg{}
 }
 
 func TestSchemaDetailsPage(t *testing.T) {
 
 	t.Run("When schemas not loaded yet", func(t *testing.T) {
 
-		page, _ := New(&MockSchemaLister{}, sradmin.Subject{})
+		page, _ := New(&MockSchemaLister{}, &MockSchemaDeleter{}, sradmin.Subject{})
 
 		t.Run("viewport ignores msgs", func(t *testing.T) {
 			assert.Nil(t, page.vp)
@@ -43,7 +51,7 @@ func TestSchemaDetailsPage(t *testing.T) {
 	})
 
 	t.Run("Title contains subject and version", func(t *testing.T) {
-		page, _ := New(&MockSchemaLister{}, sradmin.Subject{
+		page, _ := New(&MockSchemaLister{}, &MockSchemaDeleter{}, sradmin.Subject{
 			Name:     "subject-name",
 			Versions: nil,
 		})
@@ -65,7 +73,7 @@ func TestSchemaDetailsPage(t *testing.T) {
 	})
 
 	t.Run("Loading indicator", func(t *testing.T) {
-		page, _ := New(&MockSchemaLister{}, sradmin.Subject{})
+		page, _ := New(&MockSchemaLister{}, &MockSchemaDeleter{}, sradmin.Subject{})
 
 		t.Run("visible when fetching schemas", func(t *testing.T) {
 			page.Update(sradmin.SchemaListingStarted{})
@@ -94,7 +102,7 @@ func TestSchemaDetailsPage(t *testing.T) {
 	})
 
 	t.Run("esc goes back to subjects list", func(t *testing.T) {
-		page, _ := New(&MockSchemaLister{}, sradmin.Subject{})
+		page, _ := New(&MockSchemaLister{}, &MockSchemaDeleter{}, sradmin.Subject{})
 
 		cmds := page.Update(tests.Key(tea.KeyEsc))
 
@@ -104,7 +112,7 @@ func TestSchemaDetailsPage(t *testing.T) {
 	})
 
 	t.Run("Render single schema formatted", func(t *testing.T) {
-		page, _ := New(&MockSchemaLister{}, sradmin.Subject{})
+		page, _ := New(&MockSchemaLister{}, &MockSchemaDeleter{}, sradmin.Subject{})
 
 		page.Update(sradmin.SchemasListed{
 			Schemas: []sradmin.Schema{
@@ -123,7 +131,7 @@ func TestSchemaDetailsPage(t *testing.T) {
 	})
 
 	t.Run("Multiple versions", func(t *testing.T) {
-		page, _ := New(&MockSchemaLister{}, sradmin.Subject{})
+		page, _ := New(&MockSchemaLister{}, &MockSchemaDeleter{}, sradmin.Subject{})
 
 		page.Update(sradmin.SchemasListed{
 			Schemas: []sradmin.Schema{
@@ -154,7 +162,7 @@ func TestSchemaDetailsPage(t *testing.T) {
 	})
 
 	t.Run("Renders version IDs", func(t *testing.T) {
-		page, _ := New(&MockSchemaLister{}, sradmin.Subject{})
+		page, _ := New(&MockSchemaLister{}, &MockSchemaDeleter{}, sradmin.Subject{})
 
 		page.Update(sradmin.SchemasListed{
 			Schemas: []sradmin.Schema{
@@ -193,7 +201,7 @@ func TestSchemaDetailsPage(t *testing.T) {
 	})
 
 	t.Run("schema view is scrollable", func(t *testing.T) {
-		page, _ := New(&MockSchemaLister{}, sradmin.Subject{})
+		page, _ := New(&MockSchemaLister{}, &MockSchemaDeleter{}, sradmin.Subject{})
 
 		page.Update(sradmin.SchemasListed{
 			Schemas: []sradmin.Schema{
@@ -229,5 +237,96 @@ func TestSchemaDetailsPage(t *testing.T) {
 
 		assert.NotRegexp(t, "│ {\\W+│\n│\\W+\"type\": \"record\",", render)
 		assert.Contains(t, render, "userId")
+	})
+
+	t.Run("Delete schema", func(t *testing.T) {
+		page, _ := New(&MockSchemaLister{}, &MockSchemaDeleter{}, sradmin.Subject{
+			Name:          "test-subject",
+			Versions:      []int{1, 2},
+			Compatibility: "BACKWARDS",
+		})
+
+		page.Update(sradmin.SchemasListed{
+			Schemas: []sradmin.Schema{
+				{
+					Id:      "111",
+					Value:   "{\n  \"type\": \"record\",\n  \"name\": \"UserProfile\",\n  \"namespace\": \"com.example.avro\",\n  \"fields\": [\n    {\n      \"name\": \"userId\",\n      \"type\": \"string\",\n      \"doc\": \"Unique identifier for the user\"\n    },\n    {\n      \"name\": \"firstName\",\n      \"type\": [\"null\", \"string\"],\n      \"default\": null,\n      \"doc\": \"The user's first name, optional\"\n    },\n    {\n      \"name\": \"lastName\",\n      \"type\": [\"null\", \"string\"],\n      \"default\": null,\n      \"doc\": \"The user's last name, optional\"\n    },\n    {\n      \"name\": \"email\",\n      \"type\": \"string\",\n      \"doc\": \"Email address of the user\"\n    },\n    {\n      \"name\": \"age\",\n      \"type\": [\"null\", \"int\"],\n      \"default\": null,\n      \"doc\": \"Age of the user, optional\"\n    },\n    {\n      \"name\": \"isActive\",\n      \"type\": \"boolean\",\n      \"doc\": \"Indicates if the user is active\"\n    },\n    {\n      \"name\": \"signupDate\",\n      \"type\": {\n        \"type\": \"long\",\n        \"logicalType\": \"timestamp-millis\"\n      },\n      \"doc\": \"Timestamp of when the user signed up\"\n    }\n  ],\n  \"doc\": \"Schema for storing user profile data\"\n}\n",
+					Version: 1,
+					Err:     nil,
+				},
+				{
+					Id:      "123",
+					Value:   "{\n  \"type\": \"record\",\n  \"name\": \"UserProfile\",\n  \"namespace\": \"com.example.avro\",\n  \"fields\": [\n    {\n      \"name\": \"userId\",\n      \"type\": \"string\",\n      \"doc\": \"Unique identifier for the user\"\n    },\n    {\n      \"name\": \"firstName\",\n      \"type\": [\"null\", \"string\"],\n      \"default\": null,\n      \"doc\": \"The user's first name, optional\"\n    },\n    {\n      \"name\": \"lastName\",\n      \"type\": [\"null\", \"string\"],\n      \"default\": null,\n      \"doc\": \"The user's last name, optional\"\n    },\n    {\n      \"name\": \"email\",\n      \"type\": \"string\",\n      \"doc\": \"Email address of the user\"\n    },\n    {\n      \"name\": \"age\",\n      \"type\": [\"null\", \"int\"],\n      \"default\": null,\n      \"doc\": \"Age of the user, optional\"\n    },\n    {\n      \"name\": \"isActive\",\n      \"type\": \"boolean\",\n      \"doc\": \"Indicates if the user is active\"\n    },\n    {\n      \"name\": \"signupDate\",\n      \"type\": {\n        \"type\": \"long\",\n        \"logicalType\": \"timestamp-millis\"\n      },\n      \"doc\": \"Timestamp of when the user signed up\"\n    }\n  ],\n  \"doc\": \"Schema for storing user profile data\"\n}\n",
+					Version: 2,
+					Err:     nil,
+				},
+			},
+		})
+		page.View(tests.NewKontext(), tests.TestRenderer)
+
+		t.Run("F2 triggers version delete", func(t *testing.T) {
+			page.Update(tests.Key(tea.KeyDown))
+			page.Update(tests.Key(tea.KeyF2))
+
+			render := page.View(tests.NewKontext(), tests.TestRenderer)
+
+			assert.Regexp(t, "┃ 🗑️  Delete version 2 of schema?\\W+Delete!\\W+Cancel.", render)
+		})
+
+		t.Run("esc cancels deletion", func(t *testing.T) {
+			page.Update(tests.Key(tea.KeyEsc))
+
+			render := page.View(tests.NewKontext(), tests.TestRenderer)
+
+			assert.NotRegexp(t, "┃ 🗑️  Delete version 2 of schema?\\W+Delete!\\W+Cancel.", render)
+			assert.Contains(t, render, "ID      : 123")
+		})
+
+		t.Run("selecting cancel cancels deletion", func(t *testing.T) {
+			page.Update(tests.Key(tea.KeyDown))
+			page.Update(tests.Key(tea.KeyF2))
+			page.Update(tests.Key(tea.KeyEnter))
+
+			render := page.View(tests.NewKontext(), tests.TestRenderer)
+
+			assert.NotRegexp(t, "┃ 🗑️  Delete version 2 of schema?\\W+Delete!\\W+Cancel.", render)
+			assert.Contains(t, render, "ID      : 123")
+		})
+
+		t.Run("effectively delete schema", func(t *testing.T) {
+			page.Update(tests.Key(tea.KeyF2))
+			page.Update(tests.Key('d'))
+			cmd := page.Update(tests.Key(tea.KeyEnter))
+
+			assert.IsType(t, sradmin.SchemaDeletionStartedMsg{}, cmd())
+		})
+
+		t.Run("removes delete schema from list view", func(t *testing.T) {
+			cmd := page.Update(sradmin.SchemaDeletedMsg{
+				Version: 1,
+			})
+
+			render := page.View(tests.NewKontext(), tests.TestRenderer)
+
+			assert.Contains(t, render, "Versions:  «2»                                                                                     \n")
+			assert.IsType(t, notifier.HideNotificationMsg{}, cmd())
+			assert.Len(t, page.schemas, 1)
+			assert.Contains(t, page.schemas, sradmin.Schema{
+				Id:      "123",
+				Value:   "{\n  \"type\": \"record\",\n  \"name\": \"UserProfile\",\n  \"namespace\": \"com.example.avro\",\n  \"fields\": [\n    {\n      \"name\": \"userId\",\n      \"type\": \"string\",\n      \"doc\": \"Unique identifier for the user\"\n    },\n    {\n      \"name\": \"firstName\",\n      \"type\": [\"null\", \"string\"],\n      \"default\": null,\n      \"doc\": \"The user's first name, optional\"\n    },\n    {\n      \"name\": \"lastName\",\n      \"type\": [\"null\", \"string\"],\n      \"default\": null,\n      \"doc\": \"The user's last name, optional\"\n    },\n    {\n      \"name\": \"email\",\n      \"type\": \"string\",\n      \"doc\": \"Email address of the user\"\n    },\n    {\n      \"name\": \"age\",\n      \"type\": [\"null\", \"int\"],\n      \"default\": null,\n      \"doc\": \"Age of the user, optional\"\n    },\n    {\n      \"name\": \"isActive\",\n      \"type\": \"boolean\",\n      \"doc\": \"Indicates if the user is active\"\n    },\n    {\n      \"name\": \"signupDate\",\n      \"type\": {\n        \"type\": \"long\",\n        \"logicalType\": \"timestamp-millis\"\n      },\n      \"doc\": \"Timestamp of when the user signed up\"\n    }\n  ],\n  \"doc\": \"Schema for storing user profile data\"\n}\n",
+				Version: 2,
+				Err:     nil,
+			})
+			assert.True(t, page.atLeastOneSchemaDeleted)
+		})
+
+		t.Run("removing last version of subject goes back to subjects page", func(t *testing.T) {
+			cmd := page.Update(sradmin.SchemaDeletedMsg{
+				Version: 2,
+			})
+
+			msg := tests.ExecuteBatchCmd(cmd)
+			assert.Contains(t, msg, nav.LoadSubjectsPageMsg{Refresh: true}, msg)
+		})
 	})
 }

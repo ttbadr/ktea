@@ -65,4 +65,37 @@ func TestDeleteCmdBar(t *testing.T) {
 		assert.Equal(t, AssertDeletedMsg{"deleteMe"}, cmd())
 	})
 
+	t.Run("Cancel button cancels dialog", func(t *testing.T) {
+		var deleteFunc DeleteFunc[string] = func(s string) tea.Cmd {
+			return nil
+		}
+		cmdBar := NewDeleteCmdBar[string](nil, deleteFunc,
+			func(string) (bool, tea.Cmd) {
+				return true, nil
+			})
+
+		cmdBar.Update(tests.Key(tea.KeyF2))
+		cmdBar.Update(tests.Key('c'))
+		active, msg, _ := cmdBar.Update(tests.Key(tea.KeyEnter))
+
+		assert.False(t, active)
+		assert.Nil(t, msg)
+	})
+
+	t.Run("esc cancels dialog", func(t *testing.T) {
+		var deleteFunc DeleteFunc[string] = func(s string) tea.Cmd {
+			return nil
+		}
+		cmdBar := NewDeleteCmdBar[string](nil, deleteFunc,
+			func(string) (bool, tea.Cmd) {
+				return true, nil
+			})
+
+		cmdBar.Update(tests.Key(tea.KeyF2))
+		active, msg, _ := cmdBar.Update(tests.Key(tea.KeyEsc))
+
+		assert.False(t, active)
+		assert.Nil(t, msg)
+	})
+
 }

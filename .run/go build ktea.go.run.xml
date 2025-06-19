@@ -7,7 +7,7 @@
     <kind value="FILE" />
     <package value="ktea" />
     <directory value="$PROJECT_DIR$" />
-    <filePath value="$PROJECT_DIR$/ktea.go" />
+    <filePath value="$PROJECT_DIR$/cmd/ktea/main.go" />
     <method v="2" />
   </configuration>
 </component>

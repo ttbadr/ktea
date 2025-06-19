@@ -168,8 +168,8 @@ func New(ktx *kontext.ProgramKtx, connChecker kadmin.ConnChecker) (nav.Page, tea
 		return message
 	}
 
-	validateFunc := func(subject string) (bool, tea.Cmd) {
-		if ktx.Config.ActiveCluster().Name == subject {
+	validateFunc := func(clusterName string) (bool, tea.Cmd) {
+		if ktx.Config.ActiveCluster().Name == clusterName {
 			return false, func() tea.Msg {
 				return ActiveClusterDeleteErrMsg{}
 			}

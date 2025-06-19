@@ -1,6 +1,7 @@
 package schema_details_page
 
 import (
+	"fmt"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -9,21 +10,25 @@ import (
 	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/chips"
+	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
 	"ktea/ui/pages/nav"
 	"slices"
 	"sort"
 	"strconv"
+	"time"
 )
 
 type Model struct {
-	cmdbar       *CmdBar
-	schemas      []sradmin.Schema
-	vp           *viewport.Model
-	subject      sradmin.Subject
-	versionChips *chips.Model
-	schemaLister sradmin.VersionLister
-	activeSchema *sradmin.Schema
+	cmdbar                  *CmdBar
+	schemas                 []sradmin.Schema
+	vp                      *viewport.Model
+	subject                 sradmin.Subject
+	versionChips            *chips.Model
+	schemaLister            sradmin.VersionLister
+	activeSchema            *sradmin.Schema
+	atLeastOneSchemaDeleted bool
+	updatedSchemas          []sradmin.Schema
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -33,16 +38,15 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 
 	if m.schemas != nil {
 		if m.vp == nil {
-			var versions []string
-			for _, schema := range m.schemas {
-				versions = append(versions, strconv.Itoa(schema.Version))
-			}
-			m.versionChips = chips.New("Versions", versions...)
-			m.versionChips.ActivateByLabel(strconv.Itoa(m.activeSchema.Version))
 			vp := viewport.New(ktx.WindowWidth-3, ktx.AvailableHeight-4)
 			m.vp = &vp
+			m.createVersionChipsView()
 		}
 		if m.vp != nil {
+			if len(m.updatedSchemas) != 0 && len(m.schemas) != len(m.updatedSchemas) {
+				m.schemas = m.updatedSchemas
+				m.createVersionChipsView()
+			}
 			m.vp.Height = ktx.AvailableHeight - 5
 			m.vp.Width = ktx.WindowWidth - 3
 			views = append(views, lipgloss.NewStyle().
@@ -61,15 +65,26 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 			m.vp.SetContent(ui.PrettyPrintJson(m.activeSchema.Value))
 			views = append(views, renderer.RenderWithStyle(m.vp.View(), styles.TextViewPort))
 		}
+	} else {
+		m.versionChips = chips.New("Versions")
 	}
 
 	return ui.JoinVertical(lipgloss.Top, views...)
 }
 
+func (m *Model) createVersionChipsView() {
+	var versions []string
+	for _, schema := range m.schemas {
+		versions = append(versions, strconv.Itoa(schema.Version))
+	}
+	m.versionChips = chips.New("Versions", versions...)
+	m.versionChips.ActivateByLabel(strconv.Itoa(m.activeSchema.Version))
+}
+
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
-	if m.versionChips != nil {
+	if m.cmdbar.active == nil {
 		cmd := m.versionChips.Update(msg)
 		cmds = append(cmds, cmd)
 	}
@@ -78,17 +93,25 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc":
-			return ui.PublishMsg(nav.LoadSubjectsPageMsg{})
-		case "enter":
-			version, _ := strconv.Atoi(m.versionChips.SelectedLabel())
-			m.activeSchema = nil
-			for _, schema := range m.schemas {
-				if schema.Version == version {
-					m.activeSchema = &schema
+			if m.cmdbar.active != nil {
+				pmsg, _ := m.cmdbar.Update(msg, m.versionChips.SelectedLabel())
+				if pmsg == nil {
+					return nil
 				}
 			}
-			if m.activeSchema == nil {
-				panic("No schema found that matches " + m.versionChips.SelectedLabel())
+			return ui.PublishMsg(nav.LoadSubjectsPageMsg{Refresh: m.atLeastOneSchemaDeleted})
+		case "enter":
+			if m.cmdbar.active == nil {
+				version, _ := strconv.Atoi(m.versionChips.SelectedLabel())
+				m.activeSchema = nil
+				for _, schema := range m.schemas {
+					if schema.Version == version {
+						m.activeSchema = &schema
+					}
+				}
+				if m.activeSchema == nil {
+					panic("No schema found that matches " + m.versionChips.SelectedLabel())
+				}
 			}
 		}
 	case sradmin.SchemasListed:
@@ -99,9 +122,24 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.activeSchema = m.latestSchema()
 	case sradmin.SchemaListingStarted:
 		cmds = append(cmds, msg.AwaitCompletion)
+	case sradmin.SchemaDeletionStartedMsg:
+		cmds = append(cmds, msg.AwaitCompletion)
+	case sradmin.SchemaDeletedMsg:
+		m.atLeastOneSchemaDeleted = true
+		for i, schema := range m.schemas {
+			if schema.Version == msg.Version {
+				m.updatedSchemas = slices.Delete(m.schemas, i, i+1)
+			}
+		}
+		if len(m.updatedSchemas) == 0 {
+			cmds = append(cmds, func() tea.Msg {
+				time.Sleep(5 * time.Second)
+				return nav.LoadSubjectsPageMsg{Refresh: true}
+			})
+		}
 	}
 
-	msg, cmd := m.cmdbar.Update(msg)
+	msg, cmd := m.cmdbar.Update(msg, m.versionChips.SelectedLabel())
 	cmds = append(cmds, cmd)
 
 	if m.vp != nil {
@@ -130,10 +168,6 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 		{
 			Name:       "Delete Version",
 			Keybinding: "F2",
-		},
-		{
-			Name:       "Prev Version",
-			Keybinding: "h/←",
 		},
 		{
 			Name:       "Go Back",
@@ -166,13 +200,32 @@ func (m *Model) latestSchema() *sradmin.Schema {
 
 func New(
 	schemaLister sradmin.VersionLister,
+	schemaDeleter sradmin.SchemaDeleter,
 	subject sradmin.Subject,
 ) (*Model, tea.Cmd) {
+
 	model := &Model{
-		cmdbar:       NewCmdBar(),
 		subject:      subject,
 		schemaLister: schemaLister,
 	}
+
+	deleteFunc := func(version int) tea.Cmd {
+		return func() tea.Msg {
+			return schemaDeleter.DeleteSchema(subject.Name, version)
+		}
+	}
+
+	schemaDeletedMsg := func(msg sradmin.SchemaDeletedMsg, m *notifier.Model) (bool, tea.Cmd) {
+		if len(model.updatedSchemas) == 0 {
+			m.ShowSuccessMsg(fmt.Sprintf("Deleted last schema with version %d of subject, returning to subjects list.", msg.Version))
+		} else {
+			m.ShowSuccessMsg(fmt.Sprintf("Schema with version %d has been deleted", msg.Version))
+		}
+		return true, m.AutoHideCmd("schema-details-cmd-bar")
+	}
+
+	model.cmdbar = NewCmdBar(deleteFunc, schemaDeletedMsg)
+
 	return model, func() tea.Msg {
 		return schemaLister.ListVersions(subject.Name, subject.Versions)
 	}
