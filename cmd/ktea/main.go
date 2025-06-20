@@ -213,7 +213,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				m.tabCtrl = m.clustersTabCtrl
 			}
-			cmds = append(cmds, m.tabCtrl.Update(ui.RegainedFocusMsg{}))
+			// can only be nil when ktea has not been fully loaded yet (config.LoadedMsg not been processed)
+			if m.tabCtrl != nil {
+				cmds = append(cmds, m.tabCtrl.Update(ui.RegainedFocusMsg{}))
+			}
 		}
 	}
 
