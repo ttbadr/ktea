@@ -9,6 +9,7 @@ import (
 	"ktea/sradmin"
 	"ktea/styles"
 	"ktea/ui"
+	"ktea/ui/clipper"
 	"ktea/ui/components/chips"
 	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
@@ -29,6 +30,14 @@ type Model struct {
 	activeSchema            *sradmin.Schema
 	atLeastOneSchemaDeleted bool
 	updatedSchemas          []sradmin.Schema
+	clipWriter              clipper.Writer
+}
+
+type SchemaCopiedMsg struct {
+}
+
+type CopyErrorMsg struct {
+	Err error
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -113,6 +122,13 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 					panic("No schema found that matches " + m.versionChips.SelectedLabel())
 				}
 			}
+		case "c":
+			err := m.clipWriter.Write(m.activeSchema.Value)
+			if err != nil {
+				cmds = append(cmds, ui.PublishMsg(CopyErrorMsg{Err: err}))
+			} else {
+				cmds = append(cmds, ui.PublishMsg(SchemaCopiedMsg{}))
+			}
 		}
 	case sradmin.SchemasListed:
 		m.schemas = msg.Schemas
@@ -170,6 +186,10 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 			Keybinding: "F2",
 		},
 		{
+			Name:       "Copy Schema",
+			Keybinding: "c",
+		},
+		{
 			Name:       "Go Back",
 			Keybinding: "esc",
 		},
@@ -202,11 +222,13 @@ func New(
 	schemaLister sradmin.VersionLister,
 	schemaDeleter sradmin.SchemaDeleter,
 	subject sradmin.Subject,
+	clipWriter clipper.Writer,
 ) (*Model, tea.Cmd) {
 
 	model := &Model{
 		subject:      subject,
 		schemaLister: schemaLister,
+		clipWriter:   clipWriter,
 	}
 
 	deleteFunc := func(version int) tea.Cmd {

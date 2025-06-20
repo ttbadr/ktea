@@ -94,6 +94,14 @@ func NewCmdBar(deleteFunc cmdbar.DeleteFunc[int], schemaDeletedNotifier cmdbar.N
 	cmdbar.WithMsgHandler(notifierCmdBar, schemaDeletionStartedNotifier)
 	cmdbar.WithMsgHandler(notifierCmdBar, schemaDeletedNotifier)
 	cmdbar.WithMsgHandler(notifierCmdBar, schemaListedNotifier)
+	cmdbar.WithMsgHandler(notifierCmdBar, func(msg SchemaCopiedMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.ShowSuccessMsg("Schema copied")
+		return true, m.AutoHideCmd("schema-details-cmd-bar")
+	})
+	cmdbar.WithMsgHandler(notifierCmdBar, func(msg CopyErrorMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.ShowErrorMsg("Copy failed", msg.Err)
+		return true, m.AutoHideCmd("schema-details-cmd-bar")
+	})
 
 	deleteMsgFunc := func(schemaId int) string {
 		return renderFG("Delete version ", styles.ColorIndigo) +

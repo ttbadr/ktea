@@ -6,6 +6,7 @@ import (
 	"ktea/kontext"
 	"ktea/sradmin"
 	"ktea/ui"
+	"ktea/ui/clipper"
 	"ktea/ui/components/statusbar"
 	"ktea/ui/pages/create_schema_page"
 	"ktea/ui/pages/nav"
@@ -55,7 +56,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.active = m.subjectsPage
 	case nav.LoadSchemaDetailsPageMsg:
 		var cmd tea.Cmd
-		m.schemaDetailsPage, cmd = schema_details_page.New(m.schemaLister, m.schemaDeleter, msg.Subject)
+		m.schemaDetailsPage, cmd = schema_details_page.New(m.schemaLister, m.schemaDeleter, msg.Subject, clipper.New())
 		m.active = m.schemaDetailsPage
 		cmds = append(cmds, cmd)
 	}
