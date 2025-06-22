@@ -15,6 +15,8 @@ import (
 
 type state int
 
+type Option func(m *Model)
+
 type Model struct {
 	state       state
 	active      nav.Page
@@ -23,6 +25,7 @@ type Model struct {
 	statusbar   *statusbar.Model
 	ktx         *kontext.ProgramKtx
 	connChecker kadmin.ConnChecker
+	escGoesBack bool
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -51,51 +54,46 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return func() tea.Msg {
 			return config.ReLoadConfig()
 		}
-	case config.ClusterDeletedMsg:
-		if m.config.HasClusters() {
-			cmd := m.active.Update(msg)
-			return tea.Batch(cmd, func() tea.Msg {
-				// Emit Msg to trigger table recreation without deleted cluster
-				return clusters_page.ClusterSwitchedMsg{
-					Cluster: m.ktx.Config.ActiveCluster(),
-				}
-			})
-		} else {
-			m.active = create_cluster_page.NewForm(m.connChecker, m.ktx.Config, m.ktx)
-		}
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc":
-			m.active, _ = clusters_page.New(m.ktx, m.connChecker)
+			if m.escGoesBack {
+				m.active, _ = clusters_page.New(m.ktx, m.connChecker)
+			}
 		case "ctrl+n":
-			m.active = create_cluster_page.NewForm(m.connChecker, m.ktx.Config, m.ktx)
+			if _, ok := m.active.(*clusters_page.Model); ok {
+				m.active = create_cluster_page.NewForm(m.connChecker, m.ktx.Config, m.ktx)
+			}
 		case "ctrl+e":
-			clusterName := m.active.(*clusters_page.Model).SelectedCluster()
-			selectedCluster := m.ktx.Config.FindClusterByName(*clusterName)
-			formValues := &create_cluster_page.FormValues{
-				Name:  selectedCluster.Name,
-				Color: selectedCluster.Color,
-				Host:  selectedCluster.BootstrapServers[0],
+			if clustersPage, ok := m.active.(*clusters_page.Model); ok {
+				clusterName := clustersPage.SelectedCluster()
+				selectedCluster := m.ktx.Config.FindClusterByName(*clusterName)
+				formValues := &create_cluster_page.FormValues{
+					Name:  selectedCluster.Name,
+					Color: selectedCluster.Color,
+					Host:  selectedCluster.BootstrapServers[0],
+				}
+				if selectedCluster.SASLConfig != nil {
+					formValues.SecurityProtocol = selectedCluster.SASLConfig.SecurityProtocol
+					formValues.Username = selectedCluster.SASLConfig.Username
+					formValues.Password = selectedCluster.SASLConfig.Password
+					formValues.AuthMethod = config.SASLAuthMethod
+					formValues.SSLEnabled = selectedCluster.SSLEnabled
+				}
+				if selectedCluster.SchemaRegistry != nil {
+					formValues.SrEnabled = true
+					formValues.SrUrl = selectedCluster.SchemaRegistry.Url
+					formValues.SrUsername = selectedCluster.SchemaRegistry.Username
+					formValues.SrPassword = selectedCluster.SchemaRegistry.Password
+				}
+				m.active = create_cluster_page.NewEditForm(
+					m.connChecker,
+					m.ktx.Config,
+					m.ktx,
+					formValues,
+				)
 			}
-			if selectedCluster.SASLConfig != nil {
-				formValues.SecurityProtocol = selectedCluster.SASLConfig.SecurityProtocol
-				formValues.Username = selectedCluster.SASLConfig.Username
-				formValues.Password = selectedCluster.SASLConfig.Password
-				formValues.AuthMethod = config.SASLAuthMethod
-				formValues.SSLEnabled = selectedCluster.SSLEnabled
-			}
-			if selectedCluster.SchemaRegistry != nil {
-				formValues.SrEnabled = true
-				formValues.SrUrl = selectedCluster.SchemaRegistry.Url
-				formValues.SrUsername = selectedCluster.SchemaRegistry.Username
-				formValues.SrPassword = selectedCluster.SchemaRegistry.Password
-			}
-			m.active = create_cluster_page.NewEditForm(
-				m.connChecker,
-				m.ktx.Config,
-				m.ktx,
-				formValues,
-			)
 		}
 	}
 
@@ -105,12 +103,20 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return m.active.Update(msg)
 }
 
+func WithNoEsc() Option {
+	return func(m *Model) {
+		m.escGoesBack = false
+	}
+}
+
 func New(
 	ktx *kontext.ProgramKtx,
 	connChecker kadmin.ConnChecker,
+	options ...Option,
 ) (*Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m := Model{}
+	m.escGoesBack = true
 	m.connChecker = connChecker
 	m.ktx = ktx
 	m.config = ktx.Config
@@ -122,5 +128,10 @@ func New(
 	} else {
 		m.active = create_cluster_page.NewForm(m.connChecker, m.ktx.Config, m.ktx)
 	}
+
+	for _, option := range options {
+		option(&m)
+	}
+
 	return &m, cmd
 }

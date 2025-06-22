@@ -119,7 +119,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// if the active cluster has been updated it needs to be reloaded
 		if msg.Cluster.Active {
 			// TODO check err
-			m.activateCluster(msg.Cluster)
+			cmd, _ := m.boostrapUI(msg.Cluster)
+			cmds = append(cmds, cmd)
+
 			// keep clusters tab focussed after recreating tabs
 			if msg.Cluster.HasSchemaRegistry() {
 				m.tabs.GoToTab(tabs.ClustersTab)
@@ -136,38 +138,30 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		})
 
 	case RetryClusterConnectionMsg:
-		c, _ := m.initTopicsTabOrError(msg.Cluster)
+		c, _ := m.boostrapUI(msg.Cluster)
 		return m, c
 
 	case config.LoadedMsg:
 		m.ktx.Config = msg.Config
 		if m.ktx.Config.HasClusters() {
-			m.tabs.GoToTab(tabs.TopicsTab)
-			var cmds []tea.Cmd
-			cmd, err := m.initTopicsTabOrError(msg.Config.ActiveCluster())
+			// TODO check err
+			cmd, _ := m.boostrapUI(msg.Config.ActiveCluster())
 			cmds = append(cmds, cmd)
-			if err == nil {
-				cmds = append(cmds, cmd)
-				// cluster has been activated and sradmin has been loaded only if a
-				// schema registry has been configured
-				if m.ktx.Config.ActiveCluster().HasSchemaRegistry() {
-					m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.sra, m.sra, m.sra, m.ktx)
-					cmds = append(cmds, cmd)
-				}
-				m.cgroupsTabCtrl, cmd = cgroups_tab.New(m.ka, m.ka, m.ka)
-				cmds = append(cmds, cmd)
-			}
+
+			m.tabs.GoToTab(tabs.TopicsTab)
+
 			return m, tea.Batch(cmds...)
 		} else {
-			t, c := clusters_tab.New(m.ktx, kadmin.SaramaConnectivityChecker)
+			t, c := clusters_tab.New(m.ktx, kadmin.SaramaConnectivityChecker, clusters_tab.WithNoEsc())
 			m.tabCtrl = t
-			m.tabs.GoToTab(tabs.ClustersTab)
 			return m, c
 		}
 
 	case clusters_page.ClusterSwitchedMsg:
 		// TODO check err
-		m.activateCluster(msg.Cluster)
+		var cmd tea.Cmd
+		cmd, _ = m.boostrapUI(msg.Cluster)
+		cmds = append(cmds, cmd)
 		// tabs were recreated due to cluster switch,
 		// make sure we stay on the clusters tab because,
 		// which might have introduced or removed the schema-registry tab
@@ -176,14 +170,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.tabs.GoToTab(2)
 		}
-		// reset all cached tabs, so they are loaded again for the new cluster
-		var cmd tea.Cmd
-		m.topicsTabCtrl, cmd = topics_tab.New(m.ktx, m.ka)
-		cmds = append(cmds, cmd)
-		m.cgroupsTabCtrl, cmd = cgroups_tab.New(m.ka, m.ka, m.ka)
-		cmds = append(cmds, cmd)
-		m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.sra, m.sra, m.sra, m.ktx)
-		cmds = append(cmds, cmd)
+		m.tabCtrl = m.clustersTabCtrl
 
 	case tea.WindowSizeMsg:
 		m.onWindowSizeUpdated(msg)
@@ -233,7 +220,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m *Model) createTabs(cluster *config.Cluster) {
+func (m *Model) recreateTabs(cluster *config.Cluster) {
 	if cluster.HasSchemaRegistry() {
 		m.tabs = tab.New("Topics", "Consumer Groups", "Schema Registry", "Clusters")
 		tabs.ClustersTab = 3
@@ -243,9 +230,9 @@ func (m *Model) createTabs(cluster *config.Cluster) {
 	}
 }
 
-// activateCluster creates the kadmin.Model and kadmin.SrAdmin
+// recreateAdminClients (re)creates the kadmin.Model and kadmin.SrAdmin
 // based on the given cluster
-func (m *Model) activateCluster(cluster *config.Cluster) error {
+func (m *Model) recreateAdminClients(cluster *config.Cluster) error {
 	connDetails := kadmin.ToConnectionDetails(cluster)
 	if ka, err := m.kaInstantiator(connDetails); err != nil {
 		return err
@@ -258,8 +245,6 @@ func (m *Model) activateCluster(cluster *config.Cluster) error {
 		m.ka.SetSra(m.sra)
 	}
 
-	m.createTabs(cluster)
-
 	return nil
 }
 
@@ -269,15 +254,29 @@ func (m *Model) onWindowSizeUpdated(msg tea.WindowSizeMsg) {
 	m.ktx.AvailableHeight = msg.Height
 }
 
-func (m *Model) initTopicsTabOrError(cluster *config.Cluster) (tea.Cmd, error) {
+func (m *Model) boostrapUI(cluster *config.Cluster) (tea.Cmd, error) {
 	var cmd tea.Cmd
-	if err := m.activateCluster(cluster); err != nil {
+	if err := m.recreateAdminClients(cluster); err != nil {
+		m.recreateTabs(cluster)
 		m.tabCtrl, cmd = con_err_tab.New(err, cluster)
 		return cmd, err
 	} else {
+		var cmds []tea.Cmd
+		m.recreateTabs(cluster)
+		if m.ktx.Config.ActiveCluster().HasSchemaRegistry() {
+			m.schemaRegistryTabCtrl, cmd = sr_tab.New(m.sra, m.sra, m.sra, m.sra, m.sra, m.sra, m.ktx)
+			cmds = append(cmds, cmd)
+		}
+		m.cgroupsTabCtrl, cmd = cgroups_tab.New(m.ka, m.ka, m.ka)
+		cmds = append(cmds, cmd)
 		m.topicsTabCtrl, cmd = topics_tab.New(m.ktx, m.ka)
+		cmds = append(cmds, cmd)
+		m.clustersTabCtrl, cmd = clusters_tab.New(m.ktx, kadmin.SaramaConnectivityChecker)
+		cmds = append(cmds, cmd)
+
 		m.tabCtrl = m.topicsTabCtrl
-		return cmd, nil
+
+		return tea.Batch(cmds...), nil
 	}
 }
 

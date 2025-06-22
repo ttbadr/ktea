@@ -19,29 +19,21 @@ type Model struct {
 	activeTab int
 }
 
-func (m *Model) Update(msg tea.Msg) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		keyPattern, _ := regexp.Compile("alt\\+(\\d)")
-		if keyPattern.MatchString(msg.String()) {
-			subMatch := keyPattern.FindAllStringSubmatch(msg.String(), -1)[0]
-			tabNr, _ := strconv.Atoi(subMatch[1])
-			m.GoToTab(tabNr - 1)
-		}
-	}
-}
-
 func (m *Model) View(ctx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	if len(m.elements) == 0 {
 		return ""
 	}
 	tabsToRender := make([]string, len(m.elements))
-	for i, e := range m.elements {
-		tabName := fmt.Sprintf("%s (Meta-%d)", e, i+1)
-		if i == m.activeTab {
-			tabsToRender = append(tabsToRender, styles.Tab.ActiveTab.Render(tabName))
-		} else {
-			tabsToRender = append(tabsToRender, styles.Tab.Tab.Render(tabName))
+	if len(m.elements) == 1 {
+		tabsToRender = append(tabsToRender, styles.Tab.ActiveTab.Render(m.elements[0]))
+	} else {
+		for i, e := range m.elements {
+			tabName := fmt.Sprintf("%s (Meta-%d)", e, i+1)
+			if i == m.activeTab {
+				tabsToRender = append(tabsToRender, styles.Tab.ActiveTab.Render(tabName))
+			} else {
+				tabsToRender = append(tabsToRender, styles.Tab.Tab.Render(tabName))
+			}
 		}
 	}
 	renderedTabs := lipgloss.JoinHorizontal(lipgloss.Top, tabsToRender...)
@@ -52,6 +44,18 @@ func (m *Model) View(ctx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	}
 	s := renderedTabs + tabLine.String()
 	return renderer.Render(s)
+}
+
+func (m *Model) Update(msg tea.Msg) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		keyPattern, _ := regexp.Compile("alt\\+(\\d)")
+		if keyPattern.MatchString(msg.String()) {
+			subMatch := keyPattern.FindAllStringSubmatch(msg.String(), -1)[0]
+			tabNr, _ := strconv.Atoi(subMatch[1])
+			m.GoToTab(tabNr - 1)
+		}
+	}
 }
 
 func (m *Model) Next() {

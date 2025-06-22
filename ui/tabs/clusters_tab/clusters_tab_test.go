@@ -405,7 +405,45 @@ func TestClustersTab(t *testing.T) {
 			t.Run("updates shortcuts", func(t *testing.T) {
 				assert.Contains(t, render, "Prev. Field:")
 			})
+
+			t.Run("c-e on edit page does nothing", func(t *testing.T) {
+				cmd := clustersTab.Update(tests.Key(tea.KeyCtrlE))
+
+				tests.ExecuteBatchCmd(cmd)
+
+				render := clustersTab.View(programKtx, tests.TestRenderer)
+				assert.Contains(t, render, "> prd")
+			})
+
+			t.Run("c-n on edit page does nothing", func(t *testing.T) {
+				cmd := clustersTab.Update(tests.Key(tea.KeyCtrlN))
+
+				tests.ExecuteBatchCmd(cmd)
+
+				render := clustersTab.View(programKtx, tests.TestRenderer)
+				assert.Contains(t, render, "> prd")
+			})
 		})
+	})
+
+	t.Run("esc does not go back", func(t *testing.T) {
+		// given
+		programKtx := &kontext.ProgramKtx{
+			Config: &config.Config{
+				Clusters: []config.Cluster{},
+			},
+			WindowWidth:  100,
+			WindowHeight: 100,
+		}
+		var clustersTab, _ = New(programKtx, mockConnChecker, WithNoEsc())
+		clustersTab.View(programKtx, tests.TestRenderer)
+
+		// when
+		clustersTab.Update(tests.Key(tea.KeyEsc))
+
+		// then
+		render := clustersTab.View(programKtx, tests.TestRenderer)
+		assert.Contains(t, render, "┃ Name")
 	})
 }
 

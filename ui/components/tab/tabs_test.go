@@ -3,6 +3,7 @@ package tab
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
+	"ktea/tests"
 	"testing"
 )
 
@@ -77,14 +78,24 @@ func TestTabs(t *testing.T) {
 		})
 	})
 
-	//t.Run("Rendering", func(t *testing.T) {
-	//	t.Run("Initial render", func(t *testing.T) {
-	//		// given
-	//		tabs := New("tab1", "tab2")
-	//		// when
-	//		actual := tabs.View(&context)
-	//		// then
-	//		assert.Equal(t, " tab1  tab2 ", actual)
-	//	})
-	//})
+	t.Run("Rendering", func(t *testing.T) {
+		t.Run("Multiple tabs", func(t *testing.T) {
+			// given
+			tabs := New("tab1", "tab2")
+			// when
+			actual := tabs.View(tests.TestKontext, tests.TestRenderer)
+			// then
+			assert.Equal(t, "╭───────────────╮╭───────────────╮\n│ tab1 (Meta-1) ││ tab2 (Meta-2) │\n┘               └┴───────────────┴──────────────────────────────────────────────────────────────────", actual)
+		})
+
+		t.Run("Single tab no shortcut", func(t *testing.T) {
+			// given
+			tabs := New("tab1")
+			// when
+			actual := tabs.View(tests.TestKontext, tests.TestRenderer)
+			// then
+			assert.NotContains(t, actual, "Meta")
+		})
+
+	})
 }
