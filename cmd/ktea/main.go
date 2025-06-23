@@ -15,7 +15,6 @@ import (
 	"ktea/ui/tabs"
 	"ktea/ui/tabs/cgroups_tab"
 	"ktea/ui/tabs/clusters_tab"
-	"ktea/ui/tabs/con_err_tab"
 	"ktea/ui/tabs/loading_tab"
 	"ktea/ui/tabs/sr_tab"
 	"ktea/ui/tabs/topics_tab"
@@ -40,6 +39,7 @@ type Model struct {
 	clustersTabCtrl       *clusters_tab.Model
 	configIO              config.IO
 	switchingCluster      bool
+	startupConnErr        bool
 }
 
 // RetryClusterConnectionMsg is an internal Msg
@@ -119,7 +119,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// if the active cluster has been updated it needs to be reloaded
 		if msg.Cluster.Active {
 			// TODO check err
-			cmd, _ := m.boostrapUI(msg.Cluster)
+			cmd := m.boostrapUI(msg.Cluster)
 			cmds = append(cmds, cmd)
 
 			// keep clusters tab focussed after recreating tabs
@@ -130,47 +130,47 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		}
-	case con_err_tab.RetryClusterConnectionMsg:
-		var cmd tea.Cmd
-		m.tabCtrl, cmd = loading_tab.New()
-		return m, tea.Batch(cmd, func() tea.Msg {
-			return RetryClusterConnectionMsg{msg.Cluster}
-		})
 
 	case RetryClusterConnectionMsg:
-		c, _ := m.boostrapUI(msg.Cluster)
+		c := m.boostrapUI(msg.Cluster)
 		return m, c
 
 	case config.LoadedMsg:
 		m.ktx.Config = msg.Config
 		if m.ktx.Config.HasClusters() {
-			// TODO check err
-			cmd, _ := m.boostrapUI(msg.Config.ActiveCluster())
+			cmd := m.boostrapUI(msg.Config.ActiveCluster())
 			cmds = append(cmds, cmd)
 
 			m.tabs.GoToTab(tabs.TopicsTab)
 
 			return m, tea.Batch(cmds...)
 		} else {
-			t, c := clusters_tab.New(m.ktx, kadmin.SaramaConnectivityChecker, clusters_tab.WithNoEsc())
-			m.tabCtrl = t
-			return m, c
+			clustersTab, cmd := clusters_tab.New(m.ktx, kadmin.SaramaConnectivityChecker)
+			m.tabCtrl = clustersTab
+			m.tabs = tab.New("Clusters")
+			tabs.ClustersTab = 0
+			return m, cmd
 		}
 
 	case clusters_page.ClusterSwitchedMsg:
-		// TODO check err
-		var cmd tea.Cmd
-		cmd, _ = m.boostrapUI(msg.Cluster)
+		cmd := m.boostrapUI(msg.Cluster)
 		cmds = append(cmds, cmd)
-		// tabs were recreated due to cluster switch,
-		// make sure we stay on the clusters tab because,
-		// which might have introduced or removed the schema-registry tab
-		if msg.Cluster.HasSchemaRegistry() {
-			m.tabs.GoToTab(3)
+
+		if m.startupConnErr {
+			m.startupConnErr = false
+			m.tabs.GoToTab(0)
+			m.tabCtrl = m.topicsTabCtrl
 		} else {
-			m.tabs.GoToTab(2)
+			// tabs were recreated due to cluster switch,
+			// make sure we stay on the clusters tab because,
+			// which might have introduced or removed the schema-registry tab
+			if msg.Cluster.HasSchemaRegistry() {
+				m.tabs.GoToTab(3)
+			} else {
+				m.tabs.GoToTab(2)
+			}
+			m.tabCtrl = m.clustersTabCtrl
 		}
-		m.tabCtrl = m.clustersTabCtrl
 
 	case tea.WindowSizeMsg:
 		m.onWindowSizeUpdated(msg)
@@ -254,12 +254,18 @@ func (m *Model) onWindowSizeUpdated(msg tea.WindowSizeMsg) {
 	m.ktx.AvailableHeight = msg.Height
 }
 
-func (m *Model) boostrapUI(cluster *config.Cluster) (tea.Cmd, error) {
+func (m *Model) boostrapUI(cluster *config.Cluster) tea.Cmd {
 	var cmd tea.Cmd
 	if err := m.recreateAdminClients(cluster); err != nil {
-		m.recreateTabs(cluster)
-		m.tabCtrl, cmd = con_err_tab.New(err, cluster)
-		return cmd, err
+		m.tabs = tab.New("Clusters")
+		m.clustersTabCtrl, cmd = clusters_tab.New(m.ktx, kadmin.SaramaConnectivityChecker)
+		m.startupConnErr = true
+		m.tabCtrl = m.clustersTabCtrl
+		return tea.Batch(cmd, func() tea.Msg {
+			return kadmin.ConnErrMsg{
+				Err: err,
+			}
+		})
 	} else {
 		var cmds []tea.Cmd
 		m.recreateTabs(cluster)
@@ -276,7 +282,7 @@ func (m *Model) boostrapUI(cluster *config.Cluster) (tea.Cmd, error) {
 
 		m.tabCtrl = m.topicsTabCtrl
 
-		return tea.Batch(cmds...), nil
+		return tea.Batch(cmds...)
 	}
 }
 

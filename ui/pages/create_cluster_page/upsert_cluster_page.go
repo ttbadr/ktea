@@ -24,6 +24,8 @@ type formState int
 
 type mode int
 
+type Option func(m *Model)
+
 const (
 	editMode           mode          = 0
 	newMode            mode          = 1
@@ -49,20 +51,8 @@ type Model struct {
 	state              formState
 	preEditName        *string
 	mode               mode
-}
-
-func (m *Model) Shortcuts() []statusbar.Shortcut {
-	return []statusbar.Shortcut{
-		{"Confirm", "enter"},
-		{"Next Field", "tab"},
-		{"Prev. Field", "s-tab"},
-		{"Reset Form", "C-r"},
-		{"Go Back", "esc"},
-	}
-}
-
-func (m *Model) Title() string {
-	return "Clusters / Create"
+	shortcuts          []statusbar.Shortcut
+	title              string
 }
 
 type FormValues struct {
@@ -101,6 +91,14 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+r":
+			m.formValues = &FormValues{}
+			m.form = m.createForm()
+			m.authSelectionState = noneSelected
+			m.srSelectionState = srNothingSelected
+		}
 	case kadmin.ConnCheckStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
 	case kadmin.ConnCheckSucceededMsg:
@@ -163,6 +161,17 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return m.processFormSubmission()
 	}
 	return tea.Batch(cmds...)
+}
+
+func (m *Model) Shortcuts() []statusbar.Shortcut {
+	return m.shortcuts
+}
+
+func (m *Model) Title() string {
+	if m.title == "" {
+		return "Clusters / Create"
+	}
+	return m.title
 }
 
 func (m *Model) processFormSubmission() tea.Cmd {
@@ -355,15 +364,24 @@ func (m *Model) createNotifierCmdBar() {
 	})
 }
 
+func WithTitle(title string) Option {
+	return func(m *Model) {
+		m.title = title
+	}
+}
+
 func NewForm(
 	connChecker kadmin.ConnChecker,
 	registerer config.ClusterRegisterer,
 	ktx *kontext.ProgramKtx,
+	shortcuts []statusbar.Shortcut,
+	options ...Option,
 ) *Model {
 	var formValues = &FormValues{}
 	model := Model{
 		formValues:  formValues,
 		connChecker: connChecker,
+		shortcuts:   shortcuts,
 	}
 
 	model.ktx = ktx
@@ -387,6 +405,10 @@ func NewForm(
 
 	model.createNotifierCmdBar()
 
+	for _, option := range options {
+		option(&model)
+	}
+
 	return &model
 }
 
@@ -399,6 +421,13 @@ func NewEditForm(
 	model := Model{
 		formValues:  formValues,
 		connChecker: connChecker,
+		shortcuts: []statusbar.Shortcut{
+			{"Confirm", "enter"},
+			{"Next Field", "tab"},
+			{"Prev. Field", "s-tab"},
+			{"Reset Form", "C-r"},
+			{"Go Back", "esc"},
+		},
 	}
 	if formValues.Name != "" {
 		// copied to prevent model.preEditedName to follow the formValues.Name pointer

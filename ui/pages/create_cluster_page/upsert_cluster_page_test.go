@@ -8,8 +8,11 @@ import (
 	"ktea/kontext"
 	"ktea/styles"
 	"ktea/tests"
+	"ktea/ui/components/statusbar"
 	"testing"
 )
+
+var shortcuts []statusbar.Shortcut
 
 type mockClusterRegisterer struct {
 }
@@ -37,7 +40,7 @@ func TestCreateClusterPage(t *testing.T) {
 
 	t.Run("Display info message when no clusters", func(t *testing.T) {
 		// given
-		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &ktx)
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &ktx, shortcuts)
 
 		// then
 		render := createEnvPage.View(&ktx, tests.TestRenderer)
@@ -45,7 +48,7 @@ func TestCreateClusterPage(t *testing.T) {
 	})
 
 	t.Run("Do not display info message when no clusters", func(t *testing.T) {
-		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &ktx)
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &ktx, shortcuts)
 
 		render := createEnvPage.View(&kontext.ProgramKtx{
 			WindowWidth:  100,
@@ -65,7 +68,7 @@ func TestCreateClusterPage(t *testing.T) {
 
 	t.Run("Name cannot be empty", func(t *testing.T) {
 		// given
-		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &ktx)
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &ktx, shortcuts)
 
 		// when
 		createEnvPage.Update(tests.Key(tea.KeyEnter))
@@ -98,7 +101,7 @@ func TestCreateClusterPage(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, shortcuts)
 
 		// when
 		tests.UpdateKeys(createEnvPage, "prd")
@@ -237,7 +240,7 @@ func TestCreateClusterPage(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, shortcuts)
 		// and: enter name
 		tests.UpdateKeys(createEnvPage, "TST")
 		cmd := createEnvPage.Update(tests.Key(tea.KeyEnter))
@@ -268,7 +271,7 @@ func TestCreateClusterPage(t *testing.T) {
 					},
 				},
 			},
-		})
+		}, shortcuts)
 		// and: enter name
 		tests.UpdateKeys(createEnvPage, "TST")
 		cmd := createEnvPage.Update(tests.Key(tea.KeyEnter))
@@ -324,7 +327,7 @@ func TestCreateClusterPage(t *testing.T) {
 				},
 			},
 		}
-		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &programKtx)
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &programKtx, shortcuts)
 		// and: enter name
 		tests.UpdateKeys(createEnvPage, "TST")
 		cmd := createEnvPage.Update(tests.Key(tea.KeyEnter))
@@ -369,7 +372,7 @@ func TestCreateClusterPage(t *testing.T) {
 				},
 			},
 		}
-		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &programKtx)
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &programKtx, shortcuts)
 		// and: enter name
 		tests.UpdateKeys(createEnvPage, "TST")
 		cmd := createEnvPage.Update(tests.Key(tea.KeyEnter))
@@ -415,7 +418,7 @@ func TestCreateClusterPage(t *testing.T) {
 				},
 			},
 		}
-		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &programKtx)
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &programKtx, shortcuts)
 		// and: enter name
 		tests.UpdateKeys(createEnvPage, "TST")
 		cmd := createEnvPage.Update(tests.Key(tea.KeyEnter))
@@ -493,7 +496,7 @@ func TestCreateClusterPage(t *testing.T) {
 				},
 			},
 		}
-		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &programKtx)
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &programKtx, shortcuts)
 		// and: enter name
 		tests.UpdateKeys(createEnvPage, "TST")
 		cmd := createEnvPage.Update(tests.Key(tea.KeyEnter))
@@ -569,7 +572,7 @@ func TestCreateClusterPage(t *testing.T) {
 				},
 			},
 		}
-		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &programKtx)
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &programKtx, shortcuts)
 		// and: enter name
 		tests.UpdateKeys(createEnvPage, "TST")
 		cmd := createEnvPage.Update(tests.Key(tea.KeyEnter))
@@ -702,7 +705,7 @@ func TestCreateClusterPage(t *testing.T) {
 
 	t.Run("After creating a new cluster, display notification when checking connectivity", func(t *testing.T) {
 		// given
-		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &ktx)
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &ktx, shortcuts)
 
 		// when
 		createEnvPage.Update(kadmin.ConnCheckStartedMsg{})
@@ -712,4 +715,96 @@ func TestCreateClusterPage(t *testing.T) {
 		assert.Contains(t, render, "Testing cluster connectivity")
 	})
 
+	t.Run("C-r resets form", func(t *testing.T) {
+		// given
+		programKtx := kontext.ProgramKtx{
+			WindowWidth:  100,
+			WindowHeight: 100,
+			Config: &config.Config{
+				Clusters: []config.Cluster{
+					{
+						Name:             "PRD",
+						BootstrapServers: []string{"localhost:9092"},
+						SASLConfig:       nil,
+					},
+				},
+			},
+		}
+		createEnvPage := NewForm(mockConnChecker, mockClusterRegisterer{}, &programKtx, shortcuts)
+		// and: enter name
+		tests.UpdateKeys(createEnvPage, "TST")
+		cmd := createEnvPage.Update(tests.Key(tea.KeyEnter))
+		createEnvPage.Update(cmd())
+		// select Primary
+		cmd = createEnvPage.Update(tests.Key(tea.KeyUp))
+		cmd = createEnvPage.Update(tests.Key(tea.KeyEnter))
+		createEnvPage.Update(cmd())
+		// and: select Color
+		cmd = createEnvPage.Update(tests.Key(tea.KeyEnter))
+		// and: Host is entered
+		tests.UpdateKeys(createEnvPage, "localhost:9092")
+		cmd = createEnvPage.Update(tests.Key(tea.KeyEnter))
+		createEnvPage.Update(cmd())
+		// and: auth method none is selected
+		cmd = createEnvPage.Update(tests.Key(tea.KeyDown))
+		cmd = createEnvPage.Update(tests.Key(tea.KeyEnter))
+		// next field
+		cmd = createEnvPage.Update(cmd())
+		// and: select SSL enabled
+		cmd = createEnvPage.Update(tests.Key(tea.KeyDown))
+		cmd = createEnvPage.Update(tests.Key(tea.KeyEnter))
+		// next field
+		createEnvPage.Update(cmd())
+		// and: select SASL_SSL security protocol
+		cmd = createEnvPage.Update(tests.Key(tea.KeyEnter))
+		createEnvPage.Update(cmd())
+		// and: enter SASL username
+		tests.UpdateKeys(createEnvPage, "sasl-username")
+		cmd = createEnvPage.Update(tests.Key(tea.KeyEnter))
+		createEnvPage.Update(cmd())
+		// and: enter SASL password
+		tests.UpdateKeys(createEnvPage, "password")
+		cmd = createEnvPage.Update(tests.Key(tea.KeyEnter))
+		// next field
+		cmd = createEnvPage.Update(cmd())
+		// next group
+		createEnvPage.Update(cmd())
+		// select enable schema-registry
+		cmd = createEnvPage.Update(tests.Key(tea.KeyDown))
+		cmd = createEnvPage.Update(tests.Key(tea.KeyEnter))
+		// next field
+		createEnvPage.Update(cmd())
+		// and: enter schema-registry URL
+		tests.UpdateKeys(createEnvPage, "sr-url")
+		cmd = createEnvPage.Update(tests.Key(tea.KeyEnter))
+		createEnvPage.Update(cmd())
+		// and: enter schema-registry username
+		tests.UpdateKeys(createEnvPage, "sr-username")
+		cmd = createEnvPage.Update(tests.Key(tea.KeyEnter))
+		createEnvPage.Update(cmd())
+		// and: enter schema-registry password
+		tests.UpdateKeys(createEnvPage, "sr-password")
+		cmd = createEnvPage.Update(tests.Key(tea.KeyEnter))
+		createEnvPage.Update(cmd())
+
+		render := createEnvPage.View(&ktx, tests.TestRenderer)
+
+		assert.Contains(t, render, "TST")
+		assert.Contains(t, render, "localhost:9092")
+		assert.Contains(t, render, "sasl-username")
+		assert.Contains(t, render, "sr-username")
+		assert.True(t, createEnvPage.formValues.SSLEnabled)
+		assert.True(t, createEnvPage.formValues.SrEnabled)
+
+		createEnvPage.Update(tests.Key(tea.KeyCtrlR))
+
+		render = createEnvPage.View(&ktx, tests.TestRenderer)
+
+		assert.NotContains(t, render, "TST")
+		assert.NotContains(t, render, "localhost:9092")
+		assert.NotContains(t, render, "sasl-username")
+		assert.NotContains(t, render, "sr-username")
+		assert.False(t, createEnvPage.formValues.SSLEnabled)
+		assert.False(t, createEnvPage.formValues.SrEnabled)
+	})
 }

@@ -240,8 +240,3 @@ func New(configIO IO) *Config {
 	config.ConfigIO = configIO
 	return config
 }
-
-func ReLoadConfig() tea.Msg {
-	// TODO
-	return nil
-}

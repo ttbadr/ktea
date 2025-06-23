@@ -15,8 +15,6 @@ import (
 
 type state int
 
-type Option func(m *Model)
-
 type Model struct {
 	state       state
 	active      nav.Page
@@ -30,7 +28,7 @@ type Model struct {
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	var views []string
-	if m.config.HasClusters() && m.statusbar != nil {
+	if m.statusbar != nil {
 		views = append(views, m.statusbar.View(ktx, renderer))
 	}
 
@@ -51,9 +49,6 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		listPage, _ := clusters_page.New(m.ktx, m.connChecker)
 		m.active = listPage
 		m.statusbar = statusbar.New(m.active)
-		return func() tea.Msg {
-			return config.ReLoadConfig()
-		}
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -63,7 +58,18 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			}
 		case "ctrl+n":
 			if _, ok := m.active.(*clusters_page.Model); ok {
-				m.active = create_cluster_page.NewForm(m.connChecker, m.ktx.Config, m.ktx)
+				m.active = create_cluster_page.NewForm(
+					m.connChecker,
+					m.ktx.Config,
+					m.ktx,
+					[]statusbar.Shortcut{
+						{"Confirm", "enter"},
+						{"Next Field", "tab"},
+						{"Prev. Field", "s-tab"},
+						{"Reset Form", "C-r"},
+						{"Go Back", "esc"},
+					},
+				)
 			}
 		case "ctrl+e":
 			if clustersPage, ok := m.active.(*clusters_page.Model); ok {
@@ -103,34 +109,35 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return m.active.Update(msg)
 }
 
-func WithNoEsc() Option {
-	return func(m *Model) {
-		m.escGoesBack = false
-	}
-}
-
 func New(
 	ktx *kontext.ProgramKtx,
 	connChecker kadmin.ConnChecker,
-	options ...Option,
 ) (*Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m := Model{}
-	m.escGoesBack = true
 	m.connChecker = connChecker
 	m.ktx = ktx
 	m.config = ktx.Config
 	if m.config.HasClusters() {
 		var listPage, c = clusters_page.New(ktx, m.connChecker)
 		cmd = c
+		m.escGoesBack = true
 		m.active = listPage
 		m.statusbar = statusbar.New(m.active)
 	} else {
-		m.active = create_cluster_page.NewForm(m.connChecker, m.ktx.Config, m.ktx)
-	}
-
-	for _, option := range options {
-		option(&m)
+		m.active = create_cluster_page.NewForm(
+			m.connChecker,
+			m.ktx.Config,
+			m.ktx,
+			[]statusbar.Shortcut{
+				{"Confirm", "enter"},
+				{"Next Field", "tab"},
+				{"Prev. Field", "s-tab"},
+				{"Reset Form", "C-r"},
+			},
+			create_cluster_page.WithTitle("Register your first Cluster"),
+		)
+		m.escGoesBack = false
 	}
 
 	return &m, cmd

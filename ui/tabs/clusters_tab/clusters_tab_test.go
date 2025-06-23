@@ -426,7 +426,7 @@ func TestClustersTab(t *testing.T) {
 		})
 	})
 
-	t.Run("esc does not go back", func(t *testing.T) {
+	t.Run("esc does not go back when there are no clusters", func(t *testing.T) {
 		// given
 		programKtx := &kontext.ProgramKtx{
 			Config: &config.Config{
@@ -435,7 +435,7 @@ func TestClustersTab(t *testing.T) {
 			WindowWidth:  100,
 			WindowHeight: 100,
 		}
-		var clustersTab, _ = New(programKtx, mockConnChecker, WithNoEsc())
+		var clustersTab, _ = New(programKtx, mockConnChecker)
 		clustersTab.View(programKtx, tests.TestRenderer)
 
 		// when

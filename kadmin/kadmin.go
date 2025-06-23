@@ -13,6 +13,20 @@ const (
 	TopicResourceType = 2
 )
 
+type Kadmin interface {
+	TopicCreator
+	TopicDeleter
+	TopicLister
+	Publisher
+	RecordReader
+	OffsetLister
+	CGroupLister
+	CGroupDeleter
+	ConfigUpdater
+	TopicConfigLister
+	SraSetter
+}
+
 type ConnectionDetails struct {
 	BootstrapServers []string
 	SASLConfig       *SASLConfig
@@ -37,18 +51,8 @@ type KAdminErrorMsg struct {
 	Error error
 }
 
-type Kadmin interface {
-	TopicCreator
-	TopicDeleter
-	TopicLister
-	Publisher
-	RecordReader
-	OffsetLister
-	CGroupLister
-	CGroupDeleter
-	ConfigUpdater
-	TopicConfigLister
-	SraSetter
+type ConnErrMsg struct {
+	Err error
 }
 
 type Instantiator func(cd ConnectionDetails) (Kadmin, error)

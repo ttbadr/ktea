@@ -27,9 +27,12 @@ type Shortcut struct {
 }
 
 func (s *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
-	activeCluster := styles.Statusbar.
-		Cluster(ktx.Config.ActiveCluster().Color).
-		Render(ktx.Config.ActiveCluster().Name)
+	var activeCluster string
+	if ktx.Config.HasClusters() {
+		activeCluster = styles.Statusbar.
+			Cluster(ktx.Config.ActiveCluster().Color).
+			Render(ktx.Config.ActiveCluster().Name)
+	}
 	indicator := styles.Statusbar.Indicator.Render(s.provider.Title())
 
 	shortcuts := s.provider.Shortcuts()

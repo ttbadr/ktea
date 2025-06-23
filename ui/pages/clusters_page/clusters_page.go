@@ -2,6 +2,10 @@ package clusters_page
 
 import (
 	"fmt"
+	"github.com/charmbracelet/bubbles/table"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 	"ktea/config"
 	"ktea/kadmin"
 	"ktea/kontext"
@@ -15,11 +19,6 @@ import (
 	"reflect"
 	"sort"
 	"strings"
-
-	"github.com/charmbracelet/bubbles/table"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/log"
 )
 
 type Model struct {
@@ -29,10 +28,6 @@ type Model struct {
 	cmdBar        *cmdbar.TableCmdsBar[string]
 	tableFocussed bool
 	connChecker   kadmin.ConnChecker
-}
-
-func (m *Model) Title() string {
-	return "Clusters"
 }
 
 type ClusterSwitchedMsg struct {
@@ -58,15 +53,6 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	borderedView := styles.Borderize(m.table.View(), m.tableFocussed, embeddedText)
 
 	return ui.JoinVertical(lipgloss.Top, cmdBarView, borderedView)
-}
-
-func (m *Model) Shortcuts() []statusbar.Shortcut {
-	return []statusbar.Shortcut{
-		{"Switch Cluster", "enter"},
-		{"Edit", "C-e"},
-		{"Delete", "F2"},
-		{"Create", "C-n"},
-	}
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
@@ -113,6 +99,19 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	m.rows = m.createRows()
 
 	return tea.Batch(cmds...)
+}
+
+func (m *Model) Shortcuts() []statusbar.Shortcut {
+	return []statusbar.Shortcut{
+		{"Switch Cluster", "enter"},
+		{"Edit", "C-e"},
+		{"Delete", "F2"},
+		{"Create", "C-n"},
+	}
+}
+
+func (m *Model) Title() string {
+	return "Clusters"
 }
 
 func (m *Model) SelectedCluster() *string {
@@ -197,6 +196,10 @@ func New(ktx *kontext.ProgramKtx, connChecker kadmin.ConnChecker) (nav.Page, tea
 		m.ShowErrorMsg("Connection check failed", msg.Err)
 		return true, nil
 	}
+	connErrHandler := func(msg kadmin.ConnErrMsg, m *notifier.Model) (bool, tea.Cmd) {
+		m.ShowErrorMsg("Unable to connect, try again or edit clusters", msg.Err)
+		return true, nil
+	}
 	connCheckSucceededHandler := func(msg kadmin.ConnCheckSucceededMsg, m *notifier.Model) (bool, tea.Cmd) {
 		cmd := m.SpinWithRocketMsg("Connection check succeeded, switching cluster")
 		return true, cmd
@@ -210,6 +213,7 @@ func New(ktx *kontext.ProgramKtx, connChecker kadmin.ConnChecker) (nav.Page, tea
 	cmdbar.WithMsgHandler(notifierCmdBar, activeClusterDeleteErrMsgHandler)
 	cmdbar.WithMsgHandler(notifierCmdBar, connCheckStartedHandler)
 	cmdbar.WithMsgHandler(notifierCmdBar, connCheckErrHandler)
+	cmdbar.WithMsgHandler(notifierCmdBar, connErrHandler)
 	cmdbar.WithMsgHandler(notifierCmdBar, connCheckSucceededHandler)
 	cmdbar.WithMsgHandler(notifierCmdBar, clusterSwitchedHandler)
 
