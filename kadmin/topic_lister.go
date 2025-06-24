@@ -108,6 +108,7 @@ func (ka *SaramaKafkaAdmin) doListTopics(
 	listResult, err := ka.admin.ListTopics()
 	if err != nil {
 		errChan <- err
+		return
 	}
 
 	var topics []ListedTopic

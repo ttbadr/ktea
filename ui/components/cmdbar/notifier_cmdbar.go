@@ -11,15 +11,14 @@ import (
 	"reflect"
 )
 
-// Notification triggers a specific notification and
-// returns if the CmdBar is still active or not along with an optional
-// tea.Cmd to execute.
-type Notification[T any] func(T, *notifier.Model) (bool, tea.Cmd)
+// NotificationHandler handles a specific notification and
+// returns if the Cmdbar should be considered active or not and an optional tea.Cmd to be executed
+type NotificationHandler[T any] func(T, *notifier.Model) (bool, tea.Cmd)
 
 type NotifierCmdBar struct {
 	active            bool
 	Notifier          *notifier.Model
-	msgByNotification map[reflect.Type]Notification[any]
+	msgByNotification map[reflect.Type]NotificationHandler[any]
 	tag               string
 }
 
@@ -64,13 +63,13 @@ func (n *NotifierCmdBar) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
 	return n.active, msg, nil
 }
 
-func WithMsgHandler[T any](bar *NotifierCmdBar, notification Notification[T]) *NotifierCmdBar {
+func WithMsgHandler[T any](bar *NotifierCmdBar, notification NotificationHandler[T]) *NotifierCmdBar {
 	msgType := reflect.TypeOf((*T)(nil)).Elem()
 	bar.msgByNotification[msgType] = WrapNotification(notification)
 	return bar
 }
 
-func WrapNotification[T any](n Notification[T]) Notification[any] {
+func WrapNotification[T any](n NotificationHandler[T]) NotificationHandler[any] {
 	return func(msg any, m *notifier.Model) (bool, tea.Cmd) {
 		typedMsg, ok := msg.(T)
 		if !ok {
@@ -83,7 +82,7 @@ func WrapNotification[T any](n Notification[T]) Notification[any] {
 func NewNotifierCmdBar(tag string) *NotifierCmdBar {
 	return &NotifierCmdBar{
 		tag:               tag,
-		msgByNotification: make(map[reflect.Type]Notification[any]),
+		msgByNotification: make(map[reflect.Type]NotificationHandler[any]),
 		Notifier:          notifier.New(),
 	}
 }
