@@ -82,6 +82,7 @@ func (ka *SaramaKafkaAdmin) doPublishRecord(
 	})
 	if err != nil {
 		errChan <- err
+		return
 	}
 	published <- true
 }

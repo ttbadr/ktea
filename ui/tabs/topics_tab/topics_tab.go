@@ -2,7 +2,6 @@ package topics_tab
 
 import (
 	"context"
-	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
@@ -19,6 +18,7 @@ import (
 	"ktea/ui/pages/publish_page"
 	"ktea/ui/pages/record_details_page"
 	"ktea/ui/pages/topics_page"
+	"reflect"
 )
 
 type Model struct {
@@ -44,14 +44,16 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
+
+	log.Debug("Received Update", "msg", reflect.TypeOf(msg))
+
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
 
 	case kadmin.TopicListedMsg,
 		kadmin.TopicRecordCountCalculatedMsg,
-		kadmin.AllTopicRecordCountCalculatedMsg,
-		spinner.TickMsg:
+		kadmin.AllTopicRecordCountCalculatedMsg:
 		// Make sure TopicListedMsg is explicitly captured and
 		// properly propagated in the case when cgroupsPage
 		//isn't focused anymore.

@@ -58,6 +58,50 @@ func TestPublish(t *testing.T) {
 		cmd := m.Update(tests.Key(tea.KeyEsc))
 
 		assert.IsType(t, nav.LoadTopicsPageMsg{}, cmd())
+
+	})
+
+	t.Run("esc does not go back when publishing", func(t *testing.T) {
+		m := New(&MockPublisher{
+			PublishRecordFunc: func(p *kadmin.ProducerRecord) kadmin.PublicationStartedMsg {
+				return kadmin.PublicationStartedMsg{}
+			},
+		}, &kadmin.ListedTopic{
+			Name:           "topic1",
+			PartitionCount: 10,
+			Replicas:       1,
+		})
+
+		m.View(&kontext.ProgramKtx{
+			WindowWidth:  100,
+			WindowHeight: 100,
+		}, tests.TestRenderer)
+
+		// Key
+		tests.UpdateKeys(m, "key")
+		cmd := m.Update(tests.Key(tea.KeyEnter))
+		m.Update(cmd())
+
+		// Partition
+		tests.UpdateKeys(m, "2")
+		cmd = m.Update(tests.Key(tea.KeyEnter))
+		m.Update(cmd())
+
+		// headers
+		tests.UpdateKeys(m, "id=123")
+		cmd = m.Update(tests.KeyWithAlt(tea.KeyEnter))
+		tests.UpdateKeys(m, "user=456")
+		cmd = m.Update(tests.Key(tea.KeyEnter))
+		tests.NextGroup(m, cmd)
+
+		tests.UpdateKeys(m, "payload")
+		cmd = m.Update(tests.Key(tea.KeyEnter))
+		tests.NextGroup(m, cmd)
+
+		tests.Submit(m)
+
+		cmd = m.Update(tests.Key(tea.KeyEsc))
+		assert.Nil(t, cmd)
 	})
 
 	t.Run("publish plain text", func(t *testing.T) {

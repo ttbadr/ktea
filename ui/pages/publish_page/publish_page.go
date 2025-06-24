@@ -7,15 +7,19 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 	"ktea/kadmin"
 	"ktea/kontext"
 	"ktea/styles"
 	"ktea/ui"
+	"ktea/ui/components/cmdbar"
 	"ktea/ui/components/notifier"
 	"ktea/ui/components/statusbar"
 	"ktea/ui/pages/nav"
+	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type state int
@@ -45,46 +49,26 @@ type formValues struct {
 	Headers   string
 }
 
-func (v *formValues) parsedHeaders() map[string]string {
-	if v.Headers == "" {
-		return map[string]string{}
-	}
-	headers := map[string]string{}
-	for _, line := range strings.Split(v.Headers, "\n") {
-		if strings.Contains(line, "=") {
-			split := strings.Split(line, "=")
-			key := split[0]
-			value := split[1]
-			headers[key] = value
-		}
-	}
-	return headers
-}
-
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	notifierView := m.notifier.View(ktx, renderer)
+	if notifierView != "" {
+		notifierView = styles.CmdBarWithWidth(ktx.WindowWidth - cmdbar.BorderedPadding).Render(notifierView)
+	}
+
 	if m.topicForm == nil {
 		m.topicForm = m.newForm(ktx)
 	}
+
 	return ui.JoinVertical(lipgloss.Top,
 		notifierView,
 		renderer.RenderWithStyle(m.topicForm.View(), styles.Form),
 	)
 }
 
-func (m *Model) Shortcuts() []statusbar.Shortcut {
-	return []statusbar.Shortcut{
-		{"Confirm", "enter"},
-		{"Reset Form", "C-r"},
-		{"Go Back", "esc"},
-	}
-}
-
-func (m *Model) Title() string {
-	return "Topics / " + m.topic.Name + " / Produce"
-}
-
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
+
+	log.Debug("Received Update", "msg", reflect.TypeOf(msg))
+
 	switch msg := msg.(type) {
 	case spinner.TickMsg, notifier.HideNotificationMsg:
 		return m.notifier.Update(msg)
@@ -102,18 +86,21 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		return tea.Batch(
 			m.notifier.ShowSuccessMsg("Record published!"),
 			func() tea.Msg {
+				time.Sleep(5 * time.Second)
 				return notifier.HideNotificationMsg{}
 			})
 	case tea.KeyMsg:
-		m.notifier.Idle()
 		switch msg.Type {
 		case tea.KeyEsc:
+			if m.state == publishing {
+				return nil
+			}
 			return ui.PublishMsg(nav.LoadTopicsPageMsg{})
 		case tea.KeyCtrlR:
 			m.resetForm()
 		}
 	}
-	if m.topicForm != nil {
+	if m.topicForm != nil && m.state != publishing {
 		form, cmd := m.topicForm.Update(msg)
 		if f, ok := form.(*huh.Form); ok {
 			m.topicForm = f
@@ -145,6 +132,34 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
+func (v *formValues) parsedHeaders() map[string]string {
+	if v.Headers == "" {
+		return map[string]string{}
+	}
+	headers := map[string]string{}
+	for _, line := range strings.Split(v.Headers, "\n") {
+		if strings.Contains(line, "=") {
+			split := strings.Split(line, "=")
+			key := split[0]
+			value := split[1]
+			headers[key] = value
+		}
+	}
+	return headers
+}
+
+func (m *Model) Shortcuts() []statusbar.Shortcut {
+	return []statusbar.Shortcut{
+		{"Confirm", "enter"},
+		{"Reset Form", "C-r"},
+		{"Go Back", "esc"},
+	}
+}
+
+func (m *Model) Title() string {
+	return "Topics / " + m.topic.Name + " / Produce"
+}
+
 func (m *Model) resetForm() {
 	m.state = none
 	m.formValues.Key = ""
@@ -166,7 +181,7 @@ func (m *Model) newForm(ktx *kontext.ProgramKtx) *huh.Form {
 		Value(&m.formValues.Key)
 	partition := huh.NewInput().
 		Value(&m.formValues.Partition).
-		Description("Leave empty to use murmur2 based partitioner.").
+		Description("Leave empty to use murmur2 key based partitioner (identical to JVM clients).").
 		Title("Partition").
 		Validate(func(str string) error {
 			if str == "" {

@@ -77,16 +77,6 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	return ui.JoinVertical(lipgloss.Top, cmdBarView, tableView)
 }
 
-func (m *Model) columnTitle(title string) string {
-	if m.sort.Label == title {
-		return lipgloss.NewStyle().
-			Foreground(lipgloss.Color(styles.ColorPink)).
-			Bold(true).
-			Render(m.sort.Direction.String()) + " " + title
-	}
-	return title
-}
-
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	log.Debug("Received Update", "msg", reflect.TypeOf(msg))
@@ -187,6 +177,16 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.table.GotoTop()
 	}
 	return tea.Batch(cmds...)
+}
+
+func (m *Model) columnTitle(title string) string {
+	if m.sort.Label == title {
+		return lipgloss.NewStyle().
+			Foreground(lipgloss.Color(styles.ColorPink)).
+			Bold(true).
+			Render(m.sort.Direction.String()) + " " + title
+	}
+	return title
 }
 
 func (m *Model) createRows() []table.Row {
