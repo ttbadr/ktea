@@ -7,14 +7,15 @@ type CGroupDeleter interface {
 }
 
 type CGroupDeletionStartedMsg struct {
-	Deleted chan bool
-	Err     chan error
+	GroupName string
+	Deleted   chan bool
+	Err       chan error
 }
 
 func (c *CGroupDeletionStartedMsg) AwaitCompletion() tea.Msg {
 	select {
 	case <-c.Deleted:
-		return CGroupDeletedMsg{}
+		return CGroupDeletedMsg{GroupName: c.GroupName}
 	case err := <-c.Err:
 		return CGroupDeletionErrMsg{Err: err}
 	}
@@ -25,6 +26,7 @@ type CGroupDeletionErrMsg struct {
 }
 
 type CGroupDeletedMsg struct {
+	GroupName string
 }
 
 func (ka *SaramaKafkaAdmin) DeleteCGroup(name string) tea.Msg {
@@ -34,8 +36,9 @@ func (ka *SaramaKafkaAdmin) DeleteCGroup(name string) tea.Msg {
 	go ka.doDeleteCGroup(name, deletedChan, errChan)
 
 	return CGroupDeletionStartedMsg{
-		Deleted: deletedChan,
-		Err:     errChan,
+		GroupName: name,
+		Deleted:   deletedChan,
+		Err:       errChan,
 	}
 }
 

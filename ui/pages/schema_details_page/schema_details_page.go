@@ -145,6 +145,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		for i, schema := range m.schemas {
 			if schema.Version == msg.Version {
 				m.updatedSchemas = slices.Delete(m.schemas, i, i+1)
+				break
 			}
 		}
 		if len(m.updatedSchemas) == 0 {

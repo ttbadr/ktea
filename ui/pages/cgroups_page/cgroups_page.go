@@ -13,6 +13,7 @@ import (
 	ktable "ktea/ui/components/table"
 	"ktea/ui/pages/nav"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -67,16 +68,6 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	return ui.JoinVertical(lipgloss.Top, cmdBarView, tableView)
 }
 
-func (m *Model) columnTitle(title string) string {
-	if m.sort.Label == title {
-		return lipgloss.NewStyle().
-			Foreground(lipgloss.Color(styles.ColorPink)).
-			Bold(true).
-			Render(m.sort.Direction.String()) + " " + title
-	}
-	return title
-}
-
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	log.Debug("Received Update", "msg", reflect.TypeOf(msg))
@@ -102,6 +93,13 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.groups = msg.ConsumerGroups
 	case kadmin.CGroupDeletionStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
+	case kadmin.CGroupDeletedMsg:
+		for i, group := range m.groups {
+			if group.Name == msg.GroupName {
+				m.groups = slices.Delete(m.groups, i, i+1)
+				break
+			}
+		}
 	}
 
 	var cmd tea.Cmd
@@ -124,6 +122,16 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	}
 
 	return tea.Batch(cmds...)
+}
+
+func (m *Model) columnTitle(title string) string {
+	if m.sort.Label == title {
+		return lipgloss.NewStyle().
+			Foreground(lipgloss.Color(styles.ColorPink)).
+			Bold(true).
+			Render(m.sort.Direction.String()) + " " + title
+	}
+	return title
 }
 
 func (m *Model) createRows() []table.Row {
