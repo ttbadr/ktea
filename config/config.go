@@ -43,6 +43,10 @@ func (c *Cluster) HasSchemaRegistry() bool {
 	return c.SchemaRegistry != nil
 }
 
+func (c *Cluster) HasKafkaConnect() bool {
+	return false
+}
+
 type Config struct {
 	Clusters []Cluster `yaml:"clusters"`
 	ConfigIO IO        `yaml:"-"`

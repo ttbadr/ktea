@@ -18,14 +18,17 @@ const (
 	DescLabel           = "▼"
 )
 
+type SortByCmdBar struct {
+	sorts                []SortLabel
+	selectedIdx          int
+	activeIdx            int
+	active               bool
+	sortSelectedCallback SortSelectedCallback
+}
+
 type Direction bool
 
-func (d Direction) String() string {
-	if d == Asc {
-		return AscLabel
-	}
-	return DescLabel
-}
+type SortByCmdBarOption func(*SortByCmdBar)
 
 type SortLabel struct {
 	Label     string
@@ -34,26 +37,11 @@ type SortLabel struct {
 
 type SortSelectedCallback func(label SortLabel)
 
-type SortByCmdBar struct {
-	sorts                []SortLabel
-	selectedIdx          int
-	activeIdx            int
-	Direction            Direction
-	active               bool
-	sortSelectedCallback SortSelectedCallback
-}
-
-func (m *SortByCmdBar) Shortcuts() []statusbar.Shortcut {
-	return []statusbar.Shortcut{
-		{"Move", "←/→"},
-		{"Select sorting", "enter"},
-		{"Toggle direction", "enter"},
-		{"Cancel", "esc/F3"},
+func (d Direction) String() string {
+	if d == Asc {
+		return AscLabel
 	}
-}
-
-func (m *SortByCmdBar) IsFocussed() bool {
-	return true
+	return DescLabel
 }
 
 func (m *SortByCmdBar) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -135,6 +123,19 @@ func (m *SortByCmdBar) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
 	return m.active, nil, nil
 }
 
+func (m *SortByCmdBar) Shortcuts() []statusbar.Shortcut {
+	return []statusbar.Shortcut{
+		{"Move", "←/→"},
+		{"Select sorting", "enter"},
+		{"Toggle direction", "enter"},
+		{"Cancel", "esc/F3"},
+	}
+}
+
+func (m *SortByCmdBar) IsFocussed() bool {
+	return true
+}
+
 func (m *SortByCmdBar) prevElem() {
 	if m.selectedIdx >= 1 {
 		m.selectedIdx--
@@ -151,7 +152,16 @@ func (m *SortByCmdBar) SortedBy() SortLabel {
 	return m.sorts[m.selectedIdx]
 }
 
-type SortByCmdBarOption func(*SortByCmdBar)
+func (m *SortByCmdBar) PrefixSortIcon(title string) string {
+	sb := m.SortedBy()
+	if sb.Label == title {
+		return lipgloss.NewStyle().
+			Foreground(lipgloss.Color(styles.ColorPink)).
+			Bold(true).
+			Render(sb.Direction.String()) + " " + title
+	}
+	return title
+}
 
 func WithSortSelectedCallback(callback SortSelectedCallback) SortByCmdBarOption {
 	return func(bar *SortByCmdBar) {

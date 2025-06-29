@@ -153,6 +153,14 @@ func WithTitle(title string) Option {
 	}
 }
 
+func WithTitleFunc(titleFunc func() string) Option {
+	return func(m *Model) {
+		m.textByPos[TopMiddleBorder] = func(_ *Model) string {
+			return titleFunc()
+		}
+	}
+}
+
 func WithTabs(tabs ...string) Option {
 	return func(m *Model) {
 		if len(tabs) == 0 {

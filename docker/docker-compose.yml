@@ -1,4 +1,3 @@
-version: '3'
 services:
   schema-registry:
     image: confluentinc/cp-schema-registry:latest
@@ -35,6 +34,8 @@ services:
 
   kafka-init:
     image: confluentinc/cp-kafka:7.6.0
+    profiles:
+      - kafka-init
     container_name: kafka-init
     depends_on:
       broker:
@@ -67,24 +68,56 @@ services:
       CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
       CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
-      #  ---------------
       CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components,/data/connect-jars
-    # If you want to use the Confluent Hub installer to d/l component, but make them available
-    # when running this offline, spin up the stack once and then run :
-    #   docker cp kafka-connect:/usr/share/confluent-hub-components ./data/connect-jars
-    volumes:
-      - $PWD/data:/data
-    # In the command section, $ are replaced with $$ to avoid the error 'Invalid interpolation format for "command" option'
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:8083"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
     command:
       - bash
       - -c
       - |
         echo "Installing Connector"
-        confluent-hub install --no-prompt debezium/debezium-connector-mysql:1.7.0
-        confluent-hub install --no-prompt confluentinc/kafka-connect-elasticsearch:11.1.3
-        confluent-hub install --no-prompt neo4j/kafka-connect-neo4j:2.0.0
+        confluent-hub install --no-prompt confluentinc/kafka-connect-datagen:latest
         #
         echo "Launching Kafka Connect worker"
         /etc/confluent/docker/run &
         #
         sleep infinity
+
+  kafka-connect-init:
+    image: curlimages/curl:latest
+    depends_on:
+      kafka-connect:
+        condition: service_healthy
+    command:
+      - sh
+      - -c
+      - |
+        echo "Registering users connector..."
+        curl -i -X PUT -H "Content-Type:application/json" \
+          http://kafka-connect:8083/connectors/kafka-connect-datagen-users/config \
+          -d '{
+            "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
+            "kafka.topic": "dev.users.events",
+            "schema.filename": "users_schema.avro",
+            "schema.keyfield": "userid",
+            "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+            "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+            "value.converter.schemas.enable": "false",
+            "tasks.max": "1"
+          }'
+
+        echo "Registering product connector..."
+        curl -i -X PUT -H "Content-Type:application/json" \
+          http://kafka-connect:8083/connectors/kafka-connect-datagen-product/config \
+          -d '{
+            "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
+            "kafka.topic": "dev.product.events",
+            "quickstart": "product",
+            "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+            "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+            "value.converter.schemas.enable": "false",
+            "tasks.max": "1"
+          }'

@@ -35,6 +35,23 @@ func TestBorderTab(t *testing.T) {
 ╰──────────────────────────────────────────────────╯`)
 	})
 
+	t.Run("Render title func", func(t *testing.T) {
+		title := "My Title"
+		bt := New(
+			WithOnTabChanged(func(t string, m *Model) {}),
+			WithTitleFunc(func() string {
+				return title
+			}),
+		)
+
+		render := bt.View(content())
+
+		tests.TrimAndEqual(t, render, `
+╭──────────────────── My Title ────────────────────╮
+│content                                           │
+╰──────────────────────────────────────────────────╯`)
+	})
+
 	t.Run("Render tabs", func(t *testing.T) {
 		bt := New(
 			WithOnTabChanged(func(t string, m *Model) {}),

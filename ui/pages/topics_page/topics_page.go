@@ -24,7 +24,7 @@ import (
 	"strings"
 )
 
-const Name = "topics-page"
+const name = "topics-page"
 
 type state int
 
@@ -45,8 +45,8 @@ type Model struct {
 	ctx                context.Context
 	recordCountSpinner spinner.Model
 	tableFocussed      bool
-	sort               cmdbar.SortLabel
 	state              state
+	sortByCmdBar       *cmdbar.SortByCmdBar
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -54,20 +54,20 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	cmdBarView := m.cmdBar.View(ktx, renderer)
 	views = append(views, cmdBarView)
 
-	m.table.SetHeight(ktx.AvailableHeight - 2)
 	m.table.SetWidth(ktx.WindowWidth - 2)
 	m.table.SetColumns([]table.Column{
-		{m.columnTitle("Name"), int(float64(ktx.WindowWidth-7) * 0.6)},
-		{m.columnTitle("Partitions"), int(float64(ktx.WindowWidth-7) * 0.3)},
-		{m.columnTitle("Replicas"), int(float64(ktx.WindowWidth-7) * 0.1)},
+		{m.sortByCmdBar.PrefixSortIcon("Name"), int(float64(ktx.WindowWidth-7) * 0.6)},
+		{m.sortByCmdBar.PrefixSortIcon("Partitions"), int(float64(ktx.WindowWidth-7) * 0.3)},
+		{m.sortByCmdBar.PrefixSortIcon("Replicas"), int(float64(ktx.WindowWidth-7) * 0.1)},
 	})
 	m.table.SetRows(m.rows)
+	m.table.SetHeight(ktx.AvailableHeight - 2)
 
 	styledTable := renderer.RenderWithStyle(m.table.View(), styles.Table.Blur)
 
 	embeddedText := map[styles.BorderPosition]styles.EmbeddedTextFunc{
-		styles.TopMiddleBorder:    styles.BorderKeyValueTitle("Total Topics", fmt.Sprintf("%d/%d", len(m.rows), len(m.topics))),
-		styles.BottomMiddleBorder: styles.BorderKeyValueTitle("Total Topics", fmt.Sprintf("%d/%d", len(m.rows), len(m.topics))),
+		styles.TopMiddleBorder:    styles.EmbeddedBorderText("Total Topics", fmt.Sprintf("%d/%d", len(m.rows), len(m.topics))),
+		styles.BottomMiddleBorder: styles.EmbeddedBorderText("Total Topics", fmt.Sprintf("%d/%d", len(m.rows), len(m.topics))),
 	}
 
 	tableView := styles.Borderize(styledTable, m.tableFocussed, embeddedText)
@@ -169,16 +169,6 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (m *Model) columnTitle(title string) string {
-	if m.sort.Label == title {
-		return lipgloss.NewStyle().
-			Foreground(lipgloss.Color(styles.ColorPink)).
-			Bold(true).
-			Render(m.sort.Direction.String()) + " " + title
-	}
-	return title
-}
-
 func (m *Model) createRows() []table.Row {
 	var rows []table.Row
 	for _, topic := range m.topics {
@@ -206,35 +196,35 @@ func (m *Model) createRows() []table.Row {
 	}
 
 	sort.SliceStable(rows, func(i, j int) bool {
-		switch m.sort.Label {
+		switch m.sortByCmdBar.SortedBy().Label {
 		case "Name":
-			if m.sort.Direction == cmdbar.Asc {
+			if m.sortByCmdBar.SortedBy().Direction == cmdbar.Asc {
 				return rows[i][0] < rows[j][0]
 			}
 			return rows[i][0] > rows[j][0]
 		case "Partitions":
 			partitionI, _ := strconv.Atoi(rows[i][1])
 			partitionJ, _ := strconv.Atoi(rows[j][1])
-			if m.sort.Direction == cmdbar.Asc {
+			if m.sortByCmdBar.SortedBy().Direction == cmdbar.Asc {
 				return partitionI < partitionJ
 			}
 			return partitionI > partitionJ
 		case "Replicas":
 			replicasI, _ := strconv.Atoi(rows[i][2])
 			replicasJ, _ := strconv.Atoi(rows[j][2])
-			if m.sort.Direction == cmdbar.Asc {
+			if m.sortByCmdBar.SortedBy().Direction == cmdbar.Asc {
 				return replicasI < replicasJ
 			}
 			return replicasI > replicasJ
 		case "~ Record Count":
 			countI, _ := strconv.Atoi(strings.ReplaceAll(rows[i][3], ",", ""))
 			countJ, _ := strconv.Atoi(strings.ReplaceAll(rows[j][3], ",", ""))
-			if m.sort.Direction == cmdbar.Asc {
+			if m.sortByCmdBar.SortedBy().Direction == cmdbar.Asc {
 				return countI < countJ
 			}
 			return countI > countJ
 		default:
-			panic(fmt.Sprintf("unexpected sort label: %s", m.sort.Label))
+			panic(fmt.Sprintf("unexpected sort label: %s", m.sortByCmdBar.SortedBy().Label))
 		}
 	})
 	return rows
@@ -295,13 +285,6 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 
 	m.table = ktable.NewDefaultTable()
 
-	m.table.SetColumns([]table.Column{
-		{"Name", 1},
-		{"Partitions", 1},
-		{"Replicas", 1},
-		{"In Sync Replicas", 1},
-	})
-
 	deleteMsgFunc := func(topic string) string {
 		message := topic + lipgloss.NewStyle().
 			Foreground(lipgloss.Color(styles.ColorIndigo)).
@@ -316,7 +299,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 		}
 	}
 
-	notifierCmdBar := cmdbar.NewNotifierCmdBar(Name)
+	notifierCmdBar := cmdbar.NewNotifierCmdBar(name)
 
 	cmdbar.WithMsgHandler(
 		notifierCmdBar,
@@ -350,7 +333,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 			m *notifier.Model,
 		) (bool, tea.Cmd) {
 			m.Idle()
-			return false, m.AutoHideCmd(Name)
+			return false, m.AutoHideCmd(name)
 		},
 	)
 
@@ -372,7 +355,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 			m *notifier.Model,
 		) (bool, tea.Cmd) {
 			m.ShowSuccessMsg("Topic Deleted")
-			return true, m.AutoHideCmd(Name)
+			return true, m.AutoHideCmd(name)
 		},
 	)
 
@@ -394,7 +377,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 			m *notifier.Model,
 		) (bool, tea.Cmd) {
 			m.ShowErrorMsg("Error Deleting Topic", msg.Err)
-			return true, m.AutoHideCmd(Name)
+			return true, m.AutoHideCmd(name)
 		},
 	)
 
@@ -413,17 +396,14 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 				Direction: cmdbar.Desc,
 			},
 		},
-		cmdbar.WithSortSelectedCallback(func(label cmdbar.SortLabel) {
-			m.sort = label
-		}),
 	)
+	m.sortByCmdBar = sortByCmdBar
 	m.cmdBar = cmdbar.NewTableCmdsBar[string](
 		cmdbar.NewDeleteCmdBar(deleteMsgFunc, deleteFunc, nil),
 		cmdbar.NewSearchCmdBar("Search topics by name"),
 		notifierCmdBar,
 		sortByCmdBar,
 	)
-	m.sort = sortByCmdBar.SortedBy()
 	m.lister = lister
 	m.recordCountSpinner = spinner.New()
 	m.recordCountSpinner.Spinner = spinner.MiniDot

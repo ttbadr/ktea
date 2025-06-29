@@ -63,6 +63,7 @@ func (n *NotifierCmdBar) Update(msg tea.Msg) (bool, tea.Msg, tea.Cmd) {
 	return n.active, msg, nil
 }
 
+// TODO rename
 func WithMsgHandler[T any](bar *NotifierCmdBar, notification NotificationHandler[T]) *NotifierCmdBar {
 	msgType := reflect.TypeOf((*T)(nil)).Elem()
 	bar.msgByNotification[msgType] = WrapNotification(notification)

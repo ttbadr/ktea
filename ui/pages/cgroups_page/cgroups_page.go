@@ -60,8 +60,8 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	styledTable := renderer.RenderWithStyle(m.table.View(), styles.Table.Blur)
 
 	embeddedText := map[styles.BorderPosition]styles.EmbeddedTextFunc{
-		styles.TopMiddleBorder:    styles.BorderKeyValueTitle("Total Consumer Groups", fmt.Sprintf(" %d/%d", len(m.rows), len(m.groups))),
-		styles.BottomMiddleBorder: styles.BorderKeyValueTitle("Total Consumer Groups", fmt.Sprintf(" %d/%d", len(m.rows), len(m.groups))),
+		styles.TopMiddleBorder:    styles.EmbeddedBorderText("Total Consumer Groups", fmt.Sprintf(" %d/%d", len(m.rows), len(m.groups))),
+		styles.BottomMiddleBorder: styles.EmbeddedBorderText("Total Consumer Groups", fmt.Sprintf(" %d/%d", len(m.rows), len(m.groups))),
 	}
 	tableView = styles.Borderize(styledTable, m.tableFocussed, embeddedText)
 
@@ -231,7 +231,9 @@ func New(
 			return deleter.DeleteCGroup(group)
 		}
 	}
+
 	notifierCmdBar := cmdbar.NewNotifierCmdBar("cgroups-page")
+
 	cmdbar.WithMsgHandler(
 		notifierCmdBar,
 		func(

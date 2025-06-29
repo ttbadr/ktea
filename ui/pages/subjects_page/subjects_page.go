@@ -89,12 +89,12 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 				compLevel = ""
 			} else {
 				compLevel = " ── " +
-					styles.BorderKeyValueTitle("Global Compatibility", m.globalCompLevel)(active)
+					styles.EmbeddedBorderText("Global Compatibility", m.globalCompLevel)(active)
 			}
-			return styles.BorderKeyValueTitle("Total Subjects", fmt.Sprintf(" %d/%d", len(m.rows), len(m.subjects)))(active) +
+			return styles.EmbeddedBorderText("Total Subjects", fmt.Sprintf(" %d/%d", len(m.rows), len(m.subjects)))(active) +
 				compLevel
 		},
-		styles.BottomMiddleBorder: styles.BorderKeyValueTitle("Total Subjects", fmt.Sprintf(" %d/%d", len(m.rows), len(m.subjects))),
+		styles.BottomMiddleBorder: styles.EmbeddedBorderText("Total Subjects", fmt.Sprintf(" %d/%d", len(m.rows), len(m.subjects))),
 	}
 
 	tableView := styles.Borderize(m.table.View(), m.tableFocussed, embeddedText)

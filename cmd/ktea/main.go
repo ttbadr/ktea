@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/log"
 	"ktea/config"
 	"ktea/kadmin"
+	"ktea/kcadmin"
 	"ktea/kontext"
 	"ktea/sradmin"
 	"ktea/ui"
@@ -15,10 +16,13 @@ import (
 	"ktea/ui/tabs"
 	"ktea/ui/tabs/cgroups_tab"
 	"ktea/ui/tabs/clusters_tab"
+	"ktea/ui/tabs/kcon_tab"
 	"ktea/ui/tabs/loading_tab"
 	"ktea/ui/tabs/sr_tab"
 	"ktea/ui/tabs/topics_tab"
+	"net/http"
 	"os"
+	"slices"
 	"time"
 )
 
@@ -29,7 +33,14 @@ const (
 	cgroupsTabLbl             = "cgroups"
 	schemaRegTabLbl           = "schemaReg"
 	clustersTabLbl            = "clusters"
+	kconnectTabLbl            = "kconnect"
 )
+
+var topicsTab = tab.Tab{Title: "Topics", Label: topicsTabLbl}
+var cgroupsTab = tab.Tab{Title: "Consumer Groups", Label: cgroupsTabLbl}
+var schemaRegTab = tab.Tab{Title: "Schema Registry", Label: schemaRegTabLbl}
+var kconnectTab = tab.Tab{Title: "Kafka Connect", Label: kconnectTabLbl}
+var clustersTab = tab.Tab{Title: "Clusters", Label: clustersTabLbl}
 
 type Model struct {
 	tabs                  tab.Model
@@ -44,6 +55,7 @@ type Model struct {
 	renderer              *ui.Renderer
 	schemaRegistryTabCtrl *sr_tab.Model
 	clustersTabCtrl       *clusters_tab.Model
+	kconTabCtrl           *kcon_tab.Model
 	configIO              config.IO
 	switchingCluster      bool
 	startupConnErr        bool
@@ -116,6 +128,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmd := m.schemaRegistryTabCtrl.Update(msg)
 			cmds = append(cmds, cmd)
 		}
+	case kcadmin.ConnectorListingStartedMsg,
+		kcadmin.ConnectorsListedMsg,
+		kcadmin.ConnectorListingErrMsg:
+		return m, m.kconTabCtrl.Update(msg)
+
 	case kadmin.ConnCheckStartedMsg:
 		m.switchingCluster = true
 	case kadmin.ConnCheckErrMsg, kadmin.ConnCheckSucceededMsg:
@@ -145,11 +162,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			return m, tea.Batch(cmds...)
 		} else {
-			clustersTab, cmd := clusters_tab.New(m.ktx, kadmin.SaramaConnectivityChecker)
-			m.tabCtrl = clustersTab
-			m.tabs = tab.New(
-				tab.Tab{Title: "Clusters", Label: clustersTabLbl},
-			)
+			tCtrl, cmd := clusters_tab.New(m.ktx, kadmin.SaramaConnectivityChecker)
+			m.tabCtrl = tCtrl
+			m.tabs = tab.New(clustersTab)
 			return m, cmd
 		}
 
@@ -200,6 +215,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					cmds = append(cmds, cmd)
 				}
 				m.tabCtrl = m.clustersTabCtrl
+			case kconnectTabLbl:
+				m.tabCtrl = m.kconTabCtrl
 			}
 			// can only be nil when ktea has not been fully loaded yet (config.LoadedMsg not been processed)
 			if m.tabCtrl != nil {
@@ -222,20 +239,17 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) recreateTabs(cluster *config.Cluster) {
+	titles := []tab.Tab{topicsTab, cgroupsTab, clustersTab}
+
 	if cluster.HasSchemaRegistry() {
-		m.tabs = tab.New(
-			tab.Tab{Title: "Topics", Label: topicsTabLbl},
-			tab.Tab{Title: "Consumer Groups", Label: cgroupsTabLbl},
-			tab.Tab{Title: "Schema Registry", Label: schemaRegTabLbl},
-			tab.Tab{Title: "Clusters", Label: clustersTabLbl},
-		)
-	} else {
-		m.tabs = tab.New(
-			tab.Tab{Title: "Topics", Label: topicsTabLbl},
-			tab.Tab{Title: "Consumer Groups", Label: cgroupsTabLbl},
-			tab.Tab{Title: "Clusters", Label: clustersTabLbl},
-		)
+		titles = slices.Insert(titles, 2, schemaRegTab)
 	}
+
+	if cluster.HasKafkaConnect() {
+		titles = slices.Insert(titles, len(titles)-1, kconnectTab)
+	}
+
+	m.tabs = tab.New(titles...)
 }
 
 // recreateAdminClients (re)creates the kadmin.Model and kadmin.SrAdmin
@@ -265,9 +279,7 @@ func (m *Model) onWindowSizeUpdated(msg tea.WindowSizeMsg) {
 func (m *Model) boostrapUI(cluster *config.Cluster) tea.Cmd {
 	var cmd tea.Cmd
 	if err := m.recreateAdminClients(cluster); err != nil {
-		m.tabs = tab.New(
-			tab.Tab{Title: "Clusters", Label: clustersTabLbl},
-		)
+		m.tabs = tab.New(clustersTab)
 		m.clustersTabCtrl, cmd = clusters_tab.New(m.ktx, kadmin.SaramaConnectivityChecker)
 		m.startupConnErr = true
 		m.tabCtrl = m.clustersTabCtrl
@@ -288,6 +300,9 @@ func (m *Model) boostrapUI(cluster *config.Cluster) tea.Cmd {
 		m.topicsTabCtrl, cmd = topics_tab.New(m.ktx, m.ka)
 		cmds = append(cmds, cmd)
 		m.clustersTabCtrl, cmd = clusters_tab.New(m.ktx, kadmin.SaramaConnectivityChecker)
+		cmds = append(cmds, cmd)
+		admin := kcadmin.New(http.DefaultClient, "http://localhost:8083")
+		m.kconTabCtrl, cmd = kcon_tab.New(admin, admin)
 		cmds = append(cmds, cmd)
 
 		m.tabCtrl = m.topicsTabCtrl

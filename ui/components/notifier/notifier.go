@@ -17,16 +17,16 @@ type state int
 
 const (
 	idle     state = 0
-	err      state = 1
+	Err      state = 1
 	success  state = 2
-	spinning state = 3
+	Spinning state = 3
 )
 
 type Model struct {
 	spinner    spinner.Model
 	successMsg string
 	msg        string
-	state      state
+	State      state
 	autoHide   atomic.Bool
 }
 
@@ -37,17 +37,17 @@ type HideNotificationMsg struct {
 type NotificationHiddenMsg struct{}
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
-	if m.state == spinning {
+	if m.State == Spinning {
 		return renderer.RenderWithStyle(
 			lg.JoinHorizontal(lg.Top, m.spinner.View(), m.msg),
 			styles.Notifier.Spinner,
 		)
-	} else if m.state == success {
+	} else if m.State == success {
 		return renderer.RenderWithStyle(
 			wordwrap.String(m.msg, ktx.WindowWidth),
 			styles.Notifier.Success,
 		)
-	} else if m.state == err {
+	} else if m.State == Err {
 		return renderer.RenderWithStyle(
 			wordwrap.String(m.msg, ktx.WindowWidth),
 			styles.Notifier.Error,
@@ -59,7 +59,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case spinner.TickMsg:
-		if m.state != spinning {
+		if m.State != Spinning {
 			return nil
 		}
 		s, cmd := m.spinner.Update(msg)
@@ -76,21 +76,21 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 func (m *Model) SpinWithLoadingMsg(msg string) tea.Cmd {
 	m.autoHide.Store(false)
-	m.state = spinning
+	m.State = Spinning
 	m.msg = "⏳ " + msg
 	return m.spinner.Tick
 }
 
 func (m *Model) SpinWithRocketMsg(msg string) tea.Cmd {
 	m.autoHide.Store(false)
-	m.state = spinning
+	m.State = Spinning
 	m.msg = "🚀 " + msg
 	return m.spinner.Tick
 }
 
 func (m *Model) ShowErrorMsg(msg string, error error) tea.Cmd {
 	m.autoHide.Store(false)
-	m.state = err
+	m.State = Err
 	s := ": "
 	if msg == "" {
 		s = ""
@@ -102,9 +102,9 @@ func (m *Model) ShowErrorMsg(msg string, error error) tea.Cmd {
 
 func (m *Model) ShowError(error error) tea.Cmd {
 	m.autoHide.Store(false)
-	m.state = err
+	m.State = Err
 	msg := error.Error()
-	split := strings.Split(msg, ":")
+	split := strings.SplitN(msg, ":", 2)
 	if len(split) > 1 {
 		m.msg = "🚨 " + styles.FG(styles.ColorRed).Render(split[0]) + ": " +
 			styles.FG(styles.ColorWhite).Render(strings.TrimSuffix(split[1], "\n"))
@@ -117,14 +117,14 @@ func (m *Model) ShowError(error error) tea.Cmd {
 
 func (m *Model) ShowSuccessMsg(msg string) tea.Cmd {
 	m.autoHide.Store(false)
-	m.state = success
+	m.State = success
 	m.msg = "🎉 " + msg
 	return nil
 }
 
 func (m *Model) Idle() {
 	m.autoHide.Store(false)
-	m.state = idle
+	m.State = idle
 	m.msg = ""
 }
 
@@ -140,16 +140,16 @@ func (m *Model) AutoHideCmd(tag string) tea.Cmd {
 }
 
 func (m *Model) HasPriority() bool {
-	return m.state == spinning
+	return m.State == Spinning
 }
 
 func (m *Model) IsIdle() bool {
-	return m.state == idle
+	return m.State == idle
 }
 
 func New() *Model {
 	l := Model{}
-	l.state = idle
+	l.State = idle
 	l.spinner = spinner.New()
 	l.spinner.Spinner = spinner.Dot
 	return &l

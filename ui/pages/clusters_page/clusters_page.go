@@ -46,8 +46,8 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	m.table.SetRows(m.rows)
 
 	embeddedText := map[styles.BorderPosition]styles.EmbeddedTextFunc{
-		styles.TopMiddleBorder:    styles.BorderKeyValueTitle("Total Clusters", fmt.Sprintf(" %d/%d", len(m.rows), len(m.ktx.Config.Clusters))),
-		styles.BottomMiddleBorder: styles.BorderKeyValueTitle("Total Clusters", fmt.Sprintf(" %d/%d", len(m.rows), len(m.ktx.Config.Clusters))),
+		styles.TopMiddleBorder:    styles.EmbeddedBorderText("Total Clusters", fmt.Sprintf(" %d/%d", len(m.rows), len(m.ktx.Config.Clusters))),
+		styles.BottomMiddleBorder: styles.EmbeddedBorderText("Total Clusters", fmt.Sprintf(" %d/%d", len(m.rows), len(m.ktx.Config.Clusters))),
 	}
 
 	borderedView := styles.Borderize(m.table.View(), m.tableFocussed, embeddedText)
