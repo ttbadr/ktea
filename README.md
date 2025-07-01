@@ -86,3 +86,9 @@ docker-compose up -d
 
 After the local cluster is up and running, you can generate some data to work with, 
 using`go run -tags prd ./cmd/generate`.
+
+### Run `ktea`
+
+Use `go run -tags dev cmd/ktea/main.go` to run `ktea` from the root of the repository.
+
+> Note: running the tui with dev build tag will simulate an artificial slow network by sleeping for 2 seconds when doing network IO. This way the loaders and spinners can be visually asserted.
