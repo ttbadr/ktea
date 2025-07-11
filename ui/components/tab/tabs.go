@@ -1,14 +1,11 @@
 package tab
 
 import (
-	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"ktea/kontext"
 	"ktea/styles"
 	"ktea/ui"
-	"regexp"
-	"strconv"
 	"strings"
 )
 
@@ -30,17 +27,14 @@ func (m *Model) View(ctx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 		return ""
 	}
 	tabsToRender := make([]string, len(m.tabs))
-	if len(m.tabs) == 1 {
-		tabsToRender = append(tabsToRender, styles.Tab.ActiveTab.Render(m.tabs[0].Title))
-	} else {
-		for i, t := range m.tabs {
-			tabName := fmt.Sprintf("%s (Meta-%d)", t.Title, i+1)
-			if i == m.activeTab {
-				tabsToRender = append(tabsToRender, styles.Tab.ActiveTab.Render(tabName))
-			} else {
-				tabsToRender = append(tabsToRender, styles.Tab.Tab.Render(tabName))
-			}
+	for i, t := range m.tabs {
+		var tab string
+		if i == m.activeTab {
+			tab = styles.Tab.ActiveTab.Render(t.Title)
+		} else {
+			tab = styles.Tab.Tab.Render(t.Title)
 		}
+		tabsToRender = append(tabsToRender, tab)
 	}
 	renderedTabs := lipgloss.JoinHorizontal(lipgloss.Top, tabsToRender...)
 	tabLine := strings.Builder{}
@@ -55,13 +49,11 @@ func (m *Model) View(ctx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 func (m *Model) Update(msg tea.Msg) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		keyPattern, _ := regexp.Compile("alt\\+(\\d)")
-		if keyPattern.MatchString(msg.String()) {
-			subMatch := keyPattern.FindAllStringSubmatch(msg.String(), -1)[0]
-			tabNr, _ := strconv.Atoi(subMatch[1])
-			if tabNr <= len(m.tabs) {
-				m.GoToTab(m.tabs[tabNr-1].Label)
-			}
+		switch msg.Type {
+		case tea.KeyCtrlLeft, tea.KeyCtrlH:
+			m.Prev()
+		case tea.KeyCtrlRight, tea.KeyCtrlL:
+			m.Next()
 		}
 	}
 }

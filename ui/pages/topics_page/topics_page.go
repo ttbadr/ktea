@@ -104,7 +104,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			m.topics = nil
 			m.state = stateRefreshing
 			return tea.Batch(m.lister.ListTopics, m.recordCountSpinner.Tick)
-		case "ctrl+l":
+		case "L":
 			if m.SelectedTopic() == nil {
 				return nil
 			}
@@ -272,11 +272,10 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 	var m = Model{}
 	m.shortcuts = []statusbar.Shortcut{
 		{"Consume", "enter"},
-		{"Live Consume", "C-l"},
+		{"Live Consume", "S-l"},
 		{"Search", "/"},
 		{"Produce", "C-p"},
 		{"Create", "C-n"},
-		{"Delete", "F2"},
 		{"Configs", "C-o"},
 		{"Delete", "F2"},
 		{"Sort", "F3"},

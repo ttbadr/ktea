@@ -36,6 +36,12 @@ func (s *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	indicator := styles.Statusbar.Indicator.Render(s.provider.Title())
 
 	shortcuts := s.provider.Shortcuts()
+	shortcuts = append([]Shortcut{
+		{
+			Name:       "Switch Tabs",
+			Keybinding: "C-←/→/l/r",
+		},
+	}, shortcuts...)
 	rowsPerColumn := 2 // Fixed maximum rows per column
 	var columns int
 

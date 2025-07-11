@@ -68,41 +68,55 @@ func TestKtea(t *testing.T) {
 			view := model.View()
 
 			var expectedLayout = `
-╭─────────────────╮╭──────────────────────────╮╭──────────────────────────╮╭───────────────────╮    
-│ Topics (Meta-1) ││ Consumer Groups (Meta-2) ││ Schema Registry (Meta-3) ││ Clusters (Meta-4) │    
-┴─────────────────┴┘                          └┴──────────────────────────┴┴───────────────────┴────
+╭────────╮╭─────────────────╮╭─────────────────╮╭──────────╮                                                        
+│ Topics ││ Consumer Groups ││ Schema Registry ││ Clusters │                                                        
+┘        └┴─────────────────┴┴─────────────────┴┴──────────┴────────────────────────────────────────                
 `
 			assert.Contains(t, view, expectedLayout)
 
 			model.Update(tea.KeyMsg{
-				Type:  tea.KeyRunes,
-				Runes: []rune{'3'},
-				Alt:   true,
+				Type:  tea.KeyCtrlRight,
+				Runes: []rune{},
+				Alt:   false,
+				Paste: false,
+			})
+
+			model.Update(tea.KeyMsg{
+				Type:  tea.KeyCtrlL,
+				Runes: []rune{},
+				Alt:   false,
 				Paste: false,
 			})
 
 			view = model.View()
 
 			expectedLayout = `
-╭─────────────────╮╭──────────────────────────╮╭──────────────────────────╮╭───────────────────╮    
-│ Topics (Meta-1) ││ Consumer Groups (Meta-2) ││ Schema Registry (Meta-3) ││ Clusters (Meta-4) │    
-┴─────────────────┴┴──────────────────────────┴┘                          └┴───────────────────┴────
+╭────────╮╭─────────────────╮╭─────────────────╮╭──────────╮                                        
+│ Topics ││ Consumer Groups ││ Schema Registry ││ Clusters │                                        
+┴────────┴┴─────────────────┴┘                 └┴──────────┴────────────────────────────────────────
 `
 			assert.Contains(t, view, expectedLayout)
 
 			model.Update(tea.KeyMsg{
-				Type:  tea.KeyRunes,
-				Runes: []rune{'4'},
-				Alt:   true,
+				Type:  tea.KeyCtrlLeft,
+				Runes: []rune{},
+				Alt:   false,
+				Paste: false,
+			})
+
+			model.Update(tea.KeyMsg{
+				Type:  tea.KeyCtrlH,
+				Runes: []rune{},
+				Alt:   false,
 				Paste: false,
 			})
 
 			view = model.View()
 
 			expectedLayout = `
-╭─────────────────╮╭──────────────────────────╮╭──────────────────────────╮╭───────────────────╮    
-│ Topics (Meta-1) ││ Consumer Groups (Meta-2) ││ Schema Registry (Meta-3) ││ Clusters (Meta-4) │    
-┴─────────────────┴┴──────────────────────────┴┴──────────────────────────┴┘                   └────
+╭────────╮╭─────────────────╮╭─────────────────╮╭──────────╮                                                        
+│ Topics ││ Consumer Groups ││ Schema Registry ││ Clusters │                                                        
+┘        └┴─────────────────┴┴─────────────────┴┴──────────┴────────────────────────────────────────                
 `
 
 			assert.Contains(t, view, expectedLayout)

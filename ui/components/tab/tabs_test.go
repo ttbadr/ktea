@@ -11,39 +11,20 @@ func TestTabs(t *testing.T) {
 
 	t.Run("Movements", func(t *testing.T) {
 
-		t.Run("Select specific tab when available", func(t *testing.T) {
+		t.Run("Next (C-→) tab when available", func(t *testing.T) {
 			// given
 			tabs := New(Tab{Title: "tab1", Label: "tab1"}, Tab{Title: "tab2", Label: "tab2"})
 			// when
-			tabs.Update(tea.KeyMsg{
-				Type:  tea.KeyRunes,
-				Runes: []rune{'2'},
-				Alt:   true,
-				Paste: false,
-			})
+			tabs.Update(tests.Key(tea.KeyCtrlRight))
 			// then
 			assert.Equal(t, Label("tab2"), tabs.ActiveTab().Label)
 		})
 
-		t.Run("Ignore tab selection when tab not available", func(t *testing.T) {
+		t.Run("Next (C-l) tab when available", func(t *testing.T) {
 			// given
 			tabs := New(Tab{Title: "tab1", Label: "tab1"}, Tab{Title: "tab2", Label: "tab2"})
 			// when
-			tabs.Update(tea.KeyMsg{
-				Type:  tea.KeyRunes,
-				Runes: []rune{'8'},
-				Alt:   true,
-				Paste: false,
-			})
-			// then
-			assert.Equal(t, Label("tab1"), tabs.ActiveTab().Label)
-		})
-
-		t.Run("Next tab when available", func(t *testing.T) {
-			// given
-			tabs := New(Tab{Title: "tab1", Label: "tab1"}, Tab{Title: "tab2", Label: "tab2"})
-			// when
-			tabs.Next()
+			tabs.Update(tests.Key(tea.KeyCtrlRight))
 			// then
 			assert.Equal(t, Label("tab2"), tabs.ActiveTab().Label)
 		})
@@ -51,19 +32,29 @@ func TestTabs(t *testing.T) {
 		t.Run("Next tab when last", func(t *testing.T) {
 			// given
 			tabs := New(Tab{Title: "tab1", Label: "tab1"}, Tab{Title: "tab2", Label: "tab2"})
-			tabs.Next()
+			tabs.Update(tests.Key(tea.KeyCtrlRight))
 			// when
-			tabs.Next()
+			tabs.Update(tests.Key(tea.KeyCtrlRight))
 			// then
 			assert.Equal(t, Label("tab2"), tabs.ActiveTab().Label)
 		})
 
-		t.Run("Previous tab when available", func(t *testing.T) {
+		t.Run("Previous (C-h) tab when available", func(t *testing.T) {
 			// given
 			tabs := New(Tab{Title: "tab1", Label: "tab1"}, Tab{Title: "tab2", Label: "tab2"})
-			tabs.Next()
+			tabs.Update(tests.Key(tea.KeyCtrlRight))
 			// when
-			tabs.Prev()
+			tabs.Update(tests.Key(tea.KeyCtrlH))
+			// then
+			assert.Equal(t, Label("tab1"), tabs.ActiveTab().Label)
+		})
+
+		t.Run("Previous (C-←) tab when available", func(t *testing.T) {
+			// given
+			tabs := New(Tab{Title: "tab1", Label: "tab1"}, Tab{Title: "tab2", Label: "tab2"})
+			tabs.Update(tests.Key(tea.KeyCtrlRight))
+			// when
+			tabs.Update(tests.Key(tea.KeyCtrlLeft))
 			// then
 			assert.Equal(t, Label("tab1"), tabs.ActiveTab().Label)
 		})
@@ -72,7 +63,7 @@ func TestTabs(t *testing.T) {
 			// given
 			tabs := New(Tab{Title: "tab1", Label: "tab1"}, Tab{Title: "tab2", Label: "tab2"})
 			// when
-			tabs.Prev()
+			tabs.Update(tests.Key(tea.KeyCtrlLeft))
 			// then
 			assert.Equal(t, Label("tab1"), tabs.ActiveTab().Label)
 		})
@@ -85,7 +76,7 @@ func TestTabs(t *testing.T) {
 			// when
 			actual := tabs.View(tests.TestKontext, tests.TestRenderer)
 			// then
-			assert.Equal(t, "╭───────────────╮╭───────────────╮\n│ tab1 (Meta-1) ││ tab2 (Meta-2) │\n┘               └┴───────────────┴──────────────────────────────────────────────────────────────────", actual)
+			assert.Equal(t, "╭──────╮╭──────╮\n│ tab1 ││ tab2 │\n┘      └┴──────┴────────────────────────────────────────────────────────────────────────────────────", actual)
 		})
 
 		t.Run("Single tab no shortcut", func(t *testing.T) {
