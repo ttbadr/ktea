@@ -2,10 +2,19 @@ package sradmin
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"ktea/config"
 )
 
 type MockSrAdmin struct {
 	GetSchemaByIdFunc func(id int) tea.Msg
+}
+
+type MockConnectionCheckedMsg struct {
+	Config *config.SchemaRegistryConfig
+}
+
+func MockConnChecker(config *config.SchemaRegistryConfig) tea.Msg {
+	return MockConnectionCheckedMsg{config}
 }
 
 func (m *MockSrAdmin) DeleteSchema(string, int) tea.Msg {
