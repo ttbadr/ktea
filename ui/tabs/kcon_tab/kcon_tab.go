@@ -3,16 +3,21 @@ package kcon_tab
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"ktea/config"
 	"ktea/kcadmin"
 	"ktea/kontext"
 	"ktea/ui"
 	"ktea/ui/components/statusbar"
-	"ktea/ui/pages/kcons_page"
+	"ktea/ui/pages/kcon_clusters_page"
+	"ktea/ui/pages/kcon_page"
+	"ktea/ui/pages/nav"
+	"net/http"
 )
 
 type Model struct {
-	kconsPage *kcons_page.Model
+	active    nav.Page
 	statusbar *statusbar.Model
+	kconsPage *kcon_clusters_page.Model
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -21,24 +26,35 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 		views = append(views, m.statusbar.View(ktx, renderer))
 	}
 
-	views = append(views, m.kconsPage.View(ktx, renderer))
+	views = append(views, m.active.View(ktx, renderer))
 
 	return ui.JoinVertical(lipgloss.Top, views...)
 }
 
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	// always recreate the statusbar in case the active page might have changed
-	m.statusbar = statusbar.New(m.kconsPage)
+	m.statusbar = statusbar.New(m.active)
 
-	return m.kconsPage.Update(msg)
+	return m.active.Update(msg)
 }
 
-func New(
-	lister kcadmin.ConnectorLister,
-	deleter kcadmin.ConnectorDeleter,
-) (*Model, tea.Cmd) {
-	kcPage, cmd := kcons_page.New(lister, deleter)
-	return &Model{
-		kconsPage: kcPage,
-	}, cmd
+func (m *Model) navBack() tea.Cmd {
+	m.active = m.kconsPage
+	m.statusbar = statusbar.New(m.active)
+	return nil
+}
+
+func (m *Model) loadKConPage(c config.KafkaConnectConfig) tea.Cmd {
+	kca := kcadmin.New(http.DefaultClient, c.Url)
+	var cmd tea.Cmd
+	m.active, cmd = kcon_page.New(m.navBack, kca, kca, c.Name)
+	return cmd
+}
+
+func New(cluster *config.Cluster) (*Model, tea.Cmd) {
+	m := Model{}
+	kconsPage, cmd := kcon_clusters_page.New(cluster, m.loadKConPage)
+	m.kconsPage = kconsPage
+	m.active = kconsPage
+	return &m, cmd
 }

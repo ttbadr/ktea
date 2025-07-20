@@ -1,4 +1,4 @@
-package kcons_page
+package kcon_page
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
+	"ktea/config"
 	"ktea/kcadmin"
 	"ktea/kontext"
 	"ktea/styles"
@@ -21,18 +22,22 @@ import (
 )
 
 type Model struct {
-	connectors   *kcadmin.Connectors
-	table        *table.Model
-	cmdBar       *cmdbar.TableCmdsBar[string]
-	rows         []table.Row
-	sort         cmdbar.SortLabel
-	lister       kcadmin.ConnectorLister
-	border       *border.Model
-	sortByCmdBar *cmdbar.SortByCmdBar
+	connectors    *kcadmin.Connectors
+	table         *table.Model
+	cmdBar        *cmdbar.TableCmdsBar[string]
+	rows          []table.Row
+	sort          cmdbar.SortLabel
+	lister        kcadmin.ConnectorLister
+	border        *border.Model
+	sortByCmdBar  *cmdbar.SortByCmdBar
+	navBack       ui.NavBack
+	connectorName string
 	state
 }
 
 type state int
+
+type LoadPage func(c config.KafkaConnectConfig) tea.Cmd
 
 const (
 	loading state = iota
@@ -63,8 +68,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "f5":
+		switch msg.Type {
+		case tea.KeyEsc:
+			if !m.cmdBar.IsFocussed() {
+				return m.navBack()
+			}
+		case tea.KeyF5:
 			if m.state == loading {
 				log.Debug("not refreshing connectors due to loading state")
 				return nil
@@ -136,7 +145,7 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 }
 
 func (m *Model) Title() string {
-	return "Connectors"
+	return "Kafka Connect Clusters / " + m.connectorName
 }
 
 func (m *Model) createRows() []table.Row {
@@ -169,10 +178,14 @@ func (m *Model) createRows() []table.Row {
 }
 
 func New(
+	navBack ui.NavBack,
 	lister kcadmin.ConnectorLister,
 	deleter kcadmin.ConnectorDeleter,
+	name string,
 ) (*Model, tea.Cmd) {
 	m := Model{}
+	m.connectorName = name
+	m.navBack = navBack
 	m.lister = lister
 	m.state = loading
 

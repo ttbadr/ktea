@@ -10,8 +10,8 @@ import (
 	"net/http"
 )
 
-func (h *DefaultKcAdmin) DeleteConnector(name string) tea.Msg {
-	req, err := http.NewRequest(http.MethodDelete, h.url("/connectors/"+name), nil)
+func (k *DefaultKcAdmin) DeleteConnector(name string) tea.Msg {
+	req, err := http.NewRequest(http.MethodDelete, k.url("/connectors/"+name), nil)
 	if err != nil {
 		return ConnectorListingErrMsg{err}
 	}
@@ -21,19 +21,19 @@ func (h *DefaultKcAdmin) DeleteConnector(name string) tea.Msg {
 		ec = make(chan error)
 	)
 
-	go h.doDeleteConnector(req, dc, ec)
+	go k.doDeleteConnector(req, dc, ec)
 
 	return ConnectorDeletionStartedMsg{name, dc, ec}
 }
 
-func (h *DefaultKcAdmin) doDeleteConnector(
+func (k *DefaultKcAdmin) doDeleteConnector(
 	req *http.Request,
 	dc chan bool,
 	ec chan error,
 ) {
 	kadmin.MaybeIntroduceLatency()
 
-	resp, err := h.client.Do(req)
+	resp, err := k.client.Do(req)
 	if err != nil {
 		log.Error("Failed to delete connector", err)
 		ec <- err

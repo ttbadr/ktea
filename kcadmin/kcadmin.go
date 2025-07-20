@@ -2,6 +2,7 @@ package kcadmin
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"ktea/config"
 	"net/http"
 )
 
@@ -19,6 +20,9 @@ type ConnectorLister interface {
 type ConnectorDeleter interface {
 	DeleteConnector(name string) tea.Msg
 }
+
+// ConnChecker is a function that checks a Kafka Connect Cluster connection and returns a tea.Msg.
+type ConnChecker func(c *config.KafkaConnectConfig) tea.Msg
 
 type ConnectorStatus struct {
 	Name      string         `json:"name"`
@@ -96,10 +100,10 @@ type ConnectorDeletionErrMsg struct {
 	Err error
 }
 
-func (h *DefaultKcAdmin) url(path string) string {
-	return h.baseUrl + path
+func (k *DefaultKcAdmin) url(path string) string {
+	return k.baseUrl + path
 }
 
-func New(c Client, baseUrl string) KcAdmin {
+func New(c Client, baseUrl string) *DefaultKcAdmin {
 	return &DefaultKcAdmin{client: c, baseUrl: baseUrl}
 }

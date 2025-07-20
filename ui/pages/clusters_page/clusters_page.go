@@ -147,10 +147,14 @@ func (m *Model) createRows() []table.Row {
 type ActiveClusterDeleteErrMsg struct {
 }
 
-func New(ktx *kontext.ProgramKtx, connChecker kadmin.ConnChecker) (nav.Page, tea.Cmd) {
+func New(
+	ktx *kontext.ProgramKtx,
+	connChecker kadmin.ConnChecker,
+) (nav.Page, tea.Cmd) {
 
 	model := Model{}
 	model.connChecker = connChecker
+	model.tableFocussed = true
 
 	deleteFunc := func(subject string) tea.Cmd {
 		return func() tea.Msg {

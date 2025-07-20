@@ -29,14 +29,22 @@ type SchemaRegistryConfig struct {
 	Password string `yaml:"password"`
 }
 
+type KafkaConnectConfig struct {
+	Name     string `yaml:"name"`
+	Url      string `yaml:"url"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
 type Cluster struct {
-	Name             string                `yaml:"name"`
-	Color            string                `yaml:"color"`
-	Active           bool                  `yaml:"active"`
-	BootstrapServers []string              `yaml:"servers"`
-	SASLConfig       *SASLConfig           `yaml:"sasl"`
-	SchemaRegistry   *SchemaRegistryConfig `yaml:"schema-registry"`
-	SSLEnabled       bool                  `yaml:"ssl-enabled"`
+	Name                 string                `yaml:"name"`
+	Color                string                `yaml:"color"`
+	Active               bool                  `yaml:"active"`
+	BootstrapServers     []string              `yaml:"servers"`
+	SASLConfig           *SASLConfig           `yaml:"sasl"`
+	SchemaRegistry       *SchemaRegistryConfig `yaml:"schema-registry"`
+	SSLEnabled           bool                  `yaml:"ssl-enabled"`
+	KafkaConnectClusters []KafkaConnectConfig  `yaml:"kafka-connect-clusters"`
 }
 
 func (c *Cluster) HasSchemaRegistry() bool {
@@ -44,7 +52,7 @@ func (c *Cluster) HasSchemaRegistry() bool {
 }
 
 func (c *Cluster) HasKafkaConnect() bool {
-	return false
+	return len(c.KafkaConnectClusters) > 0
 }
 
 type Config struct {
@@ -62,17 +70,25 @@ type SchemaRegistryDetails struct {
 	Password string
 }
 
+type KafkaConnectClusterDetails struct {
+	Name     string
+	Url      string
+	Username string
+	Password string
+}
+
 type RegistrationDetails struct {
-	Name             string
-	Color            string
-	Host             string
-	AuthMethod       AuthMethod
-	SecurityProtocol SecurityProtocol
-	SSLEnabled       bool
-	NewName          *string
-	Username         string
-	Password         string
-	SchemaRegistry   *SchemaRegistryDetails
+	Name                 string
+	Color                string
+	Host                 string
+	AuthMethod           AuthMethod
+	SecurityProtocol     SecurityProtocol
+	SSLEnabled           bool
+	NewName              *string
+	Username             string
+	Password             string
+	SchemaRegistry       *SchemaRegistryDetails
+	KafkaConnectClusters []KafkaConnectClusterDetails
 }
 
 type ClusterDeletedMsg struct {
@@ -83,8 +99,41 @@ type ClusterRegisteredMsg struct {
 	Cluster *Cluster
 }
 
+type ConnectClusterDeleted struct {
+	Name string
+}
+
 type ClusterRegisterer interface {
 	RegisterCluster(d RegistrationDetails) tea.Msg
+}
+
+type ConnectClusterDeleter interface {
+	DeleteKafkaConnectCluster(clusterName string, connectName string) tea.Msg
+}
+
+func (c *Config) DeleteKafkaConnectCluster(clusterName string, connectName string) tea.Msg {
+	for i, cluster := range c.Clusters {
+		if clusterName == cluster.Name {
+			for _, connectCluster := range cluster.KafkaConnectClusters {
+				if connectName == connectCluster.Name {
+					c.Clusters[i].KafkaConnectClusters = deleteKafkaConnectCluster(c.Clusters[i].KafkaConnectClusters, connectName)
+					c.flush()
+					return ConnectClusterDeleted{connectName}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func deleteKafkaConnectCluster(clusters []KafkaConnectConfig, name string) []KafkaConnectConfig {
+	out := make([]KafkaConnectConfig, 0, len(clusters)-1)
+	for _, c := range clusters {
+		if c.Name != name {
+			out = append(out, c)
+		}
+	}
+	return out
 }
 
 // RegisterCluster registers a new cluster or updates an existing one in the Config.
@@ -150,6 +199,18 @@ func ToCluster(details RegistrationDetails) Cluster {
 			Password: details.SchemaRegistry.Password,
 		}
 	}
+
+	if details.KafkaConnectClusters != nil {
+		for _, connectCluster := range details.KafkaConnectClusters {
+			cluster.KafkaConnectClusters = append(cluster.KafkaConnectClusters, KafkaConnectConfig{
+				Name:     connectCluster.Name,
+				Url:      connectCluster.Url,
+				Username: connectCluster.Username,
+				Password: connectCluster.Password,
+			})
+		}
+	}
+
 	return cluster
 }
 

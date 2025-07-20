@@ -74,17 +74,10 @@ func (m *Model) numberOfTabs() int {
 	return len(m.tabs)
 }
 
-func (m *Model) GoToTab(tab interface{}) {
-	switch tab := tab.(type) {
-	case Label:
-		for i, t := range m.tabs {
-			if t.Label == tab {
-				m.activeTab = i
-			}
-		}
-	case int:
-		if tab <= m.numberOfTabs()-1 {
-			m.activeTab = tab
+func (m *Model) GoToTab(label Label) {
+	for i, t := range m.tabs {
+		if t.Label == label {
+			m.activeTab = i
 		}
 	}
 }

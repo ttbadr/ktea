@@ -26,11 +26,11 @@ type Model struct {
 	inActiveColor lipgloss.Color
 }
 
-type Label string
+type TabLabel string
 
 type Tab struct {
 	Title string
-	Label
+	TabLabel
 }
 
 type Position int
@@ -154,9 +154,9 @@ func (m *Model) NextTab() {
 	}
 }
 
-func (m *Model) GoTo(label Label) {
+func (m *Model) GoTo(label TabLabel) {
 	for i, tab := range m.tabs {
-		if tab.Label == label {
+		if tab.TabLabel == label {
 			m.activeTabIdx = i
 			break
 		}
@@ -165,6 +165,10 @@ func (m *Model) GoTo(label Label) {
 
 func (m *Model) WithInActiveColor(c lipgloss.Color) {
 	m.inActiveColor = c
+}
+
+func (m *Model) ActiveTab() TabLabel {
+	return m.tabs[m.activeTabIdx].TabLabel
 }
 
 func WithTitle(title string) Option {

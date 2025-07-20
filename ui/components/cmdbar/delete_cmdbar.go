@@ -94,6 +94,10 @@ func (s *DeleteCmdBar[T]) Delete(d T) {
 	s.deleteValue = d
 }
 
+func (s *DeleteCmdBar[any]) Hide() {
+	s.active = false
+}
+
 func newDeleteConfirm() *huh.Confirm {
 	return huh.NewConfirm().
 		Inline(true).

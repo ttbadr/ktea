@@ -56,11 +56,11 @@ func TestBorderTab(t *testing.T) {
 		bt := New(
 			WithOnTabChanged(func(t string, m *Model) {}),
 			WithTabs(
-				Tab{Title: "tab1", Label: "tab1"},
-				Tab{Title: "tab2", Label: "tab2"},
-				Tab{Title: "tab3", Label: "tab3"},
-				Tab{Title: "tab4", Label: "tab4"},
-				Tab{Title: "tab5", Label: "tab5"},
+				Tab{Title: "tab1", TabLabel: "tab1"},
+				Tab{Title: "tab2", TabLabel: "tab2"},
+				Tab{Title: "tab3", TabLabel: "tab3"},
+				Tab{Title: "tab4", TabLabel: "tab4"},
+				Tab{Title: "tab5", TabLabel: "tab5"},
 			),
 		)
 
@@ -91,8 +91,8 @@ func TestBorderTab(t *testing.T) {
 			WithOnTabChanged(func(t string, m *Model) {}),
 			WithTitle("My Title"),
 			WithTabs(
-				Tab{Title: "tab1", Label: "tab1"},
-				Tab{Title: "tab2", Label: "tab2"},
+				Tab{Title: "tab1", TabLabel: "tab1"},
+				Tab{Title: "tab2", TabLabel: "tab2"},
 			),
 		)
 
@@ -108,8 +108,8 @@ func TestBorderTab(t *testing.T) {
 		bt := New(
 			WithOnTabChanged(func(t string, m *Model) {}),
 			WithTabs(
-				Tab{Title: "tab1", Label: "tab1"},
-				Tab{Title: "tab2", Label: "tab2"},
+				Tab{Title: "tab1", TabLabel: "tab1"},
+				Tab{Title: "tab2", TabLabel: "tab2"},
 			),
 		)
 
@@ -126,10 +126,10 @@ func TestBorderTab(t *testing.T) {
 		bt := New(
 			WithOnTabChanged(func(t string, m *Model) {}),
 			WithTabs(
-				Tab{Title: "tab1", Label: "tab1"},
-				Tab{Title: "tab2", Label: "tab2"},
-				Tab{Title: "tabX", Label: "tabX"},
-				Tab{Title: "tab4", Label: "tab4"},
+				Tab{Title: "tab1", TabLabel: "tab1"},
+				Tab{Title: "tab2", TabLabel: "tab2"},
+				Tab{Title: "tabX", TabLabel: "tabX"},
+				Tab{Title: "tab4", TabLabel: "tab4"},
 			),
 		)
 

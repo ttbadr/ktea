@@ -27,8 +27,8 @@ func TestClustersTab(t *testing.T) {
 		// given
 		clustersTab, _ := New(&kontext.ProgramKtx{
 			Config:       &config.Config{},
-			WindowWidth:  0,
-			WindowHeight: 0,
+			WindowWidth:  200,
+			WindowHeight: 200,
 		}, kadmin.MockConnChecker, sradmin.MockConnChecker)
 
 		// when
@@ -425,8 +425,9 @@ func TestClustersTab(t *testing.T) {
 			Config: &config.Config{
 				Clusters: []config.Cluster{},
 			},
-			WindowWidth:  100,
-			WindowHeight: 100,
+			WindowWidth:     100,
+			WindowHeight:    100,
+			AvailableHeight: 100,
 		}
 		var clustersTab, _ = New(programKtx, kadmin.MockConnChecker, sradmin.MockConnChecker)
 		clustersTab.View(programKtx, tests.TestRenderer)

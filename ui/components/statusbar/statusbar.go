@@ -39,7 +39,7 @@ func (s *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	shortcuts = append([]Shortcut{
 		{
 			Name:       "Switch Tabs",
-			Keybinding: "C-←/→/l/r",
+			Keybinding: "C-←/→/h/l",
 		},
 	}, shortcuts...)
 	rowsPerColumn := 2 // Fixed maximum rows per column

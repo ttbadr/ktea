@@ -1,6 +1,7 @@
 package clusters_tab
 
 import (
+	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"ktea/config"
@@ -52,11 +53,13 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		switch msg.String() {
 		case "esc":
 			if m.escGoesBack {
-				m.active, _ = clusters_page.New(m.ktx, m.kConnChecker)
+				return m.active.Update(msg)
 			}
+			return nil
 		case "ctrl+n":
 			if _, ok := m.active.(*clusters_page.Model); ok {
 				m.active = create_cluster_page.NewCreateClusterPage(
+					m.GoBack,
 					m.kConnChecker,
 					m.srConnChecker,
 					m.ktx.Config,
@@ -75,12 +78,14 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				clusterName := clustersPage.SelectedCluster()
 				selectedCluster := m.ktx.Config.FindClusterByName(*clusterName)
 				m.active = create_cluster_page.NewEditClusterPage(
+					m.GoBack,
 					m.kConnChecker,
 					m.srConnChecker,
 					m.ktx.Config,
+					m.ktx.Config,
 					m.ktx,
-					selectedCluster,
-					create_cluster_page.WithTitle("Edit cluster"),
+					*selectedCluster,
+					create_cluster_page.WithTitle(fmt.Sprintf("Clusters / %s / Edit", selectedCluster.Name)),
 				)
 			}
 		}
@@ -90,6 +95,13 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	m.statusbar = statusbar.New(m.active)
 
 	return m.active.Update(msg)
+}
+
+func (m *Model) GoBack() tea.Cmd {
+	var cmd tea.Cmd
+	m.active, cmd = clusters_page.New(m.ktx, m.kConnChecker)
+	m.statusbar = statusbar.New(m.active)
+	return cmd
 }
 
 func New(
@@ -111,6 +123,7 @@ func New(
 		m.statusbar = statusbar.New(m.active)
 	} else {
 		m.active = create_cluster_page.NewCreateClusterPage(
+			m.GoBack,
 			m.kConnChecker,
 			m.srConnChecker,
 			m.ktx.Config,
@@ -121,7 +134,7 @@ func New(
 				{"Prev. Field", "s-tab"},
 				{"Reset Form", "C-r"},
 			},
-			create_cluster_page.WithTitle("Register your first Cluster"),
+			create_cluster_page.WithTitle("Clusters / Register"),
 		)
 		m.escGoesBack = false
 	}

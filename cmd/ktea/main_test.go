@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"ktea/config"
 	"ktea/kadmin"
+	"ktea/kontext"
 	"testing"
 )
 
@@ -12,12 +13,22 @@ func TestKtea(t *testing.T) {
 	t.Run("No clusters configured", func(t *testing.T) {
 		t.Run("Shows create cluster page", func(t *testing.T) {
 			model := NewModel(kadmin.NewMockKadminInstantiator(), config.NewInMemoryConfigIO(&config.Config{}))
+			model.ktx = &kontext.ProgramKtx{
+				Config:          &config.Config{},
+				WindowWidth:     200,
+				WindowHeight:    200,
+				AvailableHeight: 200,
+			}
 			model.Update(config.LoadedMsg{
 				Config: &config.Config{},
 			})
 			view := model.View()
 
 			assert.Contains(t, view, "┃ Name")
+			// do not show cluster upsert tabs
+			assert.NotContains(t, view, "f1")
+			assert.NotContains(t, view, "f2")
+			assert.NotContains(t, view, "f3")
 		})
 	})
 

@@ -20,7 +20,6 @@ import (
 	"ktea/ui/tabs/loading_tab"
 	"ktea/ui/tabs/sr_tab"
 	"ktea/ui/tabs/topics_tab"
-	"net/http"
 	"os"
 	"slices"
 	"time"
@@ -146,6 +145,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// keep clusters tab focussed after recreating tabs
 			m.tabs.GoToTab(clustersTabLbl)
+			m.tabCtrl = m.clustersTabCtrl
+			// TODO navigate to active cluster form
 		}
 
 	case RetryClusterConnectionMsg:
@@ -174,17 +175,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if m.startupConnErr {
 			m.startupConnErr = false
-			m.tabs.GoToTab(0)
+			m.tabs.GoToTab(topicsTabLbl)
 			m.tabCtrl = m.topicsTabCtrl
 		} else {
 			// tabs were recreated due to cluster switch,
 			// make sure we stay on the clusters tab because,
 			// which might have introduced or removed the schema-registry tab
-			if msg.Cluster.HasSchemaRegistry() {
-				m.tabs.GoToTab(3)
-			} else {
-				m.tabs.GoToTab(2)
-			}
+			m.tabs.GoToTab(clustersTabLbl)
 			m.tabCtrl = m.clustersTabCtrl
 		}
 
@@ -301,8 +298,7 @@ func (m *Model) boostrapUI(cluster *config.Cluster) tea.Cmd {
 		cmds = append(cmds, cmd)
 		m.clustersTabCtrl, cmd = clusters_tab.New(m.ktx, kadmin.CheckKafkaConnectivity, sradmin.CheckSchemaRegistryConn)
 		cmds = append(cmds, cmd)
-		admin := kcadmin.New(http.DefaultClient, "http://localhost:8083")
-		m.kconTabCtrl, cmd = kcon_tab.New(admin, admin)
+		m.kconTabCtrl, cmd = kcon_tab.New(m.ktx.Config.ActiveCluster())
 		cmds = append(cmds, cmd)
 
 		m.tabCtrl = m.topicsTabCtrl

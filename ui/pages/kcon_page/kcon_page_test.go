@@ -1,10 +1,11 @@
-package kcons_page
+package kcon_page
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"ktea/kcadmin"
 	"ktea/tests"
+	"ktea/ui"
 	"strings"
 	"testing"
 )
@@ -13,7 +14,7 @@ type MockKcAdmin struct{}
 
 type listActiveConnectorsCalledMsg struct{}
 
-func (m *MockKcAdmin) DeleteConnector(name string) tea.Msg {
+func (m *MockKcAdmin) DeleteConnector(string) tea.Msg {
 	return nil
 }
 
@@ -23,8 +24,16 @@ func (m *MockKcAdmin) ListActiveConnectors() tea.Msg {
 
 func TestKconsPage(t *testing.T) {
 
+	t.Run("esc goes back to Kafka Connect Clusters page", func(t *testing.T) {
+		page, _ := New(ui.NavBackMock, &MockKcAdmin{}, &MockKcAdmin{}, "connector-name")
+
+		cmd := page.Update(tests.Key(tea.KeyEsc))
+
+		assert.IsType(t, ui.NavBackMockCalledMsg{}, cmd())
+	})
+
 	t.Run("F5 refreshes topic list", func(t *testing.T) {
-		page, _ := New(&MockKcAdmin{}, &MockKcAdmin{})
+		page, _ := New(ui.NavBackMock, &MockKcAdmin{}, &MockKcAdmin{}, "connector-name")
 
 		_ = page.Update(kcadmin.ConnectorsListedMsg{
 			Connectors: kcadmin.Connectors{
@@ -55,7 +64,7 @@ func TestKconsPage(t *testing.T) {
 	})
 
 	t.Run("Default sort by Name Asc", func(t *testing.T) {
-		page, _ := New(&MockKcAdmin{}, &MockKcAdmin{})
+		page, _ := New(ui.NavBackMock, &MockKcAdmin{}, &MockKcAdmin{}, "connector-name")
 
 		_ = page.Update(kcadmin.ConnectorsListedMsg{
 			Connectors: kcadmin.Connectors{
@@ -109,7 +118,7 @@ func TestKconsPage(t *testing.T) {
 	})
 
 	t.Run("Toggle sort by Name", func(t *testing.T) {
-		page, _ := New(&MockKcAdmin{}, &MockKcAdmin{})
+		page, _ := New(ui.NavBackMock, &MockKcAdmin{}, &MockKcAdmin{}, "connector-name")
 
 		_ = page.Update(kcadmin.ConnectorsListedMsg{
 			Connectors: kcadmin.Connectors{
@@ -166,8 +175,61 @@ func TestKconsPage(t *testing.T) {
 		assert.Less(t, t2Idx, t3Idx)
 	})
 
+	t.Run("Esc hides toggled sort by", func(t *testing.T) {
+		page, _ := New(ui.NavBackMock, &MockKcAdmin{}, &MockKcAdmin{}, "connector-name")
+
+		_ = page.Update(kcadmin.ConnectorsListedMsg{
+			Connectors: kcadmin.Connectors{
+				"z-my-connector": {
+					Status: kcadmin.ConnectorStatus{
+						Name: "z-my-connector",
+						Connector: kcadmin.ConnectorState{
+							State:    "RUNNING",
+							WorkerID: "10.0.0.6:8083",
+						},
+						Tasks: nil,
+						Type:  "sink",
+					},
+				},
+				"b-my-connector": {
+					Status: kcadmin.ConnectorStatus{
+						Name: "b-my-connector",
+						Connector: kcadmin.ConnectorState{
+							State:    "RUNNING",
+							WorkerID: "10.0.0.6:8083",
+						},
+						Tasks: nil,
+						Type:  "sink",
+					},
+				},
+				"a-my-connector": {
+					Status: kcadmin.ConnectorStatus{
+						Name: "a-my-connector",
+						Connector: kcadmin.ConnectorState{
+							State:    "RUNNING",
+							WorkerID: "10.0.0.6:8083",
+						},
+						Tasks: nil,
+						Type:  "sink",
+					},
+				},
+			},
+		})
+
+		page.Update(tests.Key(tea.KeyF3))
+
+		render := page.View(tests.NewKontext(), tests.TestRenderer)
+		assert.Contains(t, render, "Name ▲")
+
+		cmd := page.Update(tests.Key(tea.KeyEsc))
+
+		assert.Nil(t, cmd)
+		render = page.View(tests.NewKontext(), tests.TestRenderer)
+		assert.NotContains(t, render, "Name ▲")
+	})
+
 	t.Run("Search for connector", func(t *testing.T) {
-		page, _ := New(&MockKcAdmin{}, &MockKcAdmin{})
+		page, _ := New(ui.NavBackMock, &MockKcAdmin{}, &MockKcAdmin{}, "connector-name")
 
 		_ = page.Update(kcadmin.ConnectorsListedMsg{
 			Connectors: kcadmin.Connectors{

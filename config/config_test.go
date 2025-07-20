@@ -56,29 +56,6 @@ func TestConfig(t *testing.T) {
 		assert.True(t, config.Clusters[0].SSLEnabled)
 	})
 
-	t.Run("Registering an existing cluster updates it", func(t *testing.T) {
-		// given
-		config := New(&InMemoryConfigIO{})
-		config.RegisterCluster(RegistrationDetails{
-			Name:       "prd",
-			Color:      "#880808",
-			Host:       "localhost:9092",
-			AuthMethod: NoneAuthMethod,
-		})
-
-		// when
-		config.RegisterCluster(RegistrationDetails{
-			Name:       "prd",
-			Color:      "#880801",
-			Host:       "localhost:9093",
-			AuthMethod: NoneAuthMethod,
-		})
-
-		// then
-		assert.Equal(t, config.Clusters[0].Color, "#880801")
-		assert.Equal(t, config.Clusters[0].BootstrapServers, []string{"localhost:9093"})
-	})
-
 	t.Run("Registering a SASL_SSL Cluster with Schema Registry ", func(t *testing.T) {
 		// given
 		config := New(&InMemoryConfigIO{})
@@ -110,6 +87,23 @@ func TestConfig(t *testing.T) {
 		assert.Equal(t, config.Clusters[0].SchemaRegistry.Password, "srTest123")
 	})
 
+	t.Run("Registering a first cluster activates it by default", func(t *testing.T) {
+		// given
+		config := New(&InMemoryConfigIO{})
+
+		// when
+		config.RegisterCluster(RegistrationDetails{
+			Name:       "prd",
+			Color:      "#880801",
+			Host:       "localhost:9093",
+			AuthMethod: NoneAuthMethod,
+		})
+
+		// then
+		assert.Equal(t, config.Clusters[0].Name, "prd")
+		assert.Equal(t, config.Clusters[0].Active, true)
+	})
+
 	t.Run("Registering an existing cluster updates it", func(t *testing.T) {
 		// given
 		config := New(&InMemoryConfigIO{})
@@ -131,23 +125,6 @@ func TestConfig(t *testing.T) {
 		// then
 		assert.Equal(t, config.Clusters[0].Color, "#880801")
 		assert.Equal(t, config.Clusters[0].BootstrapServers, []string{"localhost:9093"})
-	})
-
-	t.Run("Registering a first cluster activates it by default", func(t *testing.T) {
-		// given
-		config := New(&InMemoryConfigIO{})
-
-		// when
-		config.RegisterCluster(RegistrationDetails{
-			Name:       "prd",
-			Color:      "#880801",
-			Host:       "localhost:9093",
-			AuthMethod: NoneAuthMethod,
-		})
-
-		// then
-		assert.Equal(t, config.Clusters[0].Name, "prd")
-		assert.Equal(t, config.Clusters[0].Active, true)
 	})
 
 	t.Run("Registering an existing active cluster keeps it active", func(t *testing.T) {
@@ -201,6 +178,104 @@ func TestConfig(t *testing.T) {
 		assert.Len(t, config.Clusters, 1)
 		assert.Equal(t, config.Clusters[0].Name, "prod")
 		assert.Equal(t, config.Clusters[0].BootstrapServers, []string{"localhost:9093"})
+	})
+
+	t.Run("Registering an existing cluster with first Kafka Connect Cluster", func(t *testing.T) {
+		// given
+		config := New(&InMemoryConfigIO{})
+		config.RegisterCluster(RegistrationDetails{
+			Name:       "prd",
+			Color:      "#880808",
+			Host:       "localhost:9092",
+			AuthMethod: NoneAuthMethod,
+		})
+
+		// when
+		config.RegisterCluster(RegistrationDetails{
+			Name:       "prd",
+			Color:      "#880808",
+			Host:       "localhost:9092",
+			AuthMethod: NoneAuthMethod,
+			KafkaConnectClusters: []KafkaConnectClusterDetails{
+				{
+					Name:     "s3-sink",
+					Url:      "http://localhost:8083",
+					Username: "john",
+					Password: "doe",
+				},
+			},
+		})
+
+		// then
+		assert.Equal(t, config.Clusters[0].Color, "#880808")
+		assert.Equal(t, config.Clusters[0].BootstrapServers, []string{"localhost:9092"})
+		// and
+		assert.Len(t, config.Clusters[0].KafkaConnectClusters, 1)
+		assert.Equal(t, config.Clusters[0].KafkaConnectClusters[0], KafkaConnectConfig{
+			Name:     "s3-sink",
+			Url:      "http://localhost:8083",
+			Username: "john",
+			Password: "doe",
+		})
+	})
+
+	t.Run("Registering an existing cluster with second Kafka Connect Cluster", func(t *testing.T) {
+		// given
+		config := New(&InMemoryConfigIO{})
+		config.RegisterCluster(RegistrationDetails{
+			Name:       "prd",
+			Color:      "#880808",
+			Host:       "localhost:9092",
+			AuthMethod: NoneAuthMethod,
+			KafkaConnectClusters: []KafkaConnectClusterDetails{
+				{
+					Name:     "s3-sink",
+					Url:      "http://localhost:8083",
+					Username: "john",
+					Password: "doe",
+				},
+			},
+		})
+
+		// when
+		config.RegisterCluster(RegistrationDetails{
+			Name:       "prd",
+			Color:      "#880808",
+			Host:       "localhost:9092",
+			AuthMethod: NoneAuthMethod,
+			KafkaConnectClusters: []KafkaConnectClusterDetails{
+				{
+					Name:     "s3-sink",
+					Url:      "http://localhost:8083",
+					Username: "john",
+					Password: "doe",
+				},
+				{
+					Name:     "s4-sink",
+					Url:      "http://localhost:8084",
+					Username: "jane",
+					Password: "do3",
+				},
+			},
+		})
+
+		// then
+		assert.Equal(t, config.Clusters[0].Color, "#880808")
+		assert.Equal(t, config.Clusters[0].BootstrapServers, []string{"localhost:9092"})
+		// and
+		assert.Len(t, config.Clusters[0].KafkaConnectClusters, 2)
+		assert.Contains(t, config.Clusters[0].KafkaConnectClusters, KafkaConnectConfig{
+			Name:     "s3-sink",
+			Url:      "http://localhost:8083",
+			Username: "john",
+			Password: "doe",
+		})
+		assert.Contains(t, config.Clusters[0].KafkaConnectClusters, KafkaConnectConfig{
+			Name:     "s4-sink",
+			Url:      "http://localhost:8084",
+			Username: "jane",
+			Password: "do3",
+		})
 	})
 
 	t.Run("Get primary cluster", func(t *testing.T) {
@@ -374,7 +449,7 @@ func TestConfig(t *testing.T) {
 		assert.Equal(t, cluster.BootstrapServers, []string{"localhost:9093"})
 	})
 
-	t.Run("Find none existing cluster by Name", func(t *testing.T) {
+	t.Run("Find non existing cluster by Name", func(t *testing.T) {
 		// given
 		config := New(&InMemoryConfigIO{})
 		config.RegisterCluster(RegistrationDetails{

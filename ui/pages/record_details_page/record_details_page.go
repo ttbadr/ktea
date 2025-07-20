@@ -388,8 +388,8 @@ func New(
 	var tabs []border.Tab
 	if record.Payload.Schema != "" {
 		tabs = []border.Tab{
-			{Title: "Record", Label: "record"},
-			{Title: "Schema", Label: "record"},
+			{Title: "Record", TabLabel: "record"},
+			{Title: "Schema", TabLabel: "record"},
 		}
 	}
 	b := border.New(

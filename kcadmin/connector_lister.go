@@ -8,8 +8,8 @@ import (
 	"net/http"
 )
 
-func (h *DefaultKcAdmin) ListActiveConnectors() tea.Msg {
-	req, err := http.NewRequest(http.MethodGet, h.url("/connectors?expand=status"), nil)
+func (k *DefaultKcAdmin) ListActiveConnectors() tea.Msg {
+	req, err := http.NewRequest(http.MethodGet, k.url("/connectors?expand=status"), nil)
 	if err != nil {
 		return ConnectorListingErrMsg{err}
 	}
@@ -18,18 +18,18 @@ func (h *DefaultKcAdmin) ListActiveConnectors() tea.Msg {
 		cChan = make(chan Connectors)
 		eChan = make(chan error)
 	)
-	go h.doListActiveConnectors(cChan, eChan, req)
+	go k.doListActiveConnectors(cChan, eChan, req)
 
 	return ConnectorListingStartedMsg{cChan, eChan}
 }
 
-func (h *DefaultKcAdmin) doListActiveConnectors(
+func (k *DefaultKcAdmin) doListActiveConnectors(
 	cChan chan Connectors,
 	eChan chan error,
 	req *http.Request,
 ) {
 	kadmin.MaybeIntroduceLatency()
-	resp, err := h.client.Do(req)
+	resp, err := k.client.Do(req)
 	if err != nil {
 		eChan <- err
 		return
