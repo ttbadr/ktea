@@ -6,8 +6,10 @@
 # 🫖 ktea - kafka terminal client
 
 ktea is a tool designed to simplify and accelerate interactions with Kafka clusters.
+![topics-page.png](topics-page.png)
+![record-detail-page.png](record-detail-page.png)
+![record-page.png](record-page.png)
 
-![demo.gif](demo.gif)
 
 ## Installation
 
