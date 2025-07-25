@@ -36,17 +36,16 @@ const (
 )
 
 type Model struct {
-	topics             []kadmin.ListedTopic
-	table              table.Model
-	shortcuts          []statusbar.Shortcut
-	cmdBar             *cmdbar.TableCmdsBar[string]
-	rows               []table.Row
-	lister             kadmin.TopicLister
-	ctx                context.Context
-	recordCountSpinner spinner.Model
-	tableFocussed      bool
-	state              state
-	sortByCmdBar       *cmdbar.SortByCmdBar
+	topics        []kadmin.ListedTopic
+	table         table.Model
+	shortcuts     []statusbar.Shortcut
+	cmdBar        *cmdbar.TableCmdsBar[string]
+	rows          []table.Row
+	lister        kadmin.TopicLister
+	ctx           context.Context
+	tableFocussed bool
+	state         state
+	sortByCmdBar  *cmdbar.SortByCmdBar
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -82,7 +81,6 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	cmds := make([]tea.Cmd, 2)
 
 	var cmd tea.Cmd
-	m.recordCountSpinner, cmd = m.recordCountSpinner.Update(msg)
 	cmds = append(cmds, cmd)
 
 	switch msg := msg.(type) {
@@ -103,7 +101,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		case "f5":
 			m.topics = nil
 			m.state = stateRefreshing
-			return tea.Batch(m.lister.ListTopics, m.recordCountSpinner.Tick)
+			return m.lister.ListTopics
 		case "L":
 			if m.SelectedTopic() == nil {
 				return nil
@@ -119,22 +117,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				}
 			}
 		}
-	case ui.RegainedFocusMsg:
-		if m.state == stateRefreshing || m.state == stateLoading || m.state == stateRecordCountLoading {
-			cmds = append(cmds, m.recordCountSpinner.Tick)
-			tea.Batch(cmds...)
-		}
 	case spinner.TickMsg:
 		selectedTopic := m.SelectedTopicName()
 		_, c := m.cmdBar.Update(msg, &selectedTopic)
 		if c != nil {
 			cmds = append(cmds, c)
 		}
-	case kadmin.AllTopicRecordCountCalculatedMsg:
-		m.state = stateLoaded
-		m.recordCountSpinner = spinner.New()
-		m.recordCountSpinner.Spinner = spinner.MiniDot
-		log.Debug("All record counts calculated")
 	case kadmin.TopicDeletionStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
 	case kadmin.TopicListingStartedMsg:
@@ -404,11 +392,8 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 		sortByCmdBar,
 	)
 	m.lister = lister
-	m.recordCountSpinner = spinner.New()
-	m.recordCountSpinner.Spinner = spinner.MiniDot
 	m.state = stateLoading
 	var cmds []tea.Cmd
-	cmds = append(cmds, m.recordCountSpinner.Tick)
 	cmds = append(cmds, m.lister.ListTopics)
 	return &m, tea.Batch(cmds...)
 }

@@ -38,9 +38,6 @@ func (m *TopicListingStartedMsg) AwaitTopicListCompletion() tea.Msg {
 	}
 }
 
-type AllTopicRecordCountCalculatedMsg struct {
-}
-
 type ListedTopic struct {
 	Name           string
 	PartitionCount int
