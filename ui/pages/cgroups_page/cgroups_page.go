@@ -34,17 +34,18 @@ const (
 type Model struct {
 	lister        kadmin.CGroupLister
 	table         table.Model
-	cmdBar        *cmdbar.TableCmdsBar[string]
+	tcb           *cmdbar.TableCmdsBar[string]
 	groups        []*kadmin.ConsumerGroup
 	rows          []table.Row
 	tableFocussed bool
 	sort          cmdbar.SortLabel
 	state         state
+	goToTop       bool
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	var views []string
-	cmdBarView := m.cmdBar.View(ktx, renderer)
+	cmdBarView := m.tcb.View(ktx, renderer)
 	views = append(views, cmdBarView)
 
 	m.table.SetWidth(ktx.WindowWidth - 2)
@@ -54,6 +55,15 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	})
 	m.table.SetRows(m.rows)
 	m.table.SetHeight(ktx.AvailableHeight - 2)
+
+	if m.table.SelectedRow() == nil && len(m.table.Rows()) > 0 {
+		m.goToTop = true
+	}
+
+	if m.goToTop {
+		m.table.GotoTop()
+		m.goToTop = false
+	}
 
 	var tableView string
 
@@ -79,7 +89,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		switch msg.String() {
 		case "enter":
 			// only accept enter when the table is focussed
-			if !m.cmdBar.IsFocussed() {
+			if !m.tcb.IsFocussed() {
 				// TODO ignore enter when there are no groups loaded
 				return ui.PublishMsg(nav.LoadCGroupTopicsPageMsg{GroupName: *m.SelectedCGroup()})
 			}
@@ -88,11 +98,12 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			m.state = stateRefreshing
 			return m.lister.ListCGroups
 		}
+	case kadmin.CGroupDeletionStartedMsg:
+		cmds = append(cmds, msg.AwaitCompletion)
 	case kadmin.ConsumerGroupsListedMsg:
 		m.state = stateLoaded
 		m.groups = msg.ConsumerGroups
-	case kadmin.CGroupDeletionStartedMsg:
-		cmds = append(cmds, msg.AwaitCompletion)
+		m.tcb.ResetSearch()
 	case kadmin.CGroupDeletedMsg:
 		for i, group := range m.groups {
 			if group.Name == msg.GroupName {
@@ -104,21 +115,21 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	var cmd tea.Cmd
 
-	msg, cmd = m.cmdBar.Update(msg, m.SelectedCGroup())
-	m.tableFocussed = !m.cmdBar.IsFocussed()
+	msg, cmd = m.tcb.Update(msg, m.SelectedCGroup())
+	m.tableFocussed = !m.tcb.IsFocussed()
 	cmds = append(cmds, cmd)
 
 	m.rows = m.createRows()
 
 	// make sure table navigation is off when the cmdbar is focussed
-	if !m.cmdBar.IsFocussed() {
+	if !m.tcb.IsFocussed() {
 		t, cmd := m.table.Update(msg)
 		m.table = t
 		cmds = append(cmds, cmd)
 	}
 
-	if m.cmdBar.HasSearchedAtLeastOneChar() {
-		m.table.GotoTop()
+	if m.tcb.HasSearchedAtLeastOneChar() {
+		m.goToTop = true
 	}
 
 	return tea.Batch(cmds...)
@@ -137,8 +148,8 @@ func (m *Model) columnTitle(title string) string {
 func (m *Model) createRows() []table.Row {
 	var rows []table.Row
 	for _, group := range m.groups {
-		if m.cmdBar.GetSearchTerm() != "" {
-			if strings.Contains(strings.ToLower(group.Name), strings.ToLower(m.cmdBar.GetSearchTerm())) {
+		if m.tcb.GetSearchTerm() != "" {
+			if strings.Contains(strings.ToLower(group.Name), strings.ToLower(m.tcb.GetSearchTerm())) {
 				rows = m.appendGroupToRows(rows, group)
 			}
 		} else {
@@ -188,8 +199,8 @@ func (m *Model) SelectedCGroup() *string {
 }
 
 func (m *Model) Shortcuts() []statusbar.Shortcut {
-	if m.cmdBar.IsFocussed() {
-		shortCuts := m.cmdBar.Shortcuts()
+	if m.tcb.IsFocussed() {
+		shortCuts := m.tcb.Shortcuts()
 		if shortCuts != nil {
 			return shortCuts
 		}
@@ -266,7 +277,7 @@ func New(
 			m *notifier.Model,
 		) (bool, tea.Cmd) {
 			m.Idle()
-			return true, nil
+			return false, nil
 		},
 	)
 
@@ -319,7 +330,7 @@ func New(
 		}),
 	)
 
-	m.cmdBar = cmdbar.NewTableCmdsBar[string](
+	m.tcb = cmdbar.NewTableCmdsBar[string](
 		cmdbar.NewDeleteCmdBar(deleteMsgFunc, deleteFunc, nil),
 		cmdbar.NewSearchCmdBar("Search Consumer Group"),
 		notifierCmdBar,

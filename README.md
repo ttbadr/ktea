@@ -30,6 +30,14 @@ Binaries available at the release page.
 
 ## Usage
 
+### Navigation
+
+All tables can be navigated using vi like bindings:
+- up: `j`
+- down: `k`
+- page down: `d`
+- page up: `u`
+
 ### Configuration
 
 All configuration is stored in `~/.config/ktea/config.conf`

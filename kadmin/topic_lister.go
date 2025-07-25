@@ -10,7 +10,7 @@ type TopicLister interface {
 	ListTopics() tea.Msg
 }
 
-type TopicListedMsg struct {
+type TopicsListedMsg struct {
 	Topics []ListedTopic
 }
 
@@ -32,7 +32,7 @@ type TopicListedErrorMsg struct {
 func (m *TopicListingStartedMsg) AwaitTopicListCompletion() tea.Msg {
 	select {
 	case topics := <-m.Topics:
-		return TopicListedMsg{Topics: topics}
+		return TopicsListedMsg{Topics: topics}
 	case err := <-m.Err:
 		return TopicListedErrorMsg{Err: err}
 	}

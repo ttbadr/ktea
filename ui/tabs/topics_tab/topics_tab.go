@@ -51,8 +51,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	switch msg := msg.(type) {
 
-	case kadmin.TopicListedMsg:
-		// Make sure TopicListedMsg is explicitly captured and
+	case kadmin.TopicsListedMsg:
+		// Make sure TopicsListedMsg is explicitly captured and
 		// properly propagated in the case when cgroupsPage
 		//isn't focused anymore.
 		return m.topicsPage.Update(msg)

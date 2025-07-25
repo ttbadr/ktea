@@ -35,7 +35,7 @@ const (
 type Model struct {
 	table            table.Model
 	rows             []table.Row
-	cmdBar           *cmdbar.TableCmdsBar[sradmin.Subject]
+	tcb              *cmdbar.TableCmdsBar[sradmin.Subject]
 	subjects         []sradmin.Subject
 	renderedSubjects []sradmin.Subject
 	tableFocussed    bool
@@ -46,6 +46,7 @@ type Model struct {
 	deletedLast     bool
 	sort            cmdbar.SortLabel
 	globalCompLevel string
+	goToTop         bool
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -59,7 +60,7 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 			Render("No Subjects Found")
 	}
 
-	cmdBarView := m.cmdBar.View(ktx, renderer)
+	cmdBarView := m.tcb.View(ktx, renderer)
 
 	available := ktx.WindowWidth - 8
 	subjCol := int(float64(available) * 0.8)
@@ -78,8 +79,12 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 		m.table.GotoBottom()
 		m.deletedLast = false
 	}
-	if m.table.SelectedRow() == nil {
+	if m.table.SelectedRow() == nil && len(m.table.Rows()) > 0 {
 		m.table.GotoTop()
+	}
+	if m.goToTop {
+		m.table.GotoTop()
+		m.goToTop = false
 	}
 
 	embeddedText := map[styles.BorderPosition]styles.EmbeddedTextFunc{
@@ -130,7 +135,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			}
 		case "enter":
 			// only accept enter when the table is focussed
-			if !m.cmdBar.IsFocussed() {
+			if !m.tcb.IsFocussed() {
 				// ignore enter when there are no schemas loaded
 				if m.state == subjectsLoaded && len(m.subjects) > 0 {
 					return ui.PublishMsg(
@@ -148,6 +153,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		if len(msg.Subjects) > 0 {
 			m.state = subjectsLoaded
 			m.subjects = msg.Subjects
+			m.goToTop = true
+			m.tcb.ResetSearch()
 		} else {
 			m.state = noSubjectsFound
 		}
@@ -167,8 +174,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 	}
 
-	msg, cmd := m.cmdBar.Update(msg, m.SelectedSubject())
-	m.tableFocussed = !m.cmdBar.IsFocussed()
+	msg, cmd := m.tcb.Update(msg, m.SelectedSubject())
+	m.tableFocussed = !m.tcb.IsFocussed()
 	cmds = append(cmds, cmd)
 
 	subjects := m.filterSubjectsBySearchTerm()
@@ -177,13 +184,13 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	m.rows = m.createRows(subjects)
 
 	// make sure table navigation is off when the cmdbar is focussed
-	if !m.cmdBar.IsFocussed() {
+	if !m.tcb.IsFocussed() {
 		t, cmd := m.table.Update(msg)
 		m.table = t
 		cmds = append(cmds, cmd)
 	}
 
-	if m.cmdBar.HasSearchedAtLeastOneChar() {
+	if m.tcb.HasSearchedAtLeastOneChar() {
 		m.table.GotoTop()
 	}
 
@@ -247,7 +254,7 @@ func (m *Model) createRows(subjects []sradmin.Subject) []table.Row {
 
 func (m *Model) filterSubjectsBySearchTerm() []sradmin.Subject {
 	var subjects []sradmin.Subject
-	searchTerm := m.cmdBar.GetSearchTerm()
+	searchTerm := m.tcb.GetSearchTerm()
 	for _, subject := range m.subjects {
 		if searchTerm != "" {
 			if strings.Contains(strings.ToUpper(subject.Name), strings.ToUpper(searchTerm)) {
@@ -261,7 +268,7 @@ func (m *Model) filterSubjectsBySearchTerm() []sradmin.Subject {
 }
 
 func (m *Model) Shortcuts() []statusbar.Shortcut {
-	shortcuts := m.cmdBar.Shortcuts()
+	shortcuts := m.tcb.Shortcuts()
 	if shortcuts == nil {
 		return []statusbar.Shortcut{
 			{
@@ -404,7 +411,7 @@ func New(
 
 	model.sort = sortByBar.SortedBy()
 
-	model.cmdBar = cmdbar.NewTableCmdsBar[sradmin.Subject](
+	model.tcb = cmdbar.NewTableCmdsBar[sradmin.Subject](
 		cmdbar.NewDeleteCmdBar(deleteMsgFunc, deleteFunc, nil),
 		cmdbar.NewSearchCmdBar("Search subjects by name"),
 		notifierCmdBar,

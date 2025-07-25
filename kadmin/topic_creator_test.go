@@ -31,7 +31,7 @@ func TestCreateTopic(t *testing.T) {
 		var topics []ListedTopic
 		msg := listTopicsMsg.AwaitTopicListCompletion()
 		switch msg := msg.(type) {
-		case TopicListedMsg:
+		case TopicsListedMsg:
 			topics = msg.Topics
 		case TopicListedErrorMsg:
 			assert.Fail(t, "Failed to list topics")

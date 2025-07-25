@@ -240,4 +240,86 @@ func TestCgroupsPage(t *testing.T) {
 			assert.NotContains(t, render, "│ group2")
 		})
 	})
+
+	t.Run("When groups are loaded or refresh then the search form is reset", func(t *testing.T) {
+		page, _ := New(&MockCGroupLister{}, &MockCGroupDeleter{})
+
+		_ = page.Update(kadmin.ConsumerGroupsListedMsg{
+			ConsumerGroups: []*kadmin.ConsumerGroup{
+				{
+					Name:    "group3",
+					Members: []kadmin.GroupMember{},
+				},
+				{
+					Name:    "group1",
+					Members: []kadmin.GroupMember{},
+				},
+				{
+					Name:    "group2",
+					Members: []kadmin.GroupMember{},
+				},
+			},
+		})
+
+		page.Update(tests.Key('/'))
+		tests.UpdateKeys(page, "group2")
+
+		render := page.View(tests.NewKontext(), tests.TestRenderer)
+		assert.Contains(t, render, "> group2")
+
+		_ = page.Update(kadmin.ConsumerGroupsListedMsg{
+			ConsumerGroups: []*kadmin.ConsumerGroup{
+				{
+					Name:    "group3",
+					Members: []kadmin.GroupMember{},
+				},
+				{
+					Name:    "group1",
+					Members: []kadmin.GroupMember{},
+				},
+				{
+					Name:    "group2",
+					Members: []kadmin.GroupMember{},
+				},
+			},
+		})
+
+		render = page.View(tests.NewKontext(), tests.TestRenderer)
+		assert.NotContains(t, render, "> group2")
+	})
+
+	t.Run("Searching resets selected row to top row", func(t *testing.T) {
+		page, _ := New(&MockCGroupLister{}, &MockCGroupDeleter{})
+
+		_ = page.Update(kadmin.ConsumerGroupsListedMsg{
+			ConsumerGroups: []*kadmin.ConsumerGroup{
+				{
+					Name:    "group1",
+					Members: []kadmin.GroupMember{},
+				},
+				{
+					Name:    "group2",
+					Members: []kadmin.GroupMember{},
+				},
+				{
+					Name:    "group3",
+					Members: []kadmin.GroupMember{},
+				},
+			},
+		})
+
+		page.View(tests.NewKontext(), tests.TestRenderer)
+
+		page.Update(tests.Key(tea.KeyDown))
+		page.Update(tests.Key(tea.KeyDown))
+
+		page.View(tests.NewKontext(), tests.TestRenderer)
+		assert.Equal(t, "group3", page.table.SelectedRow()[0])
+
+		page.Update(tests.Key('/'))
+		tests.UpdateKeys(page, "group")
+
+		page.View(tests.NewKontext(), tests.TestRenderer)
+		assert.Equal(t, "group1", page.table.SelectedRow()[0])
+	})
 }

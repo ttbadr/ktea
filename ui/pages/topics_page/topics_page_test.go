@@ -1,6 +1,7 @@
 package topics_page
 
 import (
+	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"ktea/kadmin"
@@ -42,7 +43,7 @@ func TestTopicsPage(t *testing.T) {
 	t.Run("F5 refreshes topic list", func(t *testing.T) {
 		page, _ := New(&MockTopicDeleter{}, &MockTopicLister{})
 
-		_ = page.Update(kadmin.TopicListedMsg{
+		_ = page.Update(kadmin.TopicsListedMsg{
 			Topics: []kadmin.ListedTopic{
 				{
 					Name:           "topic1",
@@ -57,10 +58,63 @@ func TestTopicsPage(t *testing.T) {
 		assert.Contains(t, tests.ExecuteBatchCmd(cmd), ListTopicsCalledMsg{})
 	})
 
+	t.Run("When topics are loaded or refresh then the search form is reset", func(t *testing.T) {
+		page, _ := New(&MockTopicDeleter{}, &MockTopicLister{})
+
+		_ = page.Update(kadmin.TopicsListedMsg{
+			Topics: []kadmin.ListedTopic{
+				{
+					Name:           "topic1",
+					PartitionCount: 1,
+					Replicas:       1,
+				},
+			},
+		})
+
+		page.Update(tests.Key('/'))
+		tests.UpdateKeys(page, "topic2")
+
+		render := page.View(tests.NewKontext(), tests.TestRenderer)
+		assert.Contains(t, render, "> topic2")
+
+		page.Update(kadmin.TopicsListedMsg{})
+
+		render = page.View(tests.NewKontext(), tests.TestRenderer)
+		assert.NotContains(t, render, "> topic2")
+	})
+
+	t.Run("Searching resets selected row to top row", func(t *testing.T) {
+		page, _ := New(&MockTopicDeleter{}, &MockTopicLister{})
+
+		var topics []kadmin.ListedTopic
+		for i := range 10 {
+			topics = append(topics, kadmin.ListedTopic{
+				Name:           fmt.Sprintf("topic%d", i),
+				PartitionCount: 1,
+				Replicas:       1,
+			})
+		}
+		_ = page.Update(kadmin.TopicsListedMsg{Topics: topics})
+		page.View(tests.NewKontext(), tests.TestRenderer)
+
+		page.Update(tests.Key(tea.KeyDown))
+		page.Update(tests.Key(tea.KeyDown))
+		page.Update(tests.Key(tea.KeyDown))
+
+		page.View(tests.NewKontext(), tests.TestRenderer)
+		assert.Equal(t, "topic3", page.table.SelectedRow()[0])
+
+		page.Update(tests.Key('/'))
+		tests.UpdateKeys(page, "topic")
+
+		page.View(tests.NewKontext(), tests.TestRenderer)
+		assert.Equal(t, "topic0", page.table.SelectedRow()[0])
+	})
+
 	t.Run("Default sort by Name Asc", func(t *testing.T) {
 		page, _ := New(&MockTopicDeleter{}, &MockTopicLister{})
 
-		_ = page.Update(kadmin.TopicListedMsg{
+		_ = page.Update(kadmin.TopicsListedMsg{
 			Topics: []kadmin.ListedTopic{
 				{
 					Name:           "topic1",
@@ -88,7 +142,7 @@ func TestTopicsPage(t *testing.T) {
 	t.Run("Toggle sort by Name", func(t *testing.T) {
 		page, _ := New(&MockTopicDeleter{}, &MockTopicLister{})
 
-		_ = page.Update(kadmin.TopicListedMsg{
+		_ = page.Update(kadmin.TopicsListedMsg{
 			Topics: []kadmin.ListedTopic{
 				{
 					Name:           "topic1",
@@ -128,7 +182,7 @@ func TestTopicsPage(t *testing.T) {
 	t.Run("Toggle sort by Partitions", func(t *testing.T) {
 		page, _ := New(&MockTopicDeleter{}, &MockTopicLister{})
 
-		_ = page.Update(kadmin.TopicListedMsg{
+		_ = page.Update(kadmin.TopicsListedMsg{
 			Topics: []kadmin.ListedTopic{
 				{
 					Name:           "topic1",
@@ -181,7 +235,7 @@ func TestTopicsPage(t *testing.T) {
 	t.Run("Toggle sort by Replicas", func(t *testing.T) {
 		page, _ := New(&MockTopicDeleter{}, &MockTopicLister{})
 
-		_ = page.Update(kadmin.TopicListedMsg{
+		_ = page.Update(kadmin.TopicsListedMsg{
 			Topics: []kadmin.ListedTopic{
 				{
 					Name:           "b-topic1",

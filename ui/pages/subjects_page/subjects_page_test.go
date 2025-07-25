@@ -92,6 +92,72 @@ func TestSubjectsPage(t *testing.T) {
 		}
 	})
 
+	t.Run("When subjects are loaded or refresh then the search form is reset", func(t *testing.T) {
+
+		page, _ := New(
+			&MockSubjectsLister{},
+			&MockGlobalCompatibilityLister{},
+			&MockSubjectsDeleter{},
+		)
+
+		var subjects []sradmin.Subject
+		var versions []int
+		for i := 0; i < 10; i++ {
+			versions = append(versions, i)
+			subjects = append(subjects,
+				sradmin.Subject{
+					Name:     fmt.Sprintf("subject%d", i),
+					Versions: versions,
+				})
+		}
+		page.Update(sradmin.SubjectsListedMsg{Subjects: subjects})
+
+		page.Update(tests.Key('/'))
+		tests.UpdateKeys(page, "subject2")
+
+		render := page.View(tests.NewKontext(), tests.TestRenderer)
+		assert.Contains(t, render, "> subject2")
+
+		page.Update(sradmin.SubjectsListedMsg{Subjects: subjects})
+
+		render = page.View(tests.NewKontext(), tests.TestRenderer)
+		assert.NotContains(t, render, "> subject")
+	})
+
+	t.Run("Searching resets selected row to top row", func(t *testing.T) {
+		page, _ := New(
+			&MockSubjectsLister{},
+			&MockGlobalCompatibilityLister{},
+			&MockSubjectsDeleter{},
+		)
+
+		var subjects []sradmin.Subject
+		var versions []int
+		for i := 0; i < 10; i++ {
+			versions = append(versions, i)
+			subjects = append(subjects,
+				sradmin.Subject{
+					Name:     fmt.Sprintf("subject%d", i),
+					Versions: versions,
+				})
+		}
+		page.Update(sradmin.SubjectsListedMsg{Subjects: subjects})
+
+		page.View(tests.NewKontext(), tests.TestRenderer)
+
+		page.Update(tests.Key(tea.KeyDown))
+		page.Update(tests.Key(tea.KeyDown))
+
+		page.View(tests.NewKontext(), tests.TestRenderer)
+		assert.Equal(t, "subject2", page.table.SelectedRow()[0])
+
+		page.Update(tests.Key('/'))
+		tests.UpdateKeys(page, "subject")
+
+		page.View(tests.NewKontext(), tests.TestRenderer)
+		assert.Equal(t, "subject0", page.table.SelectedRow()[0])
+	})
+
 	t.Run("Enter opens schema detail page", func(t *testing.T) {
 
 		subjectsPage, _ := New(

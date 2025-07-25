@@ -10,7 +10,7 @@ import (
 type TableCmdsBar[T any] struct {
 	notifierWidget   CmdBar
 	deleteWidget     *DeleteCmdBar[T]
-	searchWidget     CmdBar
+	searchWidget     *SearchCmdBar
 	sortByCmdBar     *SortByCmdBar
 	active           CmdBar
 	searchPrevActive bool
@@ -103,7 +103,7 @@ func (m *TableCmdsBar[T]) handleF3(msg tea.Msg, pmsg tea.Msg, cmd tea.Cmd) (tea.
 		m.active = nil
 	} else {
 		m.active = m.sortByCmdBar
-		m.searchWidget.(*SearchCmdBar).state = hidden
+		m.searchWidget.state = hidden
 		m.deleteWidget.active = false
 	}
 	return pmsg, cmd
@@ -114,7 +114,7 @@ func (m *TableCmdsBar[T]) handleF2(selection *T, msg tea.Msg) (tea.Msg, tea.Cmd)
 	if active {
 		m.active = m.deleteWidget
 		m.deleteWidget.Delete(*selection)
-		m.searchWidget.(*SearchCmdBar).state = hidden
+		m.searchWidget.state = hidden
 		if m.sortByCmdBar != nil {
 			m.sortByCmdBar.active = false
 		}
@@ -125,7 +125,7 @@ func (m *TableCmdsBar[T]) handleF2(selection *T, msg tea.Msg) (tea.Msg, tea.Cmd)
 }
 
 func (m *TableCmdsBar[T]) HasSearchedAtLeastOneChar() bool {
-	return m.searchWidget.(*SearchCmdBar).IsSearching() && len(m.GetSearchTerm()) > 0
+	return m.searchWidget.IsSearching() && len(m.GetSearchTerm()) > 0
 }
 
 func (m *TableCmdsBar[T]) IsFocussed() bool {
@@ -133,10 +133,7 @@ func (m *TableCmdsBar[T]) IsFocussed() bool {
 }
 
 func (m *TableCmdsBar[T]) GetSearchTerm() string {
-	if searchBar, ok := m.searchWidget.(*SearchCmdBar); ok {
-		return searchBar.GetSearchTerm()
-	}
-	return ""
+	return m.searchWidget.GetSearchTerm()
 }
 
 func (m *TableCmdsBar[T]) Shortcuts() []statusbar.Shortcut {
@@ -144,6 +141,10 @@ func (m *TableCmdsBar[T]) Shortcuts() []statusbar.Shortcut {
 		return nil
 	}
 	return m.active.Shortcuts()
+}
+
+func (m *TableCmdsBar[T]) ResetSearch() {
+	m.searchWidget.Reset()
 }
 
 func NewTableCmdsBar[T any](

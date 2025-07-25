@@ -140,6 +140,11 @@ func (s *SearchCmdBar) isActive() bool {
 	return s.state == searching || s.state == searched
 }
 
+func (s *SearchCmdBar) Reset() {
+	s.state = hidden
+	s.searchInput = newSearchInput(s.placeholder)
+}
+
 func newSearchInput(placeholder string) *huh.Input {
 	searchInput := huh.NewInput()
 	searchInput.Init()

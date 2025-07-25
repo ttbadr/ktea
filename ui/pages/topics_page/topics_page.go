@@ -32,25 +32,25 @@ const (
 	stateRefreshing state = iota
 	stateLoading
 	stateLoaded
-	stateRecordCountLoading
 )
 
 type Model struct {
 	topics        []kadmin.ListedTopic
 	table         table.Model
 	shortcuts     []statusbar.Shortcut
-	cmdBar        *cmdbar.TableCmdsBar[string]
+	tcb           *cmdbar.TableCmdsBar[string]
 	rows          []table.Row
 	lister        kadmin.TopicLister
 	ctx           context.Context
 	tableFocussed bool
 	state         state
 	sortByCmdBar  *cmdbar.SortByCmdBar
+	goToTop       bool
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	var views []string
-	cmdBarView := m.cmdBar.View(ktx, renderer)
+	cmdBarView := m.tcb.View(ktx, renderer)
 	views = append(views, cmdBarView)
 
 	m.table.SetWidth(ktx.WindowWidth - 2)
@@ -61,6 +61,15 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	})
 	m.table.SetRows(m.rows)
 	m.table.SetHeight(ktx.AvailableHeight - 2)
+
+	if m.table.SelectedRow() == nil && len(m.table.Rows()) > 0 {
+		m.goToTop = true
+	}
+
+	if m.goToTop {
+		m.table.GotoTop()
+		m.goToTop = false
+	}
 
 	styledTable := renderer.RenderWithStyle(m.table.View(), styles.Table.Blur)
 
@@ -109,7 +118,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			return ui.PublishMsg(nav.LoadLiveConsumePageMsg{Topic: m.SelectedTopic()})
 		case "enter":
 			// only accept enter when the table is focussed
-			if !m.cmdBar.IsFocussed() {
+			if !m.tcb.IsFocussed() {
 				if m.SelectedTopic() != nil {
 					return ui.PublishMsg(nav.LoadConsumptionFormPageMsg{
 						Topic: m.SelectedTopic(),
@@ -119,7 +128,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 	case spinner.TickMsg:
 		selectedTopic := m.SelectedTopicName()
-		_, c := m.cmdBar.Update(msg, &selectedTopic)
+		_, c := m.tcb.Update(msg, &selectedTopic)
 		if c != nil {
 			cmds = append(cmds, c)
 		}
@@ -127,9 +136,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		cmds = append(cmds, msg.AwaitCompletion)
 	case kadmin.TopicListingStartedMsg:
 		cmds = append(cmds, msg.AwaitTopicListCompletion)
-	case kadmin.TopicListedMsg:
-		m.state = stateRecordCountLoading
+	case kadmin.TopicsListedMsg:
+		m.tcb.ResetSearch()
 		m.topics = msg.Topics
+		m.goToTop = true
+		m.state = stateLoaded
 	case kadmin.TopicDeletedMsg:
 		m.topics = slices.DeleteFunc(
 			m.topics,
@@ -138,30 +149,31 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	}
 
 	name := m.SelectedTopicName()
-	msg, cmd = m.cmdBar.Update(msg, &name)
-	m.tableFocussed = !m.cmdBar.IsFocussed()
+	msg, cmd = m.tcb.Update(msg, &name)
+	m.tableFocussed = !m.tcb.IsFocussed()
 	cmds = append(cmds, cmd)
 
 	m.rows = m.createRows()
 
 	// make sure table navigation is off when the cmdbar is focussed
-	if !m.cmdBar.IsFocussed() {
+	if !m.tcb.IsFocussed() {
 		t, cmd := m.table.Update(msg)
 		m.table = t
 		cmds = append(cmds, cmd)
 	}
 
-	if m.cmdBar.HasSearchedAtLeastOneChar() {
-		m.table.GotoTop()
+	if m.tcb.HasSearchedAtLeastOneChar() {
+		m.goToTop = true
 	}
+
 	return tea.Batch(cmds...)
 }
 
 func (m *Model) createRows() []table.Row {
 	var rows []table.Row
 	for _, topic := range m.topics {
-		if m.cmdBar.GetSearchTerm() != "" {
-			if strings.Contains(strings.ToLower(topic.Name), strings.ToLower(m.cmdBar.GetSearchTerm())) {
+		if m.tcb.GetSearchTerm() != "" {
+			if strings.Contains(strings.ToLower(topic.Name), strings.ToLower(m.tcb.GetSearchTerm())) {
 				rows = append(
 					rows,
 					table.Row{
@@ -242,8 +254,8 @@ func (m *Model) Title() string {
 }
 
 func (m *Model) Shortcuts() []statusbar.Shortcut {
-	if m.cmdBar.IsFocussed() {
-		shortCuts := m.cmdBar.Shortcuts()
+	if m.tcb.IsFocussed() {
+		shortCuts := m.tcb.Shortcuts()
 		if shortCuts != nil {
 			return shortCuts
 		}
@@ -306,6 +318,7 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 			model *notifier.Model,
 		) (bool, tea.Cmd) {
 			if m.state == stateRefreshing || m.state == stateLoading {
+				log.Debug("skldfjkslfjsdlf//////////", m.state)
 				cmd := model.SpinWithLoadingMsg("Loading Topics")
 				return true, cmd
 			}
@@ -316,11 +329,11 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 	cmdbar.WithMsgHandler(
 		notifierCmdBar,
 		func(
-			msg kadmin.TopicListedMsg,
+			msg kadmin.TopicsListedMsg,
 			m *notifier.Model,
 		) (bool, tea.Cmd) {
 			m.Idle()
-			return false, m.AutoHideCmd(name)
+			return false, nil
 		},
 	)
 
@@ -385,9 +398,10 @@ func New(topicDeleter kadmin.TopicDeleter, lister kadmin.TopicLister) (*Model, t
 		},
 	)
 	m.sortByCmdBar = sortByCmdBar
-	m.cmdBar = cmdbar.NewTableCmdsBar[string](
+	bar := cmdbar.NewSearchCmdBar("Search topics by name")
+	m.tcb = cmdbar.NewTableCmdsBar[string](
 		cmdbar.NewDeleteCmdBar(deleteMsgFunc, deleteFunc, nil),
-		cmdbar.NewSearchCmdBar("Search topics by name"),
+		bar,
 		notifierCmdBar,
 		sortByCmdBar,
 	)

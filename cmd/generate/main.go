@@ -478,7 +478,7 @@ func createTopic(ka kadmin.Kadmin, topic string) {
 func topicExists(ka kadmin.Kadmin, expectedTopic string) bool {
 	msg := ka.ListTopics().(kadmin.TopicListingStartedMsg)
 	switch msg := msg.AwaitTopicListCompletion().(type) {
-	case kadmin.TopicListedMsg:
+	case kadmin.TopicsListedMsg:
 		topics := msg.Topics
 		for _, topic := range topics {
 			if topic.Name == expectedTopic {
