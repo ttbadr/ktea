@@ -3,6 +3,7 @@ package kcadmin
 import (
 	"github.com/stretchr/testify/assert"
 	"io"
+	"ktea/config"
 	"net/http"
 	"strings"
 	"testing"
@@ -55,7 +56,10 @@ func (m mockClient) Do(*http.Request) (*http.Response, error) {
 
 func TestLister(t *testing.T) {
 	t.Run("Returns list of connectors", func(t *testing.T) {
-		kcA := New(mockClient{}, "https://localhost:8083")
+		kcA := New(mockClient{}, &config.KafkaConnectConfig{
+			Name: "test",
+			Url:  "http://localhost:8083",
+		})
 
 		startedMsg := kcA.ListActiveConnectors().(ConnectorListingStartedMsg)
 

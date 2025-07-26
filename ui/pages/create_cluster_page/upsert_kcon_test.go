@@ -59,13 +59,15 @@ func TestUpsertKcModel(t *testing.T) {
 
 			msgs := tests.Submit(m)
 
+			username := "jane"
+			password := "doe"
 			assert.Len(t, msgs, 1)
 			assert.IsType(t, kcadmin.MockConnectionCheckedMsg{}, msgs[0])
 			assert.Equal(t, &config.KafkaConnectConfig{
 				Name:     "dev sink cluster",
 				Url:      "http://localhost:8083",
-				Username: "jane",
-				Password: "doe",
+				Username: &username,
+				Password: &password,
 			}, msgs[0].(kcadmin.MockConnectionCheckedMsg).Config)
 		})
 
@@ -79,13 +81,56 @@ func TestUpsertKcModel(t *testing.T) {
 		})
 	})
 
+	t.Run("Set username and password to nil when left empty", func(t *testing.T) {
+		m := NewUpsertKcModel(
+			ui.NavBackMock,
+			&ktx,
+			nil,
+			[]config.KafkaConnectConfig{},
+			kcadmin.NewMockConnChecker(),
+			cmdbar.NewNotifierCmdBar("test"),
+			mockKafkaConnectRegisterer,
+		)
+
+		tests.UpdateKeys(m, "dev sink cluster")
+		cmd := m.Update(tests.Key(tea.KeyEnter))
+		m.Update(cmd())
+
+		tests.UpdateKeys(m, "http://localhost:8083")
+		cmd = m.Update(tests.Key(tea.KeyEnter))
+		m.Update(cmd())
+
+		cmd = m.Update(tests.Key(tea.KeyEnter))
+		m.Update(cmd())
+
+		cmd = m.Update(tests.Key(tea.KeyEnter))
+		m.Update(cmd())
+
+		msgs := tests.Submit(m)
+
+		assert.Len(t, msgs, 1)
+		assert.IsType(t, kcadmin.MockConnectionCheckedMsg{}, msgs[0])
+		assert.Equal(t, &config.KafkaConnectConfig{
+			Name:     "dev sink cluster",
+			Url:      "http://localhost:8083",
+			Username: nil,
+			Password: nil,
+		}, msgs[0].(kcadmin.MockConnectionCheckedMsg).Config)
+
+		details := m.clusterDetails()
+		assert.Nil(t, details[0].Username)
+		assert.Nil(t, details[0].Password)
+	})
+
 	t.Run("List kafka connect clusters when at least one is already registered", func(t *testing.T) {
+		username := "jane"
+		password := "doe"
 		m := NewUpsertKcModel(ui.NavBackMock, &ktx, nil, []config.KafkaConnectConfig{
 			{
 				Name:     "s3-sink",
 				Url:      "http://localhost:8083",
-				Username: "john",
-				Password: "doe",
+				Username: &username,
+				Password: &password,
 			},
 		}, kcadmin.NewMockConnChecker(), cmdbar.NewNotifierCmdBar("test"), mockKafkaConnectRegisterer)
 

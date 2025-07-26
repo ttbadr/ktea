@@ -5,6 +5,14 @@ import (
 	"testing"
 )
 
+var (
+	userJohn = "john"
+	pwdJohn  = "doe"
+
+	userJane = "jane"
+	pwdJane  = "do3"
+)
+
 func TestConfig(t *testing.T) {
 
 	t.Run("Registering a SASL cluster", func(t *testing.T) {
@@ -17,7 +25,7 @@ func TestConfig(t *testing.T) {
 			Color:            "#880808",
 			Host:             "localhost:9092",
 			AuthMethod:       SASLAuthMethod,
-			Username:         "john",
+			Username:         userJohn,
 			Password:         "test123",
 			SecurityProtocol: SASLPlaintextSecurityProtocol,
 		})
@@ -26,7 +34,7 @@ func TestConfig(t *testing.T) {
 		assert.Equal(t, config.Clusters[0].Color, "#880808")
 		assert.Equal(t, config.Clusters[0].BootstrapServers, []string{"localhost:9092"})
 		assert.Equal(t, config.Clusters[0].SASLConfig.SecurityProtocol, SASLPlaintextSecurityProtocol)
-		assert.Equal(t, config.Clusters[0].SASLConfig.Username, "john")
+		assert.Equal(t, config.Clusters[0].SASLConfig.Username, userJohn)
 		assert.Equal(t, config.Clusters[0].SASLConfig.Password, "test123")
 		assert.False(t, config.Clusters[0].SSLEnabled)
 	})
@@ -41,7 +49,7 @@ func TestConfig(t *testing.T) {
 			Color:            "#880808",
 			Host:             "localhost:9092",
 			AuthMethod:       SASLAuthMethod,
-			Username:         "john",
+			Username:         userJohn,
 			Password:         "test123",
 			SecurityProtocol: SASLPlaintextSecurityProtocol,
 			SSLEnabled:       true,
@@ -51,7 +59,7 @@ func TestConfig(t *testing.T) {
 		assert.Equal(t, config.Clusters[0].Color, "#880808")
 		assert.Equal(t, config.Clusters[0].BootstrapServers, []string{"localhost:9092"})
 		assert.Equal(t, config.Clusters[0].SASLConfig.SecurityProtocol, SASLPlaintextSecurityProtocol)
-		assert.Equal(t, config.Clusters[0].SASLConfig.Username, "john")
+		assert.Equal(t, config.Clusters[0].SASLConfig.Username, userJohn)
 		assert.Equal(t, config.Clusters[0].SASLConfig.Password, "test123")
 		assert.True(t, config.Clusters[0].SSLEnabled)
 	})
@@ -66,7 +74,7 @@ func TestConfig(t *testing.T) {
 			Color:            "#880808",
 			Host:             "localhost:9092",
 			AuthMethod:       SASLAuthMethod,
-			Username:         "john",
+			Username:         userJohn,
 			Password:         "test123",
 			SecurityProtocol: SASLPlaintextSecurityProtocol,
 			SchemaRegistry: &SchemaRegistryDetails{
@@ -80,7 +88,7 @@ func TestConfig(t *testing.T) {
 		assert.Equal(t, config.Clusters[0].Color, "#880808")
 		assert.Equal(t, config.Clusters[0].BootstrapServers, []string{"localhost:9092"})
 		assert.Equal(t, config.Clusters[0].SASLConfig.SecurityProtocol, SASLPlaintextSecurityProtocol)
-		assert.Equal(t, config.Clusters[0].SASLConfig.Username, "john")
+		assert.Equal(t, config.Clusters[0].SASLConfig.Username, userJohn)
 		assert.Equal(t, config.Clusters[0].SASLConfig.Password, "test123")
 		assert.Equal(t, config.Clusters[0].SchemaRegistry.Url, "https://sr:1923")
 		assert.Equal(t, config.Clusters[0].SchemaRegistry.Username, "srJohn")
@@ -200,8 +208,8 @@ func TestConfig(t *testing.T) {
 				{
 					Name:     "s3-sink",
 					Url:      "http://localhost:8083",
-					Username: "john",
-					Password: "doe",
+					Username: &userJohn,
+					Password: &pwdJohn,
 				},
 			},
 		})
@@ -214,8 +222,8 @@ func TestConfig(t *testing.T) {
 		assert.Equal(t, config.Clusters[0].KafkaConnectClusters[0], KafkaConnectConfig{
 			Name:     "s3-sink",
 			Url:      "http://localhost:8083",
-			Username: "john",
-			Password: "doe",
+			Username: &userJohn,
+			Password: &pwdJohn,
 		})
 	})
 
@@ -231,8 +239,8 @@ func TestConfig(t *testing.T) {
 				{
 					Name:     "s3-sink",
 					Url:      "http://localhost:8083",
-					Username: "john",
-					Password: "doe",
+					Username: &userJohn,
+					Password: &pwdJohn,
 				},
 			},
 		})
@@ -247,14 +255,14 @@ func TestConfig(t *testing.T) {
 				{
 					Name:     "s3-sink",
 					Url:      "http://localhost:8083",
-					Username: "john",
-					Password: "doe",
+					Username: &userJohn,
+					Password: &pwdJohn,
 				},
 				{
 					Name:     "s4-sink",
 					Url:      "http://localhost:8084",
-					Username: "jane",
-					Password: "do3",
+					Username: &userJane,
+					Password: &pwdJane,
 				},
 			},
 		})
@@ -267,14 +275,14 @@ func TestConfig(t *testing.T) {
 		assert.Contains(t, config.Clusters[0].KafkaConnectClusters, KafkaConnectConfig{
 			Name:     "s3-sink",
 			Url:      "http://localhost:8083",
-			Username: "john",
-			Password: "doe",
+			Username: &userJohn,
+			Password: &pwdJohn,
 		})
 		assert.Contains(t, config.Clusters[0].KafkaConnectClusters, KafkaConnectConfig{
 			Name:     "s4-sink",
 			Url:      "http://localhost:8084",
-			Username: "jane",
-			Password: "do3",
+			Username: &userJane,
+			Password: &pwdJane,
 		})
 	})
 

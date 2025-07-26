@@ -142,12 +142,17 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		case "f4":
 			m.form = m.cForm
 			m.border.GoTo("f4")
+			return nil
 		case "f5":
+			m.border.GoTo("handling f5")
 			if m.inEditingMode() {
 				m.form = m.srForm
 				m.form.State = huh.StateNormal
 				m.border.GoTo("f5")
+				log.Debug("go to f5")
+				return nil
 			} else {
+				log.Debug("not in edit")
 				return tea.Batch(
 					m.notifierCmdBar.Notifier.ShowError(fmt.Errorf("create a cluster before adding a schema registry")),
 					m.notifierCmdBar.Notifier.AutoHideCmd(notifierCmdbarTag),
@@ -157,6 +162,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			if m.inEditingMode() {
 				m.form.State = huh.StateNormal
 				m.border.GoTo("f6")
+				return nil
 			} else {
 				return tea.Batch(
 					m.notifierCmdBar.Notifier.ShowError(fmt.Errorf("create a cluster before adding a Kafka Connect Cluster")),

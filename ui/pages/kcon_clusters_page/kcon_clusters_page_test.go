@@ -10,6 +10,11 @@ import (
 	"testing"
 )
 
+var (
+	username = "john"
+	pwd      = "doe"
+)
+
 func TestKConsPage(t *testing.T) {
 	t.Run("List all available clusters", func(t *testing.T) {
 		cluster := config.Cluster{
@@ -24,8 +29,8 @@ func TestKConsPage(t *testing.T) {
 				{
 					Name:     "s3-sink",
 					Url:      "http://localhost:8083",
-					Username: "john",
-					Password: "doe",
+					Username: &username,
+					Password: &pwd,
 				},
 			},
 		}
@@ -56,8 +61,8 @@ func TestKConsPage(t *testing.T) {
 				{
 					Name:     "s3-sink",
 					Url:      "http://localhost:8083",
-					Username: "john",
-					Password: "doe",
+					Username: &username,
+					Password: &pwd,
 				},
 			},
 		}
@@ -76,8 +81,8 @@ func TestKConsPage(t *testing.T) {
 		assert.Equal(t, config.KafkaConnectConfig{
 			Name:     "s3-sink",
 			Url:      "http://localhost:8083",
-			Username: "john",
-			Password: "doe",
+			Username: &username,
+			Password: &pwd,
 		}, msg.(kcon_page.LoadKConPageMockCalled).Config)
 	})
 

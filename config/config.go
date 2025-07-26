@@ -30,10 +30,10 @@ type SchemaRegistryConfig struct {
 }
 
 type KafkaConnectConfig struct {
-	Name     string `yaml:"name"`
-	Url      string `yaml:"url"`
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
+	Name     string  `yaml:"name"`
+	Url      string  `yaml:"url"`
+	Username *string `yaml:"username"`
+	Password *string `yaml:"password"`
 }
 
 type Cluster struct {
@@ -73,8 +73,8 @@ type SchemaRegistryDetails struct {
 type KafkaConnectClusterDetails struct {
 	Name     string
 	Url      string
-	Username string
-	Password string
+	Username *string
+	Password *string
 }
 
 type RegistrationDetails struct {

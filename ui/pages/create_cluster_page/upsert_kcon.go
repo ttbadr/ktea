@@ -43,6 +43,22 @@ type formValues struct {
 	prevName string
 }
 
+func (f *formValues) usernameOrNil() *string {
+	var username *string
+	if f.username != "" {
+		username = &f.username
+	}
+	return username
+}
+
+func (f *formValues) passwordOrNil() *string {
+	var password *string
+	if f.password != "" {
+		password = &f.password
+	}
+	return password
+}
+
 const (
 	entering state = iota
 	listing
@@ -102,8 +118,19 @@ func (m *UpsertKcModel) Update(msg tea.Msg) tea.Cmd {
 					m.formValues.prevName = cluster.Name
 					m.formValues.name = cluster.Name
 					m.formValues.url = cluster.Url
-					m.formValues.username = cluster.Username
-					m.formValues.password = cluster.Password
+
+					if cluster.Username == nil {
+						m.formValues.username = ""
+					} else {
+						m.formValues.username = *cluster.Username
+					}
+
+					if cluster.Password == nil {
+						m.formValues.username = ""
+					} else {
+						m.formValues.username = *cluster.Password
+					}
+
 					m.form = m.createKcForm()
 					return nil
 				}
@@ -144,16 +171,7 @@ func (m *UpsertKcModel) Update(msg tea.Msg) tea.Cmd {
 			m.form = f
 		}
 		if m.form.State == huh.StateCompleted {
-			m.state = registering
-			kcConfig := config.KafkaConnectConfig{
-				Name:     m.formValues.name,
-				Url:      m.formValues.url,
-				Username: m.formValues.username,
-				Password: m.formValues.password,
-			}
-			return func() tea.Msg {
-				return m.connChecker(&kcConfig)
-			}
+			return m.processFormSubmission()
 		}
 		return cmd
 	}
@@ -161,6 +179,21 @@ func (m *UpsertKcModel) Update(msg tea.Msg) tea.Cmd {
 	t, c := m.table.Update(msg)
 	m.table = t
 	return c
+}
+
+func (m *UpsertKcModel) processFormSubmission() tea.Cmd {
+	m.state = registering
+
+	kcConfig := config.KafkaConnectConfig{
+		Name:     m.formValues.name,
+		Url:      m.formValues.url,
+		Username: m.formValues.usernameOrNil(),
+		Password: m.formValues.passwordOrNil(),
+	}
+
+	return func() tea.Msg {
+		return m.connChecker(&kcConfig)
+	}
 }
 
 func (m *UpsertKcModel) resetFormValues() {
@@ -179,8 +212,8 @@ func (m *UpsertKcModel) clusterDetails() []config.KafkaConnectClusterDetails {
 			details = append(details, config.KafkaConnectClusterDetails{
 				Name:     m.formValues.name,
 				Url:      m.formValues.url,
-				Username: m.formValues.username,
-				Password: m.formValues.password,
+				Username: m.formValues.usernameOrNil(),
+				Password: m.formValues.passwordOrNil(),
 			})
 		} else {
 			details = append(details, config.KafkaConnectClusterDetails{
@@ -196,8 +229,8 @@ func (m *UpsertKcModel) clusterDetails() []config.KafkaConnectClusterDetails {
 		details = append(details, config.KafkaConnectClusterDetails{
 			Name:     m.formValues.name,
 			Url:      m.formValues.url,
-			Username: m.formValues.username,
-			Password: m.formValues.password,
+			Username: m.formValues.usernameOrNil(),
+			Password: m.formValues.passwordOrNil(),
 		})
 	}
 

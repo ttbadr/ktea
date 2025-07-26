@@ -2,6 +2,7 @@ package kcadmin
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"io"
 	"ktea/config"
 	"net/http"
 )
@@ -51,8 +52,10 @@ type Client interface {
 }
 
 type DefaultKcAdmin struct {
-	client  Client
-	baseUrl string
+	client   Client
+	baseUrl  string
+	username *string
+	password *string
 }
 
 type ConnectorListingStartedMsg struct {
@@ -104,6 +107,24 @@ func (k *DefaultKcAdmin) url(path string) string {
 	return k.baseUrl + path
 }
 
-func New(c Client, baseUrl string) *DefaultKcAdmin {
-	return &DefaultKcAdmin{client: c, baseUrl: baseUrl}
+func (k *DefaultKcAdmin) NewRequest(
+	method string,
+	path string,
+	body io.Reader,
+) (*http.Request, error) {
+	req, err := http.NewRequest(method, k.url(path), body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if k.password != nil && k.username != nil {
+		req.SetBasicAuth(*k.username, *k.password)
+	}
+
+	return req, nil
+}
+
+func New(c Client, config *config.KafkaConnectConfig) *DefaultKcAdmin {
+	return &DefaultKcAdmin{client: c, baseUrl: config.Url, username: config.Username, password: config.Password}
 }

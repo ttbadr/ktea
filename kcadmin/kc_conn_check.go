@@ -28,10 +28,11 @@ func (c *ConnCheckStartedMsg) AwaitCompletion() tea.Msg {
 }
 
 func (k *DefaultKcAdmin) CheckConnection() tea.Msg {
-	req, err := http.NewRequest(http.MethodGet, k.url("/connectors?expand=status"), nil)
+	req, err := k.NewRequest(http.MethodGet, "/connectors?expand=status", nil)
 	if err != nil {
 		return ConnectorListingErrMsg{err}
 	}
+
 	connOkChan := make(chan bool)
 	errChan := make(chan error)
 
@@ -58,6 +59,6 @@ func (k *DefaultKcAdmin) doCheckConnection(connOkChan chan bool, errChan chan er
 // CheckKafkaConnectClustersConn implements ConnChecker.
 // CheckKafkaConnectClustersConn checks if the Kafka Connect is reachable and returns a tea.Msg to report status.
 func CheckKafkaConnectClustersConn(c *config.KafkaConnectConfig) tea.Msg {
-	client := New(http.DefaultClient, c.Url)
+	client := New(http.DefaultClient, c)
 	return client.CheckConnection()
 }

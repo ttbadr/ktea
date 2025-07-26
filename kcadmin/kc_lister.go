@@ -3,14 +3,17 @@ package kcadmin
 import (
 	"encoding/json"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/log"
 	"io"
 	"ktea/kadmin"
 	"net/http"
 )
 
 func (k *DefaultKcAdmin) ListActiveConnectors() tea.Msg {
-	req, err := http.NewRequest(http.MethodGet, k.url("/connectors?expand=status"), nil)
+	req, err := k.NewRequest(http.MethodGet, "/connectors?expand=status", nil)
+
 	if err != nil {
+		log.Error("Error Listing Kafka Connectors", err)
 		return ConnectorListingErrMsg{err}
 	}
 
@@ -31,6 +34,7 @@ func (k *DefaultKcAdmin) doListActiveConnectors(
 	kadmin.MaybeIntroduceLatency()
 	resp, err := k.client.Do(req)
 	if err != nil {
+		log.Error("Error Listing Kafka Connectors", err)
 		eChan <- err
 		return
 	}
@@ -43,15 +47,19 @@ func (k *DefaultKcAdmin) doListActiveConnectors(
 
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
+		log.Error("Error Listing Kafka Connectors", err)
 		eChan <- err
 		return
 	}
 
 	var connectors Connectors
 	if err := json.Unmarshal(b, &connectors); err != nil {
+		log.Error("Error Listing Kafka Connectors", err)
 		eChan <- err
 		return
 	}
+
+	log.Debug("Listed Kafka Connectors", connectors)
 
 	cChan <- connectors
 }

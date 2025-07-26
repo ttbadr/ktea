@@ -11,8 +11,9 @@ import (
 )
 
 func (k *DefaultKcAdmin) DeleteConnector(name string) tea.Msg {
-	req, err := http.NewRequest(http.MethodDelete, k.url("/connectors/"+name), nil)
+	req, err := k.NewRequest(http.MethodDelete, k.url("/connectors/"+name), nil)
 	if err != nil {
+		log.Error("Error Deleting Kafka Connector", err)
 		return ConnectorListingErrMsg{err}
 	}
 
@@ -47,17 +48,17 @@ func (k *DefaultKcAdmin) doDeleteConnector(
 	}(resp.Body)
 
 	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
-		log.Info("Connector deleted")
+		log.Info("Kafka Connector deleted")
 		dc <- true
 	} else {
 		var b bytes.Buffer
 		_, err := b.ReadFrom(resp.Body)
 		if err != nil {
-			log.Info("Connector deletion error", err)
+			log.Error("Error Deleting Kafka Connector", err)
 			ec <- fmt.Errorf("unable to delete connector received (%d)", resp.StatusCode)
 			return
 		}
-		log.Info("Connector deletion error", resp.StatusCode)
+		log.Error("Error Deleting Kafka Connector", resp.StatusCode)
 		ec <- fmt.Errorf("unable to delete connector received (%d): %s", resp.StatusCode, b.String())
 	}
 }
