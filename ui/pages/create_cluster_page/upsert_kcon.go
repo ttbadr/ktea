@@ -126,9 +126,9 @@ func (m *UpsertKcModel) Update(msg tea.Msg) tea.Cmd {
 					}
 
 					if cluster.Password == nil {
-						m.formValues.username = ""
+						m.formValues.password = ""
 					} else {
-						m.formValues.username = *cluster.Password
+						m.formValues.password = *cluster.Password
 					}
 
 					m.form = m.createKcForm()

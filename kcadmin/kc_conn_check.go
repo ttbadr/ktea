@@ -28,7 +28,7 @@ func (c *ConnCheckStartedMsg) AwaitCompletion() tea.Msg {
 }
 
 func (k *DefaultKcAdmin) CheckConnection() tea.Msg {
-	req, err := k.NewRequest(http.MethodGet, "/connectors?expand=status", nil)
+	req, err := k.NewRequest(http.MethodGet, "/", nil)
 	if err != nil {
 		return ConnectorListingErrMsg{err}
 	}
@@ -41,18 +41,18 @@ func (k *DefaultKcAdmin) CheckConnection() tea.Msg {
 	return ConnCheckStartedMsg{connOkChan, errChan}
 }
 
-func (k *DefaultKcAdmin) doCheckConnection(connOkChan chan bool, errChan chan error, req *http.Request) {
+func (k *DefaultKcAdmin) doCheckConnection(connOkChan chan bool, conErrChan chan error, req *http.Request) {
 	kadmin.MaybeIntroduceLatency()
 
-	conChan := make(chan Connectors)
-	eChan := make(chan error)
-	go k.doListActiveConnectors(conChan, eChan, req)
+	versionChan := make(chan KafkaConnectVersion)
+	versionErrChan := make(chan error)
+	go execReq(req, k.client, versionChan, versionErrChan)
 
 	select {
-	case <-conChan:
+	case <-versionChan:
 		connOkChan <- true
-	case err := <-eChan:
-		errChan <- err
+	case err := <-versionErrChan:
+		conErrChan <- err
 	}
 }
 

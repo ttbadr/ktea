@@ -1,7 +1,10 @@
 package kcadmin
 
 import (
+	"encoding/json"
+	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/log"
 	"io"
 	"ktea/config"
 	"net/http"
@@ -20,6 +23,12 @@ type ConnectorLister interface {
 
 type ConnectorDeleter interface {
 	DeleteConnector(name string) tea.Msg
+}
+
+// VersionLister defines the behavior of listing the kafka connect version
+// return a tea.Msg that can either be a VersionListingStartedMsg or a VersionListingErrMsg
+type VersionLister interface {
+	ListVersion() tea.Msg
 }
 
 // ConnChecker is a function that checks a Kafka Connect Cluster connection and returns a tea.Msg.
@@ -65,6 +74,20 @@ type ConnectorListingStartedMsg struct {
 
 type ConnectorsListedMsg struct {
 	Connectors
+}
+
+type KafkaConnectVersion struct {
+	Version   string `json:"version"`
+	ClusterId string `json:"kafka_cluster_id"`
+}
+
+type VersionListingStartedMsg struct {
+	Version chan KafkaConnectVersion
+	Err     chan error
+}
+
+type VersionListingErrMsg struct {
+	Err error
 }
 
 func (c *ConnectorListingStartedMsg) AwaitCompletion() tea.Msg {
@@ -123,6 +146,51 @@ func (k *DefaultKcAdmin) NewRequest(
 	}
 
 	return req, nil
+}
+
+func execReq[T any](
+	req *http.Request,
+	client Client,
+	resChan chan T,
+	errChan chan error,
+) {
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Error("Error during request", err)
+		errChan <- err
+		return
+	}
+	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
+		log.Info("Request executed successfully", resp.StatusCode)
+
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				errChan <- err
+			}
+		}(resp.Body)
+
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Error("Error Reading Response Body", err)
+			errChan <- err
+			return
+		}
+
+		var res T
+		if err := json.Unmarshal(b, &res); err != nil {
+			log.Error("Error Unmarshalling", err)
+			errChan <- err
+			return
+		}
+
+		log.Debug("Executed Request Successfully")
+
+		resChan <- res
+	} else {
+		log.Error("Error", resp.StatusCode)
+		errChan <- fmt.Errorf("Error unexpected response code (%d)", resp.StatusCode)
+	}
 }
 
 func New(c Client, config *config.KafkaConnectConfig) *DefaultKcAdmin {
