@@ -23,16 +23,18 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-type authSelection int
+type selectionState int
 
 type formState int
 
 type Option func(m *Model)
 
 const (
-	noneSelected      authSelection   = 0
-	saslSelected      authSelection   = 1
-	nothingSelected   authSelection   = 2
+	noneSelected      selectionState  = 0
+	saslSelected      selectionState  = 1
+	nothingSelected   selectionState  = 2
+	sslEnabledState   selectionState  = 3
+	sslDisabledState  selectionState  = 4
 	none              formState       = 0
 	loading           formState       = 1
 	notifierCmdbarTag                 = "upsert-cluster-page"
@@ -55,7 +57,8 @@ type Model struct {
 	clusterRegisterer  config.ClusterRegisterer
 	kConnChecker       kadmin.ConnChecker
 	srConnChecker      sradmin.ConnChecker
-	authSelectionState authSelection
+	authSelectionState selectionState
+	sslSelectionState  selectionState
 	preEditName        *string
 	shortcuts          []statusbar.Shortcut
 	title              string
@@ -139,6 +142,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 				m.cForm = m.createCForm()
 				m.form = m.cForm
 				m.authSelectionState = noneSelected
+				m.sslSelectionState = noneSelected
 			} else {
 				m.srForm = m.createSrForm()
 				m.form = m.srForm
@@ -227,12 +231,18 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	if activeTab == cTab {
 		// 检查SSL启用状态是否改变
-		prevSSLEnabled := m.form.GetBool("sslEnabled")
-		if prevSSLEnabled != m.clusterValues.sslEnabled {
+		if !m.clusterValues.isSSLEnabled() && m.sslSelectionState == sslEnabledState {
 			// SSL状态改变，重新创建表单以显示或隐藏TLS证书配置选项
 			m.cForm = m.createCForm()
 			m.form = m.cForm
-			m.NextField(4) // 跳到认证方法选择
+			m.NextField(3) // 跳到认证方法选择
+			m.sslSelectionState = sslDisabledState
+		} else if m.clusterValues.isSSLEnabled() && m.sslSelectionState == sslDisabledState {
+			// SSL状态改变，重新创建表单以显示或隐藏TLS证书配置选项
+			m.cForm = m.createCForm()
+			m.form = m.cForm
+			m.NextField(3)
+			m.sslSelectionState = sslEnabledState
 		}
 
 		if !m.clusterValues.HasSASLAuthMethodSelected() &&
@@ -240,14 +250,22 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 			// if SASL authentication mode was previously selected and switched back to none
 			m.cForm = m.createCForm()
 			m.form = m.cForm
-			m.NextField(4)
+			if m.sslSelectionState == sslEnabledState {
+				m.NextField(8)
+			} else {
+				m.NextField(4)
+			}
 			m.authSelectionState = noneSelected
 		} else if m.clusterValues.HasSASLAuthMethodSelected() &&
 			(m.authSelectionState == nothingSelected || m.authSelectionState == noneSelected) {
 			// SASL authentication mode selected and previously nothing or none auth mode was selected
 			m.cForm = m.createCForm()
 			m.form = m.cForm
-			m.NextField(4)
+			if m.sslSelectionState == sslEnabledState {
+				m.NextField(8)
+			} else {
+				m.NextField(4)
+			}
 			m.authSelectionState = saslSelected
 		}
 
@@ -358,6 +376,10 @@ func (f *clusterValues) HasSASLAuthMethodSelected() bool {
 	return f.authMethod == config.SASLAuthMethod
 }
 
+func (f *clusterValues) isSSLEnabled() bool {
+	return f.sslEnabled == true
+}
+
 func (f *clusterValues) SrEnabled() bool {
 	return len(f.srUrl) > 0
 }
@@ -409,13 +431,6 @@ func (m *Model) createCForm() *huh.Form {
 			}
 			return nil
 		})
-	auth := huh.NewSelect[config.AuthMethod]().
-		Value(&m.clusterValues.authMethod).
-		Title("Authentication method").
-		Options(
-			huh.NewOption("NONE", config.NoneAuthMethod),
-			huh.NewOption("SASL", config.SASLAuthMethod),
-		)
 
 	sslEnabled := huh.NewSelect[bool]().
 		Value(&m.clusterValues.sslEnabled).
@@ -426,9 +441,9 @@ func (m *Model) createCForm() *huh.Form {
 		)
 
 	var clusterFields []huh.Field
-	clusterFields = append(clusterFields, name, color, host, sslEnabled, auth)
+	clusterFields = append(clusterFields, name, color, host, sslEnabled)
 
-	if m.clusterValues.sslEnabled {
+	if m.clusterValues.isSSLEnabled() {
 		tlsCertFile := huh.NewInput().
 			Value(&m.clusterValues.tlsCertFile).
 			Title("TLS Certificate File Path")
@@ -451,6 +466,15 @@ func (m *Model) createCForm() *huh.Form {
 
 		clusterFields = append(clusterFields, tlsCertFile, tlsKeyFile, tlsCAFile, tlsInsecureSkipVerify)
 	}
+
+	auth := huh.NewSelect[config.AuthMethod]().
+		Value(&m.clusterValues.authMethod).
+		Title("Authentication method").
+		Options(
+			huh.NewOption("NONE", config.NoneAuthMethod),
+			huh.NewOption("SASL", config.SASLAuthMethod),
+		)
+	clusterFields = append(clusterFields, auth)
 
 	if m.clusterValues.HasSASLAuthMethodSelected() {
 		securityProtocol := huh.NewSelect[config.SecurityProtocol]().
@@ -599,10 +623,17 @@ func NewCreateClusterPage(
 	model.clusterRegisterer = registerer
 
 	model.authSelectionState = nothingSelected
+	model.sslSelectionState = nothingSelected
 	model.state = none
 
 	if model.clusterValues.HasSASLAuthMethodSelected() {
 		model.authSelectionState = saslSelected
+	}
+
+	if model.clusterValues.isSSLEnabled() {
+		model.sslSelectionState = sslEnabledState
+	} else {
+		model.sslSelectionState = sslDisabledState
 	}
 
 	for _, option := range options {
@@ -686,10 +717,17 @@ func NewEditClusterPage(
 
 	model.clusterRegisterer = registerer
 	model.authSelectionState = nothingSelected
+	model.sslSelectionState = nothingSelected
 	model.state = none
 
 	if model.clusterValues.HasSASLAuthMethodSelected() {
 		model.authSelectionState = saslSelected
+	}
+
+	if model.clusterValues.isSSLEnabled() {
+		model.sslSelectionState = sslEnabledState
+	} else {
+		model.sslSelectionState = sslDisabledState
 	}
 
 	for _, o := range options {
