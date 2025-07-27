@@ -1,8 +1,8 @@
 name: release
 on:
   push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+    branches:
+      - toby
 
 jobs:
 
@@ -27,4 +27,3 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          KTEA_HOMEBREW_TOKEN: ${{ secrets.KTEA_HOMEBREW_TOKEN }}

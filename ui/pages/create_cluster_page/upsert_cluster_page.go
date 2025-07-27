@@ -64,17 +64,21 @@ type Model struct {
 }
 
 type clusterValues struct {
-	name             string
-	color            string
-	host             string
-	authMethod       config.AuthMethod
-	securityProtocol config.SecurityProtocol
-	sslEnabled       bool
-	username         string
-	password         string
-	srUrl            string
-	srUsername       string
-	srPassword       string
+	name                  string
+	color                 string
+	host                  string
+	authMethod            config.AuthMethod
+	securityProtocol      config.SecurityProtocol
+	sslEnabled            bool
+	tlsCertFile           string
+	tlsKeyFile            string
+	tlsCAFile             string
+	tlsInsecureSkipVerify bool
+	username              string
+	password              string
+	srUrl                 string
+	srUsername            string
+	srPassword            string
 }
 
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
@@ -222,6 +226,15 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	}
 
 	if activeTab == cTab {
+		// 检查SSL启用状态是否改变
+		prevSSLEnabled := m.form.GetBool("sslEnabled")
+		if prevSSLEnabled != m.clusterValues.sslEnabled {
+			// SSL状态改变，重新创建表单以显示或隐藏TLS证书配置选项
+			m.cForm = m.createCForm()
+			m.form = m.cForm
+			m.NextField(4) // 跳到认证方法选择
+		}
+
 		if !m.clusterValues.HasSASLAuthMethodSelected() &&
 			m.authSelectionState == saslSelected {
 			// if SASL authentication mode was previously selected and switched back to none
@@ -314,15 +327,19 @@ func (m *Model) getRegistrationDetails() config.RegistrationDetails {
 	}
 
 	details := config.RegistrationDetails{
-		Name:             name,
-		NewName:          newName,
-		Color:            m.clusterValues.color,
-		Host:             m.clusterValues.host,
-		AuthMethod:       authMethod,
-		SecurityProtocol: securityProtocol,
-		SSLEnabled:       m.clusterValues.sslEnabled,
-		Username:         m.clusterValues.username,
-		Password:         m.clusterValues.password,
+		Name:                  name,
+		NewName:               newName,
+		Color:                 m.clusterValues.color,
+		Host:                  m.clusterValues.host,
+		AuthMethod:            authMethod,
+		SecurityProtocol:      securityProtocol,
+		SSLEnabled:            m.clusterValues.sslEnabled,
+		TLSCertFile:           m.clusterValues.tlsCertFile,
+		TLSKeyFile:            m.clusterValues.tlsKeyFile,
+		TLSCAFile:             m.clusterValues.tlsCAFile,
+		TLSInsecureSkipVerify: m.clusterValues.tlsInsecureSkipVerify,
+		Username:              m.clusterValues.username,
+		Password:              m.clusterValues.password,
 	}
 	if m.clusterValues.SrEnabled() {
 		details.SchemaRegistry = &config.SchemaRegistryDetails{
@@ -410,6 +427,30 @@ func (m *Model) createCForm() *huh.Form {
 
 	var clusterFields []huh.Field
 	clusterFields = append(clusterFields, name, color, host, sslEnabled, auth)
+
+	if m.clusterValues.sslEnabled {
+		tlsCertFile := huh.NewInput().
+			Value(&m.clusterValues.tlsCertFile).
+			Title("TLS Certificate File Path")
+
+		tlsKeyFile := huh.NewInput().
+			Value(&m.clusterValues.tlsKeyFile).
+			Title("TLS Key File Path")
+
+		tlsCAFile := huh.NewInput().
+			Value(&m.clusterValues.tlsCAFile).
+			Title("TLS CA Certificate File Path")
+
+		tlsInsecureSkipVerify := huh.NewSelect[bool]().
+			Value(&m.clusterValues.tlsInsecureSkipVerify).
+			Title("Skip TLS Verification").
+			Options(
+				huh.NewOption("Verify TLS Certificate", false),
+				huh.NewOption("Skip TLS Verification (Insecure)", true),
+			)
+
+		clusterFields = append(clusterFields, tlsCertFile, tlsKeyFile, tlsCAFile, tlsInsecureSkipVerify)
+	}
 
 	if m.clusterValues.HasSASLAuthMethodSelected() {
 		securityProtocol := huh.NewSelect[config.SecurityProtocol]().
@@ -582,16 +623,20 @@ func NewEditClusterPage(
 	options ...Option,
 ) *Model {
 	formValues := &clusterValues{
-		name:  cluster.Name,
-		color: cluster.Color,
-		host:  cluster.BootstrapServers[0],
+		name:                  cluster.Name,
+		color:                 cluster.Color,
+		host:                  cluster.BootstrapServers[0],
+		sslEnabled:            cluster.SSLEnabled,
+		tlsCertFile:           cluster.TLSCertFile,
+		tlsKeyFile:            cluster.TLSKeyFile,
+		tlsCAFile:             cluster.TLSCAFile,
+		tlsInsecureSkipVerify: cluster.TLSInsecureSkipVerify,
 	}
 	if cluster.SASLConfig != nil {
 		formValues.securityProtocol = cluster.SASLConfig.SecurityProtocol
 		formValues.username = cluster.SASLConfig.Username
 		formValues.password = cluster.SASLConfig.Password
 		formValues.authMethod = config.SASLAuthMethod
-		formValues.sslEnabled = cluster.SSLEnabled
 	}
 	if cluster.SchemaRegistry != nil {
 		formValues.srUrl = cluster.SchemaRegistry.Url

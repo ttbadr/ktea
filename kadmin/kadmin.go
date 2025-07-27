@@ -31,6 +31,10 @@ type ConnectionDetails struct {
 	BootstrapServers []string
 	SASLConfig       *SASLConfig
 	SSLEnabled       bool
+	TLSCertFile      string
+	TLSKeyFile       string
+	TLSCAFile        string
+	TLSInsecureSkipVerify bool
 }
 
 type SASLProtocol int

@@ -2,9 +2,10 @@ package config
 
 import (
 	"fmt"
+	"os"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/log"
-	"os"
 )
 
 type AuthMethod int
@@ -37,14 +38,18 @@ type KafkaConnectConfig struct {
 }
 
 type Cluster struct {
-	Name                 string                `yaml:"name"`
-	Color                string                `yaml:"color"`
-	Active               bool                  `yaml:"active"`
-	BootstrapServers     []string              `yaml:"servers"`
-	SASLConfig           *SASLConfig           `yaml:"sasl"`
-	SchemaRegistry       *SchemaRegistryConfig `yaml:"schema-registry"`
-	SSLEnabled           bool                  `yaml:"ssl-enabled"`
-	KafkaConnectClusters []KafkaConnectConfig  `yaml:"kafka-connect-clusters"`
+	Name                  string                `yaml:"name"`
+	Color                 string                `yaml:"color"`
+	Active                bool                  `yaml:"active"`
+	BootstrapServers      []string              `yaml:"servers"`
+	SASLConfig            *SASLConfig           `yaml:"sasl"`
+	SchemaRegistry        *SchemaRegistryConfig `yaml:"schema-registry"`
+	SSLEnabled            bool                  `yaml:"ssl-enabled"`
+	TLSCertFile           string                `yaml:"tls-cert-file,omitempty"`
+	TLSKeyFile            string                `yaml:"tls-key-file,omitempty"`
+	TLSCAFile             string                `yaml:"tls-ca-file,omitempty"`
+	TLSInsecureSkipVerify bool                  `yaml:"tls-insecure-skip-verify,omitempty"`
+	KafkaConnectClusters  []KafkaConnectConfig  `yaml:"kafka-connect-clusters"`
 }
 
 func (c *Cluster) HasSchemaRegistry() bool {
@@ -78,17 +83,21 @@ type KafkaConnectClusterDetails struct {
 }
 
 type RegistrationDetails struct {
-	Name                 string
-	Color                string
-	Host                 string
-	AuthMethod           AuthMethod
-	SecurityProtocol     SecurityProtocol
-	SSLEnabled           bool
-	NewName              *string
-	Username             string
-	Password             string
-	SchemaRegistry       *SchemaRegistryDetails
-	KafkaConnectClusters []KafkaConnectClusterDetails
+	Name                  string
+	Color                 string
+	Host                  string
+	AuthMethod            AuthMethod
+	SecurityProtocol      SecurityProtocol
+	SSLEnabled            bool
+	TLSCertFile           string
+	TLSKeyFile            string
+	TLSCAFile             string
+	TLSInsecureSkipVerify bool
+	NewName               *string
+	Username              string
+	Password              string
+	SchemaRegistry        *SchemaRegistryDetails
+	KafkaConnectClusters  []KafkaConnectClusterDetails
 }
 
 type ClusterDeletedMsg struct {
@@ -178,10 +187,14 @@ func (c *Config) RegisterCluster(details RegistrationDetails) tea.Msg {
 
 func ToCluster(details RegistrationDetails) Cluster {
 	cluster := Cluster{
-		Name:             details.Name,
-		Color:            details.Color,
-		BootstrapServers: []string{details.Host},
-		SSLEnabled:       details.SSLEnabled,
+		Name:                  details.Name,
+		Color:                 details.Color,
+		BootstrapServers:      []string{details.Host},
+		SSLEnabled:            details.SSLEnabled,
+		TLSCertFile:           details.TLSCertFile,
+		TLSKeyFile:            details.TLSKeyFile,
+		TLSCAFile:             details.TLSCAFile,
+		TLSInsecureSkipVerify: details.TLSInsecureSkipVerify,
 	}
 
 	if details.AuthMethod == SASLAuthMethod {

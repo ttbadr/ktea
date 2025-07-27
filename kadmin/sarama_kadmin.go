@@ -1,13 +1,17 @@
 package kadmin
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"ktea/config"
+	"ktea/sradmin"
+	"os"
+	"time"
+
 	"github.com/IBM/sarama"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/log"
-	"ktea/config"
-	"ktea/sradmin"
-	"time"
 )
 
 type SaramaKafkaAdmin struct {
@@ -60,9 +64,13 @@ func ToConnectionDetails(cluster *config.Cluster) ConnectionDetails {
 	}
 
 	connDetails := ConnectionDetails{
-		BootstrapServers: cluster.BootstrapServers,
-		SASLConfig:       saslConfig,
-		SSLEnabled:       cluster.SSLEnabled,
+		BootstrapServers:      cluster.BootstrapServers,
+		SASLConfig:            saslConfig,
+		SSLEnabled:            cluster.SSLEnabled,
+		TLSCertFile:           cluster.TLSCertFile,
+		TLSKeyFile:            cluster.TLSKeyFile,
+		TLSCAFile:             cluster.TLSCAFile,
+		TLSInsecureSkipVerify: cluster.TLSInsecureSkipVerify,
 	}
 	return connDetails
 }
@@ -75,6 +83,32 @@ func NewSaramaKadmin(cd ConnectionDetails) (Kadmin, error) {
 	cfg.Consumer.Offsets.Initial = sarama.OffsetOldest
 
 	cfg.Net.TLS.Enable = cd.SSLEnabled
+
+	if cd.SSLEnabled {
+		cfg.Net.TLS.Enable = true
+		cfg.Net.TLS.Config = &tls.Config{
+			InsecureSkipVerify: cd.TLSInsecureSkipVerify,
+			ClientAuth:         tls.NoClientCert,
+		}
+
+		if cd.TLSCAFile != "" {
+			caCert, err := os.ReadFile(cd.TLSCAFile)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read CA certificate: %w", err)
+			}
+			caCertPool := x509.NewCertPool()
+			caCertPool.AppendCertsFromPEM(caCert)
+			cfg.Net.TLS.Config.RootCAs = caCertPool
+		}
+
+		if cd.TLSCertFile != "" && cd.TLSKeyFile != "" {
+			cert, err := tls.LoadX509KeyPair(cd.TLSCertFile, cd.TLSKeyFile)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load client key pair: %w", err)
+			}
+			cfg.Net.TLS.Config.Certificates = []tls.Certificate{cert}
+		}
+	}
 
 	if cd.SASLConfig != nil {
 		cfg.Net.SASL.Enable = true
@@ -115,6 +149,44 @@ func CheckKafkaConnectivity(cluster *config.Cluster) tea.Msg {
 	cfg := sarama.NewConfig()
 
 	cfg.Net.TLS.Enable = cd.SSLEnabled
+
+	if cd.SSLEnabled {
+		cfg.Net.TLS.Enable = true
+		cfg.Net.TLS.Config = &tls.Config{
+			InsecureSkipVerify: cd.TLSInsecureSkipVerify,
+			ClientAuth:         tls.NoClientCert,
+		}
+
+		if cd.TLSCAFile != "" {
+			caCert, err := os.ReadFile(cd.TLSCAFile)
+			if err != nil {
+				log.Error("failed to read CA certificate for connectivity check", "error", err)
+				errChan <- fmt.Errorf("failed to read CA certificate: %w", err)
+				return ConnCheckStartedMsg{
+					Cluster:   cluster,
+					Connected: connectedChan,
+					Err:       errChan,
+				}
+			}
+			caCertPool := x509.NewCertPool()
+			caCertPool.AppendCertsFromPEM(caCert)
+			cfg.Net.TLS.Config.RootCAs = caCertPool
+		}
+
+		if cd.TLSCertFile != "" && cd.TLSKeyFile != "" {
+			cert, err := tls.LoadX509KeyPair(cd.TLSCertFile, cd.TLSKeyFile)
+			if err != nil {
+				log.Error("failed to load client key pair for connectivity check", "error", err)
+				errChan <- fmt.Errorf("failed to load client key pair: %w", err)
+				return ConnCheckStartedMsg{
+					Cluster:   cluster,
+					Connected: connectedChan,
+					Err:       errChan,
+				}
+			}
+			cfg.Net.TLS.Config.Certificates = []tls.Certificate{cert}
+		}
+	}
 
 	if cd.SASLConfig != nil {
 		cfg.Net.SASL.Enable = true
