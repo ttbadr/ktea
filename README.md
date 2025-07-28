@@ -61,6 +61,7 @@ to add one.
 - *Record Consumption*: Consume records in text, JSON, and **Avro** formats, with powerful search capabilities.
 - *Consumer Group Insights*: Monitor consumer groups, view their members, and track offsets.
 - *Schema Registry Integration*: Browse, view, and register schemas effortlessly.
+- *Kafka Connect Integration*: Browse, view, and Update clusters.
 
 ## Todo
 

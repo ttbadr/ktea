@@ -7,12 +7,16 @@ import (
 	"github.com/charmbracelet/log"
 	"io"
 	"ktea/config"
+	"ktea/kadmin"
 	"net/http"
 )
 
-type KcAdmin interface {
+type Admin interface {
 	ConnectorLister
 	ConnectorDeleter
+	VersionLister
+	Pauser
+	Resumer
 }
 
 // ConnectorLister defines the behavior of listing active Kafka connectors.
@@ -29,6 +33,16 @@ type ConnectorDeleter interface {
 // return a tea.Msg that can either be a VersionListingStartedMsg or a VersionListingErrMsg
 type VersionLister interface {
 	ListVersion() tea.Msg
+}
+
+// Pauser Pauses the connector and its tasks by its name
+// return a tea.Msg that can either be a PausingStartedMsg or a PausingErrMsg
+type Pauser interface {
+	Pause(name string) tea.Msg
+}
+
+type Resumer interface {
+	Resume(name string) tea.Msg
 }
 
 // ConnChecker is a function that checks a Kafka Connect Cluster connection and returns a tea.Msg.
@@ -90,6 +104,29 @@ type VersionListingErrMsg struct {
 	Err error
 }
 
+type PausingStartedMsg struct {
+	Paused chan bool
+	Err    chan error
+	Name   string
+}
+
+type PauseRequestedMsg struct {
+	Name string
+}
+
+func (c *PausingStartedMsg) AwaitCompletion() tea.Msg {
+	select {
+	case <-c.Paused:
+		return PauseRequestedMsg{c.Name}
+	case err := <-c.Err:
+		return PausingErrMsg{err}
+	}
+}
+
+type PausingErrMsg struct {
+	Err error
+}
+
 func (c *ConnectorListingStartedMsg) AwaitCompletion() tea.Msg {
 	select {
 	case con := <-c.Connectors:
@@ -148,48 +185,63 @@ func (k *DefaultKcAdmin) NewRequest(
 	return req, nil
 }
 
+type successFunc[T any] func(body T)
+
+type errorFunc func(err error)
+
 func execReq[T any](
 	req *http.Request,
 	client Client,
-	resChan chan T,
-	errChan chan error,
+	sf successFunc[T],
+	ef errorFunc,
 ) {
+
+	kadmin.MaybeIntroduceLatency()
+
+	log.Debug("Executing request", "request", req)
+
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Error("Error during request", err)
-		errChan <- err
+		log.Error("Error during request", "error", err)
+		ef(err)
 		return
 	}
 	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
-		log.Info("Request executed successfully", resp.StatusCode)
 
 		defer func(Body io.ReadCloser) {
 			err := Body.Close()
 			if err != nil {
-				errChan <- err
+				ef(err)
 			}
 		}(resp.Body)
 
+		if resp.ContentLength == 0 || resp.StatusCode == http.StatusNoContent {
+			log.Info("Executed Request Successfully without content")
+			var res T
+			sf(res)
+			return
+		}
+
 		b, err := io.ReadAll(resp.Body)
 		if err != nil {
-			log.Error("Error Reading Response Body", err)
-			errChan <- err
+			log.Error("Error Reading Response Body", "error", err)
+			ef(err)
 			return
 		}
 
 		var res T
 		if err := json.Unmarshal(b, &res); err != nil {
-			log.Error("Error Unmarshalling", err)
-			errChan <- err
+			log.Error("Error Unmarshalling", "error", err)
+			ef(err)
 			return
 		}
 
-		log.Debug("Executed Request Successfully")
+		log.Info("Request executed successfully", "statusCode", resp.StatusCode)
 
-		resChan <- res
+		sf(res)
 	} else {
-		log.Error("Error", resp.StatusCode)
-		errChan <- fmt.Errorf("Error unexpected response code (%d)", resp.StatusCode)
+		log.Error("Error", "statusCode", resp.StatusCode)
+		ef(fmt.Errorf("Error unexpected response code (%d)", resp.StatusCode))
 	}
 }
 

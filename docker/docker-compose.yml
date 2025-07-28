@@ -144,7 +144,7 @@ services:
       - |
         echo "Registering users connector..."
         curl -u 'admin:secret' -i -X PUT -H "Content-Type:application/json" \
-          http://kafka-connect:8083/connectors/kafka-connect-datagen-users/config \
+          http://kafka-connect-secured:8083/connectors/kafka-connect-datagen-users/config \
           -d '{
             "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
             "kafka.topic": "dev.users.events",
@@ -158,7 +158,7 @@ services:
 
         echo "Registering product connector..."
         curl -u 'admin:secret' -i -X PUT -H "Content-Type:application/json" \
-          http://kafka-connect:8083/connectors/kafka-connect-datagen-product/config \
+          http://kafka-connect-secured:8083/connectors/kafka-connect-datagen-product/config \
           -d '{
             "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
             "kafka.topic": "dev.product.events",
@@ -179,7 +179,7 @@ services:
       - |
         echo "Registering users connector..."
         curl -i -X PUT -H "Content-Type:application/json" \
-          http://kafka-connect:8084/connectors/kafka-connect-datagen-users/config \
+          http://kafka-connect-unsecured:8084/connectors/kafka-connect-datagen-users/config \
           -d '{
             "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
             "kafka.topic": "dev.users.events",
@@ -193,7 +193,7 @@ services:
 
         echo "Registering product connector..."
         curl -i -X PUT -H "Content-Type:application/json" \
-          http://kafka-connect:8084/connectors/kafka-connect-datagen-product/config \
+          http://kafka-connect-unsecured:8084/connectors/kafka-connect-datagen-product/config \
           -d '{
             "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
             "kafka.topic": "dev.product.events",

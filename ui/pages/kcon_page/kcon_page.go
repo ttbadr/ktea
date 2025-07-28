@@ -2,6 +2,7 @@ package kcon_page
 
 import (
 	"fmt"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -19,20 +20,29 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 )
 
 type Model struct {
-	connectors    *kcadmin.Connectors
-	table         *table.Model
-	cmdBar        *cmdbar.TableCmdsBar[string]
-	rows          []table.Row
-	sort          cmdbar.SortLabel
-	lister        kcadmin.ConnectorLister
-	border        *border.Model
-	sortByCmdBar  *cmdbar.SortByCmdBar
-	navBack       ui.NavBack
+	border     *border.Model
+	cmdBar     *cmdbar.TableCmdsBar[string]
+	table      *table.Model
+	stsSpinner spinner.Model
+	sort       cmdbar.SortLabel
+
+	connectors *kcadmin.Connectors
+	rows       []table.Row
+
+	sortByCmdBar *cmdbar.SortByCmdBar
+
+	kca     kcadmin.Admin
+	navBack ui.NavBack
+
 	connectorName string
 	state
+	stateChangingConnectorName string
+	resumeDeadline             *time.Time
+	connectorChangeState       string
 }
 
 type state int
@@ -48,6 +58,8 @@ const (
 func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	cmdBarView := m.cmdBar.View(ktx, renderer)
 
+	m.rows = m.createRows()
+
 	m.table.SetWidth(ktx.WindowWidth - 2)
 	m.table.SetColumns([]table.Column{
 		{m.sortByCmdBar.PrefixSortIcon("Name"), int(float64(ktx.WindowWidth-5) * 0.7)},
@@ -60,6 +72,9 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	return ui.JoinVertical(lipgloss.Top, cmdBarView, tableView)
 }
 
+type ConnectorStateAlreadyChanging struct {
+}
+
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	log.Debug("Received Update", "msg", reflect.TypeOf(msg))
@@ -68,22 +83,76 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyEsc:
+		switch msg.String() {
+		case "esc":
 			if !m.cmdBar.IsFocussed() {
 				return m.navBack()
 			}
-		case tea.KeyF5:
+		case "P":
+			if m.stateChangingConnectorName == "" {
+				var name = m.selectedConnector()
+				log.Debug("Pausing", "connector name", name)
+				m.connectorChangeState = "PAUSING"
+				return func() tea.Msg {
+					return m.kca.Pause(name)
+				}
+			} else {
+				return func() tea.Msg {
+					return ConnectorStateAlreadyChanging{}
+				}
+			}
+		case "R":
+			if m.stateChangingConnectorName == "" {
+				var name = m.selectedConnector()
+				m.connectorChangeState = "RESUMING"
+				log.Debug("Resuming", "connector name", name)
+				return func() tea.Msg {
+					return m.kca.Resume(name)
+				}
+			} else {
+				return func() tea.Msg {
+					return ConnectorStateAlreadyChanging{}
+				}
+			}
+		case "f5":
 			if m.state == loading {
-				log.Debug("not refreshing connectors due to loading state")
+				log.Debug("Not refreshing connectors due to loading state")
 				return nil
 			}
 			m.connectors = nil
 			m.rows = m.createRows()
 			m.state = loading
-			log.Debug("refreshing connectors")
-			return m.lister.ListActiveConnectors
+			log.Debug("Refreshing connectors")
+			return m.kca.ListActiveConnectors
 		}
+
+	case spinner.TickMsg:
+		sm, cmd := m.stsSpinner.Update(msg)
+		m.stsSpinner = sm
+		cmds = append(cmds, cmd)
+
+	case kcadmin.ResumingStartedMsg:
+		var name = m.selectedConnector()
+		cmd := m.newSpinner(name)
+		return tea.Batch(cmd, msg.AwaitCompletion)
+	case kcadmin.ResumeRequestedMsg:
+		return func() tea.Msg {
+			return m.waitForConnectorState("RUNNING")
+		}
+
+	case kcadmin.PausingStartedMsg:
+		var name = m.selectedConnector()
+		cmd := m.newSpinner(name)
+		return tea.Batch(cmd, msg.AwaitCompletion)
+	case kcadmin.PauseRequestedMsg:
+		return func() tea.Msg {
+			return m.waitForConnectorState("PAUSED")
+		}
+
+	case ConnectorStateChanged:
+		m.connectors = msg.Connectors
+		m.stateChangingConnectorName = ""
+
 	case kcadmin.ConnectorListingStartedMsg:
 		cmds = append(cmds, msg.AwaitCompletion)
 	case kcadmin.ConnectorsListedMsg:
@@ -119,6 +188,57 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
+func (m *Model) newSpinner(name string) tea.Cmd {
+	m.stsSpinner = spinner.New()
+	m.stsSpinner.Spinner = spinner.Dot
+	m.stateChangingConnectorName = name
+	return m.stsSpinner.Tick
+}
+
+type ConnectorStateChanged struct {
+	Connectors *kcadmin.Connectors
+}
+
+func (m *Model) waitForConnectorState(state string) tea.Msg {
+	if m.resumeDeadline == nil {
+		resumeDeadline := time.Now().Add(30 * time.Second)
+		m.resumeDeadline = &resumeDeadline
+	}
+	if time.Now().After(*m.resumeDeadline) {
+		log.Warn("Timeout waiting for connector to resume", "connector", m.stateChangingConnectorName)
+		m.resumeDeadline = nil
+		return kcadmin.ConnectorListingErrMsg{
+			Err: fmt.Errorf("timeout waiting for connector %s to resume", m.stateChangingConnectorName),
+		}
+	}
+
+	msg := m.kca.ListActiveConnectors()
+
+	startedMsg, ok := msg.(kcadmin.ConnectorListingStartedMsg)
+	if !ok {
+		log.Error("Expected ConnectorListingStartedMsg but got something else", "msg", msg)
+		return m.waitForConnectorState
+	}
+
+	completedMsg := startedMsg.AwaitCompletion()
+
+	listedMsg, ok := completedMsg.(kcadmin.ConnectorsListedMsg)
+	if !ok {
+		log.Error("Expected ConnectorsListedMsg but got something else", "msg", completedMsg)
+		return m.waitForConnectorState
+	}
+
+	res := listedMsg
+	log.Error(res.Connectors)
+	if res.Connectors[m.stateChangingConnectorName].Status.Connector.State != state {
+		return m.waitForConnectorState(state)
+	}
+
+	return ConnectorStateChanged{
+		Connectors: &res.Connectors,
+	}
+}
+
 func (m *Model) selectedConnector() string {
 	selectedRow := m.table.SelectedRow()
 	var selectedConnector string
@@ -141,6 +261,8 @@ func (m *Model) Shortcuts() []statusbar.Shortcut {
 		{"Delete", "F2"},
 		{"Sort", "F3"},
 		{"Refresh", "F5"},
+		{"Pause", "S-p"},
+		{"Resume", "S-r"},
 	}
 }
 
@@ -157,7 +279,11 @@ func (m *Model) createRows() []table.Row {
 					rows = append(rows, table.Row{k, c.Status.Connector.State})
 				}
 			} else {
-				rows = append(rows, table.Row{k, c.Status.Connector.State})
+				status := c.Status.Connector.State
+				if m.stateChangingConnectorName == k {
+					status = m.stsSpinner.View() + fmt.Sprintf(" %s ", m.connectorChangeState) + m.stsSpinner.View()
+				}
+				rows = append(rows, table.Row{k, status})
 			}
 		}
 	}
@@ -179,14 +305,13 @@ func (m *Model) createRows() []table.Row {
 
 func New(
 	navBack ui.NavBack,
-	lister kcadmin.ConnectorLister,
-	deleter kcadmin.ConnectorDeleter,
-	name string,
+	kca kcadmin.Admin,
+	connectorName string,
 ) (*Model, tea.Cmd) {
 	m := Model{}
-	m.connectorName = name
+	m.connectorName = connectorName
 	m.navBack = navBack
-	m.lister = lister
+	m.kca = kca
 	m.state = loading
 
 	m.border = border.New(
@@ -299,6 +424,28 @@ func New(
 		},
 	)
 
+	cmdbar.WithMsgHandler(
+		notifierCmdBar,
+		func(
+			msg kcadmin.PauseRequestedMsg,
+			m *notifier.Model,
+		) (bool, tea.Cmd) {
+			m.Idle()
+			return true, nil
+		},
+	)
+
+	cmdbar.WithMsgHandler(
+		notifierCmdBar,
+		func(
+			msg ConnectorStateAlreadyChanging,
+			m *notifier.Model,
+		) (bool, tea.Cmd) {
+			m.ShowError(fmt.Errorf("Other connector already in progress of changing state, wait until it completes."))
+			return true, m.AutoHideCmd("kcons-page")
+		},
+	)
+
 	deleteMsgFunc := func(connector string) string {
 		message := connector + lipgloss.NewStyle().
 			Foreground(lipgloss.Color(styles.ColorIndigo)).
@@ -309,7 +456,7 @@ func New(
 
 	deleteFunc := func(name string) tea.Cmd {
 		return func() tea.Msg {
-			return deleter.DeleteConnector(name)
+			return kca.DeleteConnector(name)
 		}
 	}
 
@@ -321,5 +468,5 @@ func New(
 
 	m.sort = sortByCmdBar.SortedBy()
 
-	return &m, lister.ListActiveConnectors
+	return &m, kca.ListActiveConnectors
 }

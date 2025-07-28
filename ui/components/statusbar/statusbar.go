@@ -55,7 +55,7 @@ func (s *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	// Organize shortcuts into columns
 	var shortcutsTable [][]Shortcut
 	for i := 0; i < rowsPerColumn; i++ {
-		row := []Shortcut{}
+		var row []Shortcut
 		for j := 0; j < columns; j++ {
 			index := j*rowsPerColumn + i
 			if index < len(shortcuts) {
