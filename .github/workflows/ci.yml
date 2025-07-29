@@ -23,3 +23,13 @@ jobs:
 
     - name: Test
       run: go test -tags prd -v ./...
+
+    - name: Update coverage report
+      uses: jonas-grgt/go-coverage-report@main
+      with:
+        tags: prd
+        report: true
+        chart: true
+        amend: true
+      if: github.event_name == 'push'  
+      continue-on-error: true
