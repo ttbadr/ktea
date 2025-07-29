@@ -19,6 +19,7 @@ import (
 	ktable "ktea/ui/components/table"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -60,12 +61,17 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 
 	m.rows = m.createRows()
 
-	m.table.SetWidth(ktx.WindowWidth - 2)
+	available := ktx.WindowWidth - 8
+	nameCol := int(float64(available) * 0.8)
+	tasksCol := int(float64(available) * 0.08)
+	compCol := available - nameCol - tasksCol
 	m.table.SetColumns([]table.Column{
-		{m.sortByCmdBar.PrefixSortIcon("Name"), int(float64(ktx.WindowWidth-5) * 0.7)},
-		{m.sortByCmdBar.PrefixSortIcon("Status"), int(float64(ktx.WindowWidth-5) * 0.3)},
+		{m.sortByCmdBar.PrefixSortIcon("Name"), nameCol},
+		{m.sortByCmdBar.PrefixSortIcon("Tasks"), tasksCol},
+		{m.sortByCmdBar.PrefixSortIcon("Status"), compCol},
 	})
 	m.table.SetRows(m.rows)
+	m.table.SetWidth(ktx.WindowWidth - 2)
 	m.table.SetHeight(ktx.AvailableHeight - 2)
 
 	tableView := m.border.View(m.table.View())
@@ -276,14 +282,14 @@ func (m *Model) createRows() []table.Row {
 		for k, c := range *m.connectors {
 			if m.cmdBar.GetSearchTerm() != "" {
 				if strings.Contains(strings.ToLower(k), strings.ToLower(m.cmdBar.GetSearchTerm())) {
-					rows = append(rows, table.Row{k, c.Status.Connector.State})
+					rows = append(rows, table.Row{k, strconv.Itoa(len(c.Status.Tasks)), c.Status.Connector.State})
 				}
 			} else {
 				status := c.Status.Connector.State
 				if m.stateChangingConnectorName == k {
 					status = m.stsSpinner.View() + fmt.Sprintf(" %s ", m.connectorChangeState) + m.stsSpinner.View()
 				}
-				rows = append(rows, table.Row{k, status})
+				rows = append(rows, table.Row{k, strconv.Itoa(len(c.Status.Tasks)), status})
 			}
 		}
 	}
