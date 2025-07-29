@@ -24,12 +24,12 @@ jobs:
     - name: Test
       run: go test -tags prd -v ./...
 
+    - name: Run coverage
+      run: go test -cover -coverprofile=coverage.out -tags=prd ./...
+
     - name: Update coverage report
       uses: jonas-grgt/go-coverage-report@main
       with:
-        tags: prd
-        report: true
-        chart: true
-        amend: true
+        coverage-file: coverage.out
       if: github.event_name == 'push'  
       continue-on-error: true

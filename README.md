@@ -1,7 +1,6 @@
-<p>
-  <a href="https://github.com/jonas-grgt/ktea/releases"><img src="https://img.shields.io/github/release/jonas-grgt/ktea.svg" alt="Latest Release"></a>
-  <a href="https://github.com/jonas-grgt/ktea/actions"><img src="https://github.com/jonas-grgt/ktea/actions/workflows/ci.yml/badge.svg?branch=main" alt="Build Status"></a>
-</p>
+[![Latest Release](https://img.shields.io/github/release/jonas-grgt/ktea.svg)](https://github.com/jonas-grgt/ktea/releases)
+[![Build Status](https://github.com/jonas-grgt/ktea/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jonas-grgt/ktea/actions)
+[![Go Coverage](https://github.com/jonas-grgt/ktea/wiki/coverage.svg)](https://raw.githack.com/wiki/jonas-grgt/ktea/coverage.html)
 
 # 🫖 ktea - kafka terminal client
 
