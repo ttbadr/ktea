@@ -1,6 +1,8 @@
 package kcon_page
 
 import (
+	"fmt"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 	"ktea/kcadmin"
@@ -409,6 +411,45 @@ func TestKconsPage(t *testing.T) {
 			assert.NotContains(t, render, "RESUMING")
 		})
 	})
+}
+
+func TestTickMsgHandled(t *testing.T) {
+	initialSpinner := spinner.New(spinner.WithSpinner(spinner.Dot))
+	model, _ := New(
+		ui.NavBackMock,
+		kcadmin.NewMock(),
+		"connector-name",
+	)
+	model.stsSpinner = &initialSpinner
+
+	cmd := model.Update(spinner.TickMsg{
+		ID:   initialSpinner.ID(),
+		Time: time.Now(),
+	})
+
+	assert.NotNil(t, model.stsSpinner, "expected stsSpinner to still be set after update")
+	assert.Equal(t, model.stsSpinner.ID(), initialSpinner.ID(),
+		fmt.Sprintf("spinner ID should not change; got %d want %d", model.stsSpinner.ID(), initialSpinner.ID()))
+	assert.NotNil(t, cmd, "expected a tea.Cmd to be returned after TickMsg")
+	assert.IsType(t, spinner.TickMsg{}, cmd())
+}
+
+func TestTickMsgIgnored(t *testing.T) {
+	initialSpinner := spinner.New(spinner.WithSpinner(spinner.Dot))
+	model, _ := New(
+		ui.NavBackMock,
+		kcadmin.NewMock(),
+		"connector-name",
+	)
+	model.stsSpinner = nil
+
+	cmd := model.Update(spinner.TickMsg{
+		ID:   initialSpinner.ID(),
+		Time: time.Now(),
+	})
+
+	assert.Nil(t, model.stsSpinner, "expected stsSpinner to still be nil")
+	assert.Nil(t, cmd, "expected no tea.Cmd to be returned after TickMsg")
 }
 
 func TestWaitForConnectorResumed_Success(t *testing.T) {

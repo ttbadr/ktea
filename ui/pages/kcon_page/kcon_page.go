@@ -28,7 +28,7 @@ type Model struct {
 	border     *border.Model
 	cmdBar     *cmdbar.TableCmdsBar[string]
 	table      *table.Model
-	stsSpinner spinner.Model
+	stsSpinner *spinner.Model
 	sort       cmdbar.SortLabel
 
 	connectors *kcadmin.Connectors
@@ -133,9 +133,11 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 
 	case spinner.TickMsg:
-		sm, cmd := m.stsSpinner.Update(msg)
-		m.stsSpinner = sm
-		cmds = append(cmds, cmd)
+		if m.stsSpinner != nil {
+			sm, cmd := m.stsSpinner.Update(msg)
+			m.stsSpinner = &sm
+			cmds = append(cmds, cmd)
+		}
 
 	case kcadmin.ResumingStartedMsg:
 		var name = m.selectedConnector()
@@ -156,6 +158,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		}
 
 	case ConnectorStateChanged:
+		m.stsSpinner = nil
 		m.connectors = msg.Connectors
 		m.stateChangingConnectorName = ""
 
@@ -195,7 +198,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 }
 
 func (m *Model) newSpinner(name string) tea.Cmd {
-	m.stsSpinner = spinner.New()
+	model := spinner.New()
+	m.stsSpinner = &model
 	m.stsSpinner.Spinner = spinner.Dot
 	m.stateChangingConnectorName = name
 	return m.stsSpinner.Tick
