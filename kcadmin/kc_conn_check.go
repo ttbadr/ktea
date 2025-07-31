@@ -3,7 +3,6 @@ package kcadmin
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"ktea/config"
-	"ktea/kadmin"
 	"net/http"
 )
 
@@ -42,11 +41,15 @@ func (k *DefaultKcAdmin) CheckConnection() tea.Msg {
 }
 
 func (k *DefaultKcAdmin) doCheckConnection(connOkChan chan bool, conErrChan chan error, req *http.Request) {
-	kadmin.MaybeIntroduceLatency()
-
 	versionChan := make(chan KafkaConnectVersion)
 	versionErrChan := make(chan error)
-	go execReq(req, k.client, versionChan, versionErrChan)
+
+	go execReq(
+		req,
+		k.client,
+		func(v KafkaConnectVersion) { versionChan <- v },
+		func(e error) { versionErrChan <- e },
+	)
 
 	select {
 	case <-versionChan:

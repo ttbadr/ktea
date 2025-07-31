@@ -7,10 +7,10 @@ import (
 )
 
 func (k *DefaultKcAdmin) DeleteConnector(name string) tea.Msg {
-	req, err := k.NewRequest(http.MethodDelete, k.url("/connectors/"+name), nil)
+	req, err := k.NewRequest(http.MethodDelete, "/connectors/"+name, nil)
 	if err != nil {
 		log.Error("Error Deleting Kafka Connector", err)
-		return ConnectorListingErrMsg{err}
+		return ConnectorDeletionErrMsg{err}
 	}
 
 	var (
@@ -18,7 +18,12 @@ func (k *DefaultKcAdmin) DeleteConnector(name string) tea.Msg {
 		ec = make(chan error)
 	)
 
-	go execReq(req, k.client, dc, ec)
+	go execReq(
+		req,
+		k.client,
+		func(_ any) { dc <- true },
+		func(e error) { ec <- e },
+	)
 
 	return ConnectorDeletionStartedMsg{name, dc, ec}
 }

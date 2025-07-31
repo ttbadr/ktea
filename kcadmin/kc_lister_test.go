@@ -13,9 +13,7 @@ type mockClient struct {
 }
 
 func (m mockClient) Do(*http.Request) (*http.Response, error) {
-	return &http.Response{
-		StatusCode: 200,
-		Body: io.NopCloser(strings.NewReader(`
+	var content = `
  {
         "FileStreamSinkConnectorConnector_0": {
             "status": {
@@ -51,7 +49,11 @@ func (m mockClient) Do(*http.Request) (*http.Response, error) {
             "type": "source"
             }
         }
-}`)),
+}`
+	return &http.Response{
+		ContentLength: int64(len(content)),
+		StatusCode:    200,
+		Body:          io.NopCloser(strings.NewReader(content)),
 	}, nil
 }
 

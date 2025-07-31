@@ -1,11 +1,13 @@
 package kcon_clusters_page
 
 import (
+	"fmt"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/log"
 	"ktea/config"
 	"ktea/kontext"
+	"ktea/styles"
 	"ktea/ui"
 	"ktea/ui/components/border"
 	"ktea/ui/components/statusbar"
@@ -33,7 +35,9 @@ func (m *Model) View(ktx *kontext.ProgramKtx, renderer *ui.Renderer) string {
 	})
 	m.table.SetRows(rows)
 	m.table.SetHeight(ktx.AvailableHeight - 2)
-	b := border.New()
+	b := border.New(border.WithTitleFunc(func() string {
+		return styles.BorderTopTitle("Total Kafka Connect Clusters", fmt.Sprintf("%d/%d", len(rows), len(m.cluster.KafkaConnectClusters)), true)
+	}))
 	return renderer.Render(b.View(m.table.View()))
 }
 

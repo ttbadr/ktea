@@ -19,7 +19,12 @@ func (k *DefaultKcAdmin) ListActiveConnectors() tea.Msg {
 		eChan = make(chan error)
 	)
 
-	go execReq(req, k.client, cChan, eChan)
+	go execReq(
+		req,
+		k.client,
+		func(r Connectors) { cChan <- r },
+		func(e error) { eChan <- e },
+	)
 
 	return ConnectorListingStartedMsg{cChan, eChan}
 }

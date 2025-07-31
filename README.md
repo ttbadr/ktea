@@ -1,13 +1,17 @@
-<p>
-  <a href="https://github.com/jonas-grgt/ktea/releases"><img src="https://img.shields.io/github/release/jonas-grgt/ktea.svg" alt="Latest Release"></a>
-  <a href="https://github.com/jonas-grgt/ktea/actions"><img src="https://github.com/jonas-grgt/ktea/actions/workflows/ci.yml/badge.svg?branch=main" alt="Build Status"></a>
-</p>
+[![Latest Release](https://img.shields.io/github/release/jonas-grgt/ktea.svg)](https://github.com/jonas-grgt/ktea/releases)
+[![Build Status](https://github.com/jonas-grgt/ktea/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jonas-grgt/ktea/actions)
+[![Go Coverage](https://github.com/jonas-grgt/ktea/wiki/coverage.svg)](https://raw.githack.com/wiki/jonas-grgt/ktea/coverage.html)
 
 # 🫖 ktea - kafka terminal client
 
 ktea is a tool designed to simplify and accelerate interactions with Kafka clusters.
+
+If you're a **k9s** user you'll love **ktea**!
+
 ![topics-page.png](topics-page.png)
+
 ![record-detail-page.png](record-detail-page.png)
+
 ![record-page.png](record-page.png)
 
 
@@ -121,6 +125,7 @@ to add one.
 - *Record Consumption*: Consume records in text, JSON, and **Avro** formats, with powerful search capabilities.
 - *Consumer Group Insights*: Monitor consumer groups, view their members, and track offsets.
 - *Schema Registry Integration*: Browse, view, and register schemas effortlessly.
+- *Kafka Connect Integration*: Browse, view, and Update clusters.
 
 ## Todo
 
